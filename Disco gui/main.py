@@ -2,20 +2,23 @@ from kivy.app import App
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
-# from kivy.graphics import Color
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.uix.label import Label
 from kivy.uix.slider import Slider
 from kivy.uix.textinput import TextInput
 from kivy.clock import Clock
+# from kivy.graphics import Color
+
 import random
 
+import constatnts
+import simulation
 
 class MainScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.flag = False
-        self.amount = 100
+        self.amount = constatnts.GRID_SIDE_SIZE * constatnts.GRID_SIDE_SIZE
         self.clock = None
         # self.randrangee = [0, 255]
 
@@ -103,7 +106,7 @@ class ChildGridScreen(Screen):
         super().__init__(**kwargs)
         self.curr = (0, 0)
         self.flag = False
-        self.amount = 100
+        self.amount = constatnts.CELL_SIDE_SIZE * constatnts.CELL_SIDE_SIZE
         # self.randrangee = [0, 255]
 
         btn = Button(background_normal='', background_color=[random.random(), random.random(), random.random(), 1],
@@ -158,6 +161,11 @@ class ScreenManagement(ScreenManager):
 
 
 class MainApp(App):
+    def __init__(self, **kwargs):
+        super(MainApp, self).__init__(**kwargs)
+        
+        self.engine = simulation.SimulationEngine() 
+
 
     def build(self):
         sm = ScreenManagement(transition=FadeTransition())
