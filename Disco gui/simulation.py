@@ -1,6 +1,7 @@
 from enum import Enum
+from math import exp, log
 
-from constatnts import WORD_SIDE_SIZE, CELL_SIDE_SIZE
+from constatnts import WORLD_SIDE_SIZE, CELL_SIDE_SIZE
 
 
 class TopographyState(Enum):
@@ -16,6 +17,8 @@ class InitialValues:
         self.composition = 0  # TODO calculate mean from values in paper
         self.time_limit = 200  # [h]
         self.c = 0.7  # max content of water in the emulsion
+        self.molar_mass = 348.23  # [g/mol] mean
+        self.boiling_point = 609  # [K] mean
 
 
 class Cell:
@@ -23,6 +26,7 @@ class Cell:
         self.x = x
         self.y = y
         self.wind_velocity = 0  # TODO
+        self.temperature = 298  # [K]
 
 
 class Point:
@@ -31,33 +35,45 @@ class Point:
         self.x = x
         self.y = y
         self.cell = cell
+        self.oil_mass = 0  # [kg]
         self.initial_values = initial_values
         self.emulsification_rate = 0  # tbh chuj wi
 
-    def contain_oil(self):
+    def contain_oil(self) -> bool:
         return True  # TODO
 
-    def update(self, delta_time):
+    def update(self, delta_time) -> None:
         self.process_emulsification(delta_time)
         # TODO other processes
 
-    def process_emulsification(self, delta_time):
+    def process_emulsification(self, delta_time) -> None:
         K = 2.0e-6
 
         self.emulsification_rate += delta_time * K * (
-            ((self.cell.wind_velocity + 1) ** 2) * (
+                ((self.cell.wind_velocity + 1) ** 2) * (
                 1 - self.emulsification_rate / self.initial_values.c))
+
+    def process_evaporation(self, delta_time) -> None:
+        # TODO option to split evaporation into n components
+        K = 1.25e-3
+        P = 1000 * exp(-(4.4 + log(self.initial_values.boiling_point)) * (
+                    1.803 * (self.initial_values.boiling_point / self.cell.temperature - 1) - 0.803 * log(
+                self.initial_values.boiling_point / self.cell.temperature)))  # [Pa]
+        R = 8.314  # [J/(mol*K)]
+
+        evaporation_rate = (K * (self.initial_values.molar_mass / 1000) * P) / (R * self.cell.temperature)
+        self.oil_mass += delta_time * CELL_SIDE_SIZE * CELL_SIDE_SIZE * evaporation_rate  # TODO check if sign is correct
 
 
 class SimulationEngine:
     def __init__(self):
         self.total_time = 0
         self.initial_values = InitialValues()
-        self.cells = [[Cell(x, y) for y in range(WORD_SIDE_SIZE)]
-                      for x in range(WORD_SIDE_SIZE)]
+        self.cells = [[Cell(x, y) for y in range(WORLD_SIDE_SIZE)]
+                      for x in range(WORLD_SIDE_SIZE)]
         self.word = [[Point(x, y, self.initial_values, self.cells[x // CELL_SIDE_SIZE][y // CELL_SIDE_SIZE])
-                      for y in range(WORD_SIDE_SIZE)]
-                     for x in range(WORD_SIDE_SIZE)]
+                      for y in range(WORLD_SIDE_SIZE)]
+                     for x in range(WORLD_SIDE_SIZE)]
 
     def start(self, preset_path):
         # TODO load Topography - currently I have no idea how xD
