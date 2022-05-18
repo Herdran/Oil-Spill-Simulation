@@ -1,7 +1,7 @@
 from enum import Enum
-from math import exp, log
+from math import exp, log, sqrt
 
-from constatnts import WORLD_SIDE_SIZE, CELL_SIDE_SIZE
+from constatnts import WORLD_SIDE_SIZE, CELL_SIDE_SIZE, POINT_SIDE_SIZE
 
 
 class TopographyState(Enum):
@@ -38,12 +38,15 @@ class Point:
         self.oil_mass = 0  # [kg]
         self.initial_values = initial_values
         self.emulsification_rate = 0  # tbh chuj wi
+        self.viscosity = 0  # [cP]
 
     def contain_oil(self) -> bool:
         return True  # TODO
 
     def update(self, delta_time) -> None:
         self.process_emulsification(delta_time)
+        if self.topography == TopographyState.LAND:
+            self.process_seashore_ineraction(delta_time)
         # TODO other processes
 
     def process_emulsification(self, delta_time) -> None:
@@ -62,8 +65,25 @@ class Point:
         R = 8.314  # [J/(mol*K)]
 
         evaporation_rate = (K * (self.initial_values.molar_mass / 1000) * P) / (R * self.cell.temperature)
-        self.oil_mass += delta_time * CELL_SIDE_SIZE * CELL_SIDE_SIZE * evaporation_rate  # TODO check if sign is correct
+        self.oil_mass -= delta_time * POINT_SIDE_SIZE * POINT_SIDE_SIZE * evaporation_rate  # TODO check if sign is correct
 
+    def process_seashore_ineraction(self, delta_time) -> None:
+        delta_mass = -log(2)*self.oil_mass*delta_time/(3600*24)
+        # TODO iterate over neighbors and add oil if it is the sea
+
+    def process_natural_dispersion(self, delta_time) -> None:
+
+        Da = 0.11*(self.cell.wind_velocity + 1)**2
+        t = 1  # TODO nwm jak policzyć interfacial tension
+        Db = 1/(1+50*sqrt(self.viscosity)*self.slick_thickness()*t)
+        self.oil_mass -= self.oil_mass*Da*Db/(3600*delta_time) # TODO check if sign is correct
+
+    def slick_thickness(self) -> float:
+        thickness = (self.oil_mass / self.initial_values.density) / (POINT_SIDE_SIZE ** 2)  # [m]
+        return thickness/100  # [cm]
+
+    def viscosity_change(self) -> None:
+        pass  # TODO
 
 class SimulationEngine:
     def __init__(self):
