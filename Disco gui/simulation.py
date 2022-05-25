@@ -19,6 +19,7 @@ class InitialValues:
         self.emulsion_max_content_water = 0.7  # max content of water in the emulsion
         self.molar_mass = 348.23  # [g/mol] mean
         self.boiling_point = 609  # [K] mean
+        self.interfacial_tension = 28 # [dyna/cm] # TODO not sure :v probably not correct
 
 
 class Cell:
@@ -88,10 +89,10 @@ class Point:
         self.world[self.x+delta_r[0]][self.y+delta_r[1]].oil_buffer += self.oil_mass
         self.oil_mass = 0
 
-    def process_natural_dispersion(self, delta_time: float) -> None:
+    def process_natural_dispersion(self, delta_time: float, evaporation_rate: float) -> None: #TODO evaporation rate - tam na koncu dokumentu jest to opisane ale nw :v
         Da = 0.11 * (self.cell.wind_velocity + 1) ** 2
-        t = 1  # TODO nwm jak policzyć interfacial tension
-        Db = 1 / (1 + 50 * sqrt(self.viscosity) * self.slick_thickness() * t)
+        interfacial_tension = self.initial_values.interfacial_tension * (1 + evaporation_rate) 
+        Db = 1 / (1 + 50 * sqrt(self.viscosity) * self.slick_thickness() * interfacial_tension)
         self.oil_mass -= self.oil_mass * Da * Db / (3600 * delta_time)  # TODO check if sign is correct
 
     def slick_thickness(self) -> float:
