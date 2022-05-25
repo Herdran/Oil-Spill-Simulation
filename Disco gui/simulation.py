@@ -1,3 +1,4 @@
+from asyncio import constants
 from enum import Enum
 from math import exp, log, sqrt
 
@@ -20,6 +21,7 @@ class InitialValues:
         self.molar_mass = 348.23  # [g/mol] mean
         self.boiling_point = 609  # [K] mean
         self.interfacial_tension = 28 # [dyna/cm] # TODO not sure :v probably not correct
+        self.propagation_factor = 2.5
 
 
 class Cell:
@@ -119,6 +121,8 @@ class SimulationEngine:
                        for y in range(WORLD_SIDE_SIZE)]
                       for x in range(WORLD_SIDE_SIZE)]
         Point.world = self.world
+        self.spreading_pairs = self.generate_spreading_pairs()
+        self.current_oil_volume = 0 # TODO 
 
     def start(self, preset_path):
         # TODO load Topography - currently I have no idea how xD
@@ -140,5 +144,28 @@ class SimulationEngine:
                 if (point.contain_oil):
                     point.update(delta_time)
 
-    def spread_oil_points(self, delta_time):
-        pass  # TODO
+    def generate_spreading_pairs():
+        rows = [((x, y), (x+1, y)) for x in range(WORLD_SIDE_SIZE) for y in range(WORLD_SIDE_SIZE)]
+        cols = [((x, y), (x, y+1)) for y in range(WORLD_SIDE_SIZE) for x in range(WORLD_SIDE_SIZE)]
+        return rows + cols
+
+    def spread_oil_points(self, delta_time: float):
+        for pair in self.spreading_pairs:
+            first, second = pair
+            self.process_spread_between(delta_time, self.from_coords(first), self.from_coords(second))
+    
+    def process_spread_between(self, delta_time: float, first: Point, second: Point) -> None:  
+        length = 1 # TODO dunno xD
+        V = self.current_oil_volume
+        g = 9.8 
+        delta = 1 # TODO
+        viscosity = 0.5 * (first.viscosity + second.viscosity)
+        D = 0.48 / self.initial_values.propagation_factor * (V**2 * g * delta / sqrt(vw)) ** (1/3) / sqrt(delta_time)
+        delta_mass = 0.5 * (first.oil_mass - second.oil_mass) * (1 - exp(-2 * D/(length**2) * delta_time))
+        #TODO dunno czy to powinno byc tu czy nie
+        first.oil_mass -= delta_mass
+        second.oil_mass += delta_mass
+
+    def from_coords(self, coord) -> Point:
+        x, y = coord
+        return self[x][y]
