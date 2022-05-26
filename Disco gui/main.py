@@ -27,6 +27,7 @@ class MyButton(ButtonBehavior, Image):
         self.allow_stretch = True
         self.keep_ratio = False
         self.texture = Texture.create(size=(CELL_SIDE_SIZE, CELL_SIDE_SIZE))
+        self.coords = None
 
     # def texture_handler(self, arr):
     #     self.texture.blit_buffer(arr, colorfmt='rgb', bufferfmt='ubyte')
@@ -59,7 +60,6 @@ class MainScreen(Screen):
 
         for i in range(self.amount):
             ind = ((i - i % (int(self.amount ** 0.5))) // int(self.amount ** 0.5), i % (int(self.amount ** 0.5)))
-
             size = CELL_SIDE_SIZE * CELL_SIDE_SIZE
             buf = [self.oil_color if self.engine.world[i // CELL_SIDE_SIZE + 10 * ind[0]][
                 i % CELL_SIDE_SIZE + 10 * ind[1]].contain_oil() else self.white_color for i in range(size)]
@@ -67,10 +67,10 @@ class MainScreen(Screen):
             arr = array('B', buf2)
 
             btn = MyButton()
-            btn.text = '%s, %s' % (ind[1], ind[0])
+            btn.text = '%s, %s' % (ind[0], ind[1])
             btn.bind(on_press=self.on_press_func)
             btn.update(arr)
-
+            btn.coords = ind
             self.grid_parent.add_widget(btn)
 
         self.clock = Clock.schedule_interval(lambda a: self.update(), 2)
@@ -117,14 +117,14 @@ class MainScreen(Screen):
     def update(self):
         if self.flag:
             self.engine.update(1)
-            i = 99
+            # i = 99
             size = CELL_SIDE_SIZE * CELL_SIDE_SIZE
             for child in self.grid_parent.children:
-                self.update_texture(child, i, size)
-                i -= 1
+                self.update_texture(child, size)
+                # i -= 1
 
-    def update_texture(self, child, i, size):
-        ind = ((i - i % (int(self.amount ** 0.5))) // int(self.amount ** 0.5), i % (int(self.amount ** 0.5)))
+    def update_texture(self, child, size):
+        ind = child.coords
         buf = [self.oil_color if self.engine.world[i // CELL_SIDE_SIZE + 10 * ind[0]][
             i % CELL_SIDE_SIZE + 10 * ind[1]].contain_oil() else self.white_color for i in range(size)]
         buf2 = [buf[x][y] for x in range(size) for y in range(3)]
@@ -206,7 +206,7 @@ class ChildGridScreen(Screen):
                 int(instance.text[3]) + 10 * self.curr[1]].oil_mass += self.oil_to_add_on_click
             if instance.background_color != self.oil_color:
                 instance.background_color = self.oil_color
-                self.manager.get_screen('main').update_texture(self.button_object, self.curr[0] * 10 + self.curr[1],
+                self.manager.get_screen('main').update_texture(self.button_object,
                                                                self.amount)
 
     def update(self, entering=False):
@@ -229,7 +229,7 @@ class ChildGridScreen(Screen):
     def update_before_entering(self):
         self.num_label.text = 'Currently viewing %d, %d' % (self.curr[0], self.curr[1])
         self.button_object = self.manager.get_screen('main').grid_parent.children[
-            -(self.curr[0] + self.curr[1] * 10) + 99]
+            -(self.curr[0] * 10 + self.curr[1]) + 99]
         self.update(True)
 
 
