@@ -1,7 +1,7 @@
-from asyncio import constants
 from enum import Enum
 from math import exp, log, sqrt
 from random import randrange
+import numpy as np
 
 from constatnts import WORLD_SIDE_SIZE, CELL_SIDE_SIZE, POINT_SIDE_SIZE
 
@@ -29,8 +29,8 @@ class Cell:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.wind_velocity = 0  # TODO vector
-        self.wave_velocity = 0  # TODO vector
+        self.wind_velocity = np.array([5, 5])  # TODO vector
+        self.wave_velocity = np.array([2, 2])  # TODO vector
         self.temperature = 298  # [K]
 
 
@@ -57,7 +57,7 @@ class Point:
             self.process_seashore_ineraction(delta_time)
         # TODO other processes
         self.process_evaporation(delta_time)
-        self.process_natural_dispersion(delta_time, 0.0) # 0.0 bo nie wiem o co wam tu chodzi
+        # self.process_natural_dispersion(delta_time, 0.0) # 0.0 bo nie wiem o co wam tu chodzi
 
         # to na końcu na pewno
         self.process_advection(delta_time)
@@ -88,12 +88,13 @@ class Point:
         alpha = 1.1
         beta = 0.03
         delta_r = (alpha * self.cell.wave_velocity + beta * self.cell.wind_velocity) * delta_time
-        # TODO zrobić z wektora wartości całkowite
-        # self.world[self.x+delta_r[0]][self.y+delta_r[1]].oil_buffer += self.oil_mass # TODO nie działa
+        # TODO teraz założenie że jedna kratka to jeden metr, żeby działo trzeba niżej pomnożyć
+        if 0 <= self.x+int(delta_r[0]) < WORLD_SIDE_SIZE and 0 <= self.y+int(delta_r[1]) < WORLD_SIDE_SIZE:
+            self.world[self.x+int(delta_r[0])][self.y+int(delta_r[1])].oil_buffer += self.oil_mass
         self.oil_mass = 0
 
     def process_natural_dispersion(self, delta_time: float, evaporation_rate: float) -> None: #TODO evaporation rate - tam na koncu dokumentu jest to opisane ale nw :v
-        Da = 0.11 * (self.cell.wind_velocity + 1) ** 2
+        Da = 0.11 * (self.cell.wind_velocity + 1) ** 2  # TODO coś się psuje jak zmieniliśmy na wektory
         interfacial_tension = self.initial_values.interfacial_tension * (1 + evaporation_rate) 
         Db = 1 / (1 + 50 * sqrt(self.viscosity) * self.slick_thickness() * interfacial_tension)
         self.oil_mass -= self.oil_mass * Da * Db / (3600 * delta_time)  # TODO check if sign is correct
@@ -106,7 +107,7 @@ class Point:
         C2 = 10
         delta_viscosity = (C2 * self.viscosity * delta_F + 2.5 * self.viscosity * delta_Y) / (
                     (1 - self.initial_values.emulsion_max_content_water * delta_Y) ** 2)
-        # TODO
+        self.viscosity += delta_viscosity  # TODO check if sign is correct
 
     def pour_from_buffer(self):
         self.oil_mass += self.oil_buffer
