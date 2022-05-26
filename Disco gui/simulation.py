@@ -57,7 +57,7 @@ class Point:
             self.process_seashore_ineraction(delta_time)
         # TODO other processes
         self.process_evaporation(delta_time)
-        # self.process_natural_dispersion(delta_time, 0.0) # 0.0 bo nie wiem o co wam tu chodzi
+        self.process_natural_dispersion(delta_time, 0.0) # 0.0 bo nie wiem o co wam tu chodzi
 
         # to na końcu na pewno
         self.process_advection(delta_time)
@@ -94,7 +94,7 @@ class Point:
         self.oil_mass = 0
 
     def process_natural_dispersion(self, delta_time: float, evaporation_rate: float) -> None: #TODO evaporation rate - tam na koncu dokumentu jest to opisane ale nw :v
-        Da = 0.11 * (self.cell.wind_velocity + 1) ** 2  # TODO coś się psuje jak zmieniliśmy na wektory
+        Da = 0.11 * (sqrt(self.cell.wind_velocity[0]**2+self.cell.wind_velocity[1]**2) + 1) ** 2
         interfacial_tension = self.initial_values.interfacial_tension * (1 + evaporation_rate) 
         Db = 1 / (1 + 50 * sqrt(self.viscosity) * self.slick_thickness() * interfacial_tension)
         self.oil_mass -= self.oil_mass * Da * Db / (3600 * delta_time)  # TODO check if sign is correct
