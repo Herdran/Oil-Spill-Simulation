@@ -170,6 +170,7 @@ class ChildGridScreen(Screen):
         self.button_object = None
         self.amount = CELL_SIDE_SIZE * CELL_SIDE_SIZE
         self.oil_to_add_on_click = 2
+        self.decimal_places = 3
 
         btn = Button(background_normal='', background_color=[random.random(), random.random(), random.random(), 1],
                      text='<-- Main screen', size_hint=(.2, 1))
@@ -188,7 +189,8 @@ class ChildGridScreen(Screen):
         for i in range(self.amount):
             ind = ((i - i % (int(self.amount ** 0.5))) // int(self.amount ** 0.5), i % (int(self.amount ** 0.5)))
 
-            btn = Button(background_normal='', background_color=self.white_color, text='%s, %s' % (ind[0], ind[1]))
+            btn = Button(background_normal='', background_color=self.white_color, text="0.0")
+            btn.coords = '%s, %s' % (ind[0], ind[1])
             btn.bind(on_press=self.on_press_func)
             self.grid_parent.add_widget(btn)
 
@@ -202,19 +204,25 @@ class ChildGridScreen(Screen):
 
     def on_press_func(self, instance):
         if self.oil_to_add_on_click > 0:
-            self.manager.get_screen('main').engine.world[int(instance.text[0]) + 10 * self.curr[0]][
-                int(instance.text[3]) + 10 * self.curr[1]].oil_mass += self.oil_to_add_on_click
+            self.manager.get_screen('main').engine.world[int(instance.coords[0]) + 10 * self.curr[0]][
+                int(instance.coords[3]) + 10 * self.curr[1]].oil_mass += self.oil_to_add_on_click
             if instance.background_color != self.oil_color:
                 instance.background_color = self.oil_color
-                self.manager.get_screen('main').update_texture(self.button_object,
-                                                               self.amount)
+                self.manager.get_screen('main').update_texture(self.button_object, self.amount)
+        instance.text = str(round(
+            self.manager.get_screen('main').engine.world[int(instance.coords[0]) + 10 * self.curr[0]][
+                int(instance.coords[3]) + 10 * self.curr[1]].oil_mass, self.decimal_places))
 
     def update(self, entering=False):
         if self.flag or entering:
             x = 99
             for child in self.grid_parent.children:
-                if self.manager.get_screen('main').engine.world[x // CELL_SIDE_SIZE + 10 * self.curr[0]][x % CELL_SIDE_SIZE + 10 * self.curr[1]].contain_oil():
+                if self.manager.get_screen('main').engine.world[x // CELL_SIDE_SIZE + 10 * self.curr[0]][
+                    x % CELL_SIDE_SIZE + 10 * self.curr[1]].contain_oil():
                     child.background_color = self.oil_color
+                    child.text = str(
+                        round(self.manager.get_screen('main').engine.world[x // CELL_SIDE_SIZE + 10 * self.curr[0]][
+                                  x % CELL_SIDE_SIZE + 10 * self.curr[1]].oil_mass, self.decimal_places))
                 else:
                     child.background_color = self.white_color
                 x -= 1
