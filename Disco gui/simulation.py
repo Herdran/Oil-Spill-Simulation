@@ -1,6 +1,7 @@
 from enum import Enum
 from math import exp, log, sqrt
 from random import randrange
+from re import S
 import numpy as np
 
 from constatnts import WORLD_SIDE_SIZE, CELL_SIDE_SIZE, POINT_SIDE_SIZE
@@ -14,9 +15,8 @@ class TopographyState(Enum):
 class InitialValues:
     def __init__(self):
         self.density = 835  # [kg/m^3]
-        self.viscosity = 0  # tbh chuj wi
+        self.viscosity = 40  # tbh chuj wi
         self.surface_tension = 30  # [dyne/s]
-        self.composition = 0  # TODO calculate mean from values in paper
         self.time_limit = 200  # [h]
         self.emulsion_max_content_water = 0.7  # max content of water in the emulsion
         self.molar_mass = 348.23  # [g/mol] mean
@@ -29,8 +29,8 @@ class Cell:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.wind_velocity = np.array([5, 5])  # TODO vector
-        self.wave_velocity = np.array([2, 2])  # TODO vector
+        self.wind_velocity = np.array([-0.1, -0.6])  # TODO vector
+        self.wave_velocity = np.array([1.1, 0.2])  # TODO vector
         self.temperature = 298  # [K]
 
 
@@ -45,8 +45,9 @@ class Point:
         self.oil_mass = 0  # [kg]
         self.initial_values = initial_values
         self.emulsification_rate = 0  # tbh chuj wi
-        self.viscosity = 0  # [cP]
+        self.viscosity = initial_values.viscosity  # [cP]
         self.oil_buffer = 0  # contains oil which was added in current step
+        self.evaporation_rate = 0
 
     def contain_oil(self) -> bool:
         return self.oil_mass > 0
@@ -56,8 +57,9 @@ class Point:
         if self.topography == TopographyState.LAND:
             self.process_seashore_ineraction(delta_time)
         # TODO other processes
-        self.process_evaporation(delta_time)
-        self.process_natural_dispersion(delta_time, 0.0) # 0.0 bo nie wiem o co wam tu chodzi
+        delta_f = self.process_evaporation(delta_time)
+        self.process_natural_dispersion(delta_time)
+        self.viscosity_change(delta_f, 0.01) # #TODO water content?? 
 
         # to na końcu na pewno
         self.process_advection(delta_time)
@@ -77,8 +79,10 @@ class Point:
             self.initial_values.boiling_point / self.cell.temperature)))  # [Pa]
         R = 8.314  # [J/(mol*K)]
 
-        evaporation_rate = (K * (self.initial_values.molar_mass / 1000) * P) / (R * self.cell.temperature)
-        self.oil_mass -= delta_time * POINT_SIDE_SIZE * POINT_SIDE_SIZE * evaporation_rate  # TODO check if sign is correct
+        self.evaporation_rate = (K * (self.initial_values.molar_mass / 1000) * P) / (R * self.cell.temperature)
+        delta_f = -1 * delta_time * POINT_SIDE_SIZE * POINT_SIDE_SIZE * self.evaporation_rate  # TODO check if sign is correct
+        self.oil_mass += delta_f
+        return delta_f
 
     def process_seashore_ineraction(self, delta_time: float) -> None:
         delta_mass = -log(2) * self.oil_mass * delta_time / (3600 * 24)
@@ -93,9 +97,9 @@ class Point:
             self.world[self.x+int(delta_r[0])][self.y+int(delta_r[1])].oil_buffer += self.oil_mass
         self.oil_mass = 0
 
-    def process_natural_dispersion(self, delta_time: float, evaporation_rate: float) -> None: #TODO evaporation rate - tam na koncu dokumentu jest to opisane ale nw :v
+    def process_natural_dispersion(self, delta_time: float) -> None:
         Da = 0.11 * (sqrt(self.cell.wind_velocity[0]**2+self.cell.wind_velocity[1]**2) + 1) ** 2
-        interfacial_tension = self.initial_values.interfacial_tension * (1 + evaporation_rate) 
+        interfacial_tension = self.initial_values.interfacial_tension * (1 + self.evaporation_rate) 
         Db = 1 / (1 + 50 * sqrt(self.viscosity) * self.slick_thickness() * interfacial_tension)
         self.oil_mass -= self.oil_mass * Da * Db / (3600 * delta_time)  # TODO check if sign is correct
 
@@ -150,7 +154,7 @@ class SimulationEngine:
 
     def update(self, delta_time):
         self.update_oil_points(delta_time)
-        # self.spread_oil_points(delta_time)
+        self.spread_oil_points(delta_time)
 
         self.total_time += delta_time
 
@@ -161,8 +165,8 @@ class SimulationEngine:
                     point.update(delta_time)
 
     def generate_spreading_pairs(self):
-        rows = [((x, y), (x+1, y)) for x in range(WORLD_SIDE_SIZE) for y in range(WORLD_SIDE_SIZE)]
-        cols = [((x, y), (x, y+1)) for y in range(WORLD_SIDE_SIZE) for x in range(WORLD_SIDE_SIZE)]
+        rows = [((x, y), (x+1, y)) for x in range(WORLD_SIDE_SIZE - 1) for y in range(WORLD_SIDE_SIZE)]
+        cols = [((x, y), (x, y+1)) for y in range(WORLD_SIDE_SIZE - 1) for x in range(WORLD_SIDE_SIZE)]
         return rows + cols
 
     def spread_oil_points(self, delta_time: float):
@@ -176,7 +180,7 @@ class SimulationEngine:
         g = 9.8 
         delta = 1 # TODO
         viscosity = 0.5 * (first.viscosity + second.viscosity)
-        D = 0.48 / self.initial_values.propagation_factor * (V**2 * g * delta / sqrt(vw)) ** (1/3) / sqrt(delta_time)  #TODO tu powinno coś być zamiast tego vw
+        D = 0.48 / self.initial_values.propagation_factor * (V**2 * g * delta / sqrt(viscosity)) ** (1/3) / sqrt(delta_time) 
         delta_mass = 0.5 * (first.oil_mass - second.oil_mass) * (1 - exp(-2 * D/(length**2) * delta_time))
         #TODO dunno czy to powinno byc tu czy nie
         first.oil_mass -= delta_mass
@@ -184,4 +188,4 @@ class SimulationEngine:
 
     def from_coords(self, coord) -> Point:
         x, y = coord
-        return self.world[x][y]  #Nie wiem czy o to tu chodzi ale bez tego world to nie ma chyba sensu (plus nie działa)
+        return self.world[x][y]  
