@@ -218,7 +218,7 @@ class ChildGridScreen(Screen):
             x = 99
             for child in self.grid_parent.children:
                 if self.manager.get_screen('main').engine.world[x // CELL_SIDE_SIZE + 10 * self.curr[0]][
-                    x % CELL_SIDE_SIZE + 10 * self.curr[1]].contain_oil():
+                    x % CELL_SIDE_SIZE + 10 * self.curr[1]].oil_mass > 0.1:
                     child.background_color = self.oil_color
                     child.text = str(
                         round(self.manager.get_screen('main').engine.world[x // CELL_SIDE_SIZE + 10 * self.curr[0]][
