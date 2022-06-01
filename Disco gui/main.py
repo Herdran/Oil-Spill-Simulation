@@ -116,7 +116,7 @@ class MainScreen(Screen):
 
     def update(self):
         if self.flag:
-            self.engine.update(1)
+            self.engine.update(20)
             # i = 99
             size = CELL_SIDE_SIZE * CELL_SIDE_SIZE
             for child in self.grid_parent.children:
