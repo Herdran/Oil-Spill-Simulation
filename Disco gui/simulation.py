@@ -138,7 +138,7 @@ class SimulationEngine:
 
         Point.world = self.world
         self.spreading_pairs = self.generate_spreading_pairs()
-        self.current_oil_volume = 0.00001 # TODO 
+        self.current_oil_volume = 0.1 # TODO 
 
     def start(self, preset_path):
         # TODO load Topography - currently I have no idea how xD
