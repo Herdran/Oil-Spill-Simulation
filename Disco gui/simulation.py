@@ -96,6 +96,8 @@ class Point:
             neighbor = self.world[self.x+cords[0]][self.y+cords[1]]
             if neighbor.topography == TopographyState.SEA:
                 to_share.append(neighbor)
+        if len(to_share) == 0:  # in case of bug
+            return
         delta_mass /= len(to_share)
         for neighbor in to_share:
             neighbor.oil_mass += delta_mass
