@@ -4,7 +4,7 @@ from random import randrange
 from re import S
 import numpy as np
 
-from constatnts import WORLD_SIDE_SIZE, CELL_SIDE_SIZE, POINT_SIDE_SIZE
+from constatnts import *
 
 
 class TopographyState(Enum):
@@ -29,10 +29,11 @@ class Cell:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        self.latitude = CELL_LAT[y]
+        self.longitude = CELL_LON[x]
         self.wind_velocity = np.array([-0.1, -0.6]) #TODO load from topography
         self.wave_velocity = np.array([1.1, 0.2])
         self.temperature = 298  # [K]
-
 
 class Point:
     world = []
@@ -121,8 +122,8 @@ class SimulationEngine:
     def __init__(self):
         self.total_time = 0
         self.initial_values = InitialValues()
-        self.cells = [[Cell(x, y) for y in range(WORLD_SIDE_SIZE)]
-                      for x in range(WORLD_SIDE_SIZE)]
+        self.cells = [[Cell(x, y) for y in range(GRID_SIDE_SIZE)]
+                      for x in range(GRID_SIDE_SIZE)]
         self.world = [[Point(x, y, self.initial_values, self.cells[x // CELL_SIDE_SIZE][y // CELL_SIDE_SIZE])
                        for y in range(WORLD_SIDE_SIZE)]
                       for x in range(WORLD_SIDE_SIZE)]
