@@ -22,23 +22,10 @@ import simulation
 class MyButton(ButtonBehavior, Image):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # self.background_disabled_down = "atlas://data/images/defaulttheme/button_disabled_pressed"
-        # self.background_disabled_normal = "atlas://data/images/defaulttheme/button_disabled"
         self.allow_stretch = True
         self.keep_ratio = False
         self.texture = Texture.create(size=(CELL_SIDE_SIZE, CELL_SIDE_SIZE))
         self.coords = None
-
-    # def texture_handler(self, arr):
-    #     self.texture.blit_buffer(arr, colorfmt='rgb', bufferfmt='ubyte')
-
-    # def on_press(self):
-    #     pass
-    #     print("aaa")
-    #     self.source = 'atlas://data/images/defaulttheme/checkbox_on'
-
-    # def on_release(self):
-    #     self.source = 'atlas://data/images/defaulttheme/checkbox_off'
 
     def update(self, arr):
         self.texture.blit_buffer(arr, colorfmt='rgb', bufferfmt='ubyte')
@@ -49,25 +36,24 @@ class MainScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.flag = False
-        self.amount = GRID_SIDE_SIZE * GRID_SIDE_SIZE
         self.clock = None
+        self.grid_size = GRID_SIDE_SIZE * GRID_SIDE_SIZE
+        self.grid_parent = GridLayout(cols=self.grid_size // (int(self.grid_size ** 0.5)), spacing=2)
+        self.sea_color = [15, 10, 222]
+        self.land_color = [38, 166, 91]
+        self.oil_color = [200, 101, 0]
         self.engine = simulation.SimulationEngine()
         self.engine.start("bruh")
 
-        self.grid_parent = GridLayout(cols=self.amount // (int(self.amount ** 0.5)), spacing=2)
-        self.white_color = [255, 255, 255, 1]
-        self.oil_color = [195, 81, 24, 1]  # Honestly looks shitty
+        for i in range(self.grid_size):
+            ind = (i % (int(self.grid_size ** 0.5)), (i - i % (int(self.grid_size ** 0.5))) // int(self.grid_size ** 0.5))
 
-        for i in range(self.amount):
-            ind = ((i - i % (int(self.amount ** 0.5))) // int(self.amount ** 0.5), i % (int(self.amount ** 0.5)))
-            size = CELL_SIDE_SIZE * CELL_SIDE_SIZE
-            buf = [self.oil_color if self.engine.world[i // CELL_SIDE_SIZE + 10 * ind[0]][
-                i % CELL_SIDE_SIZE + 10 * ind[1]].contain_oil() else self.white_color for i in range(size)]
-            buf2 = [buf[x][y] for x in range(size) for y in range(3)]
+            buf = self.generate_buf(ind)
+            buf2 = [buf[x][y] for x in range(self.grid_size) for y in range(3)]
             arr = array('B', buf2)
 
             btn = MyButton()
-            btn.text = '%s, %s' % (ind[0], ind[1])
+            btn.text = (ind[0], ind[1])
             btn.bind(on_press=self.on_press_func)
             btn.update(arr)
             btn.coords = ind
@@ -111,30 +97,33 @@ class MainScreen(Screen):
 
         self.add_widget(main_widget)
 
+    def generate_buf(self, ind):
+        return [self.land_color if self.engine.world[i % CELL_SIDE_SIZE + 10 * ind[0]][
+                                       i // CELL_SIDE_SIZE + 10 * ind[
+                                           1]].topography == simulation.TopographyState.LAND else self.oil_color if
+        self.engine.world[i % CELL_SIDE_SIZE + 10 * ind[0]][
+            i // CELL_SIDE_SIZE + 10 * ind[1]].oil_mass > 0.01 else self.sea_color for i in range(self.grid_size)]
+
     def on_press_func(self, instance):
-        self.manager.get_screen('child').curr = (int(instance.text[0]), int(instance.text[3]))
+        self.manager.get_screen('child').curr = instance.text
 
     def update(self):
         if self.flag:
             self.engine.update(20)
-            # i = 99
-            size = CELL_SIDE_SIZE * CELL_SIDE_SIZE
             for child in self.grid_parent.children:
-                self.update_texture(child, size)
-                # i -= 1
+                self.update_texture(child)
 
-    def update_texture(self, child, size):
+    def update_texture(self, child):
         ind = child.coords
-        buf = [self.oil_color if self.engine.world[i // CELL_SIDE_SIZE + 10 * ind[0]][
-            i % CELL_SIDE_SIZE + 10 * ind[1]].contain_oil() else self.white_color for i in range(size)]
-        buf2 = [buf[x][y] for x in range(size) for y in range(3)]
+        buf = self.generate_buf(ind)
+        buf2 = [buf[x][y] for x in range(self.grid_size) for y in range(3)]
         arr = array('B', buf2)
         texture = Texture.create(size=(CELL_SIDE_SIZE, CELL_SIDE_SIZE))
         texture.blit_buffer(arr, colorfmt='rgb', bufferfmt='ubyte')
         texture.flip_vertical()
         child.texture = texture
 
-    def start_stop(self, instance):
+    def start_stop(self, *args):
         if self.flag:
             self.flag = False
         else:
@@ -146,7 +135,6 @@ class MainScreen(Screen):
             instance.text = '0'
             self.flag = False
             self.manager.get_screen('child').flag = False
-            # self.manager.get_screen('child').flag = self.flag
 
         self.clock.cancel()
         self.clock = Clock.schedule_interval(lambda a: self.update(), float(instance.text))
@@ -157,7 +145,7 @@ class MainScreen(Screen):
             instance.text = '0'
         self.manager.get_screen('child').oil_to_add_on_click = int(instance.text)
 
-    def change_screen(self, instance):
+    def change_screen(self, *args):
         self.manager.get_screen('child').update_before_entering()
         self.manager.current = 'child'
 
@@ -168,7 +156,7 @@ class ChildGridScreen(Screen):
         self.curr = (0, 0)
         self.flag = False
         self.button_object = None
-        self.amount = CELL_SIDE_SIZE * CELL_SIDE_SIZE
+        self.grid_size = CELL_SIDE_SIZE * CELL_SIDE_SIZE
         self.oil_to_add_on_click = 2
         self.decimal_places = 3
 
@@ -179,18 +167,19 @@ class ChildGridScreen(Screen):
         up_widget = BoxLayout(orientation='horizontal', size_hint=(1, .1))
         up_widget.add_widget(btn)
 
-        self.num_label = Label(text='Currently viewing %d, %d' % (self.curr[0], self.curr[1]))
+        self.num_label = Label(text='')
         up_widget.add_widget(self.num_label)
 
-        self.grid_parent = GridLayout(cols=self.amount // (int(self.amount ** 0.5)), spacing=1)
-        self.white_color = [255, 255, 255, 1]
-        self.oil_color = [195 / 255, 81 / 255, 24 / 255, 1]
+        self.grid_parent = GridLayout(cols=self.grid_size // (int(self.grid_size ** 0.5)), spacing=1)
+        self.sea_color = [15 / 255, 10 / 255, 222 / 255, 1]
+        self.land_color = [38 / 255, 166 / 255, 91 / 255, 1]
+        self.oil_color = [200 / 255, 101 / 255, 0, 1]
 
-        for i in range(self.amount):
-            ind = ((i - i % (int(self.amount ** 0.5))) // int(self.amount ** 0.5), i % (int(self.amount ** 0.5)))
+        for i in range(self.grid_size):
+            ind = ((i - i % (int(self.grid_size ** 0.5))) // int(self.grid_size ** 0.5), i % (int(self.grid_size ** 0.5)))
 
-            btn = Button(background_normal='', background_color=self.white_color, text="0.0")
-            btn.coords = '%s, %s' % (ind[0], ind[1])
+            btn = Button(background_normal='', background_color=self.sea_color, text="")
+            btn.coords = (ind[0], ind[1])
             btn.bind(on_press=self.on_press_func)
             self.grid_parent.add_widget(btn)
 
@@ -202,32 +191,35 @@ class ChildGridScreen(Screen):
 
         self.add_widget(main_widget)
 
+    def get_point_object(self, coords):
+        return self.manager.get_screen('main').engine.world[coords[1] + 10 * self.curr[0]][coords[0] + 10 * self.curr[1]]
+
     def on_press_func(self, instance):
-        if self.oil_to_add_on_click > 0:
-            self.manager.get_screen('main').engine.world[int(instance.coords[0]) + 10 * self.curr[0]][
-                int(instance.coords[3]) + 10 * self.curr[1]].oil_mass += self.oil_to_add_on_click
+        point = self.get_point_object(instance.coords)
+        if self.oil_to_add_on_click > 0 and point.topography == simulation.TopographyState.SEA:
+            point.oil_mass += self.oil_to_add_on_click
             if instance.background_color != self.oil_color:
                 instance.background_color = self.oil_color
-                self.manager.get_screen('main').update_texture(self.button_object, self.amount)
-        instance.text = str(round(
-            self.manager.get_screen('main').engine.world[int(instance.coords[0]) + 10 * self.curr[0]][
-                int(instance.coords[3]) + 10 * self.curr[1]].oil_mass, self.decimal_places))
+                self.manager.get_screen('main').update_texture(self.button_object)
+            instance.text = str(round(point.oil_mass, self.decimal_places))
 
     def update(self, entering=False):
         if self.flag or entering:
             x = 99
             for child in self.grid_parent.children:
-                if self.manager.get_screen('main').engine.world[x // CELL_SIDE_SIZE + 10 * self.curr[0]][
-                    x % CELL_SIDE_SIZE + 10 * self.curr[1]].oil_mass > 0.1:
+                coords = (x // CELL_SIDE_SIZE, x % CELL_SIDE_SIZE)
+                point = self.get_point_object(coords)
+                child.text = ''
+                if point.topography == simulation.TopographyState.LAND:
+                    child.background_color = self.land_color
+                elif point.oil_mass > 0.01:
                     child.background_color = self.oil_color
-                    child.text = str(
-                        round(self.manager.get_screen('main').engine.world[x // CELL_SIDE_SIZE + 10 * self.curr[0]][
-                                  x % CELL_SIDE_SIZE + 10 * self.curr[1]].oil_mass, self.decimal_places))
+                    child.text = str(round(point.oil_mass, self.decimal_places))
                 else:
-                    child.background_color = self.white_color
+                    child.background_color = self.sea_color
                 x -= 1
 
-    def change_screen(self, instance):
+    def change_screen(self, *args):
         self.manager.current = 'main'
 
     def update_interval(self, new_interval):
@@ -236,8 +228,7 @@ class ChildGridScreen(Screen):
 
     def update_before_entering(self):
         self.num_label.text = 'Currently viewing %d, %d' % (self.curr[0], self.curr[1])
-        self.button_object = self.manager.get_screen('main').grid_parent.children[
-            -(self.curr[0] * 10 + self.curr[1]) + 99]
+        self.button_object = self.manager.get_screen('main').grid_parent.children[-(self.curr[0] + self.curr[1] * 10) + 99]
         self.update(True)
 
 
@@ -247,17 +238,10 @@ class ScreenManagement(ScreenManager):
 
 
 class MainApp(App):
-    # def __init__(self, **kwargs):
-    #     super(MainApp, self).__init__(**kwargs)
-    #
-    #     self.engine = simulation.SimulationEngine()
-
     def build(self):
         sm = ScreenManagement(transition=FadeTransition())
         sm.add_widget(MainScreen(name='main'))
         sm.add_widget(ChildGridScreen(name='child'))
-        # self.engine.start("bruh")
-        # print(self.engine.world[0][0].oil_mass)
         return sm
 
 
