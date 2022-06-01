@@ -98,11 +98,11 @@ class MainScreen(Screen):
         self.add_widget(main_widget)
 
     def generate_buf(self, ind):
-        return [self.land_color if self.engine.world[i % CELL_SIDE_SIZE + 10 * ind[0]][
-                                       i // CELL_SIDE_SIZE + 10 * ind[
-                                           1]].topography == simulation.TopographyState.LAND else self.oil_color if
-        self.engine.world[i % CELL_SIDE_SIZE + 10 * ind[0]][
-            i // CELL_SIDE_SIZE + 10 * ind[1]].oil_mass > 0.01 else self.sea_color for i in range(self.grid_size)]
+        return [self.land_color if self.engine.world[i % CELL_SIDE_SIZE + 10 * ind[0]]
+                                    [i // CELL_SIDE_SIZE + 10 * ind[1]].topography == simulation.TopographyState.LAND
+                else self.oil_color if self.engine.world[i % CELL_SIDE_SIZE + 10 * ind[0]]
+                                    [i // CELL_SIDE_SIZE + 10 * ind[1]].oil_mass > 0.01
+                else self.sea_color for i in range(self.grid_size)]
 
     def on_press_func(self, instance):
         self.manager.get_screen('child').curr = instance.text
@@ -131,10 +131,8 @@ class MainScreen(Screen):
         self.manager.get_screen('child').flag = self.flag
 
     def interval_change(self, instance):
-        if instance.text == '':
-            instance.text = '0'
-            self.flag = False
-            self.manager.get_screen('child').flag = False
+        if instance.text == '' or int(instance.text) < 0.5:
+            instance.text = '0.5'
 
         self.clock.cancel()
         self.clock = Clock.schedule_interval(lambda a: self.update(), float(instance.text))
