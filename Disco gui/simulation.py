@@ -15,13 +15,13 @@ class TopographyState(Enum):
 class InitialValues:
     def __init__(self):
         self.density = 835  # [kg/m^3]
-        self.viscosity = 40  # tbh chuj wi
+        self.viscosity = 10
         self.surface_tension = 30  # [dyne/s]
         self.time_limit = 200  # [h]
         self.emulsion_max_content_water = 0.7  # max content of water in the emulsion
         self.molar_mass = 348.23  # [g/mol] mean
         self.boiling_point = 609  # [K] mean
-        self.interfacial_tension = 30  # [dyna/cm]
+        self.interfacial_tension = 30 # [dyna/cm]
         self.propagation_factor = 2.5
         self.c = 1  # nie wiem co to jest ale oczekuje tego na 71 więc dodałem 1 jako placeholder
 
@@ -53,6 +53,7 @@ class Point:
         return self.oil_mass > 0
 
     def update(self, delta_time: float) -> None:
+        self.process_emulsification(delta_time)
         if self.topography == TopographyState.LAND:
             self.process_seashore_ineraction(delta_time)
             return
@@ -60,7 +61,7 @@ class Point:
         # TODO other processes
         delta_f = self.process_evaporation(delta_time)
         self.process_natural_dispersion(delta_time)
-        self.viscosity_change(delta_f, 0.01) # #TODO water content??
+        self.viscosity_change(delta_f, 0.01) # #TODO water content?? 
 
         # to na końcu na pewno
         self.process_advection(delta_time)
@@ -137,6 +138,15 @@ class SimulationEngine:
         self.world = [[Point(x, y, self.initial_values, self.cells[x // CELL_SIDE_SIZE][y // CELL_SIDE_SIZE])
                        for y in range(WORLD_SIDE_SIZE)]
                       for x in range(WORLD_SIDE_SIZE)]
+
+        #temp ----------
+        for x in range(len(self.world)):
+            for y in range(len(self.world[x])):
+                if(y < 9):
+                    self.world[x][y].topography = TopographyState.LAND
+                    self.world[x][y].oil_mass = 0
+        #---------------
+
         Point.world = self.world
         self.spreading_pairs = self.generate_spreading_pairs()
         self.current_oil_volume = 0 # TODO 
@@ -146,20 +156,8 @@ class SimulationEngine:
         # TODO deserialize initial_values from json (preset_path)
         for points in self.world:
             for point in points:
-                # point.oil_mass = randrange(0, 2)
-                pass
-        # self.world[0][0].oil_mass = 2
-        # self.world[0][1].oil_mass = 2
-        # self.world[0][2].oil_mass = 2
-        # self.world[0][3].oil_mass = 2
-        # self.world[0][4].oil_mass = 2
-        # self.world[0][5].oil_mass = 2
-        # self.world[1][0].oil_mass = 2
-        # self.world[2][0].oil_mass = 2
-        # self.world[3][0].oil_mass = 2
-        # self.world[4][0].oil_mass = 2
-        # self.world[5][0].oil_mass = 2
-        # pass
+                if point.x > 10 and point.x < 30 and point.y > 10 and point.y < 30:
+                    point.oil_mass = randrange(0, 2)
 
     def is_finished(self):
         return self.total_time >= self.initial_values.time_limit
