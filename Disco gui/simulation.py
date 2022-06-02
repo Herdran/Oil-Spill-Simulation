@@ -1,11 +1,10 @@
 from enum import Enum
 from math import exp, log, sqrt
 from random import randrange
-from re import S
 import numpy as np
 
 from constatnts import *
-
+import water_current_data
 
 class TopographyState(Enum):
     LAND = 0
@@ -17,7 +16,7 @@ class InitialValues:
         self.density = 835  # [kg/m^3]
         self.viscosity = 10
         self.surface_tension = 30  # [dyne/s]
-        self.time_limit = 200  # [h]
+        self.time_limit = 24  # [h]
         self.emulsion_max_content_water = 0.7  # max content of water in the emulsion
         self.molar_mass = 348.23  # [g/mol] mean
         self.boiling_point = 609  # [K] mean
@@ -32,9 +31,21 @@ class Cell:
 
         self.latitude = CELL_LAT[y]
         self.longitude = CELL_LON[x]
-        self.wind_velocity = np.array([5, -0.6]) #TODO load from topography
-        self.wave_velocity = np.array([4, 0.2])  # TODO vector
+        self.wind_velocity = np.array([0.4, -0.6]) #TODO load from topography
         self.temperature = 298  # [K]
+        
+        self.default_wave_velocity = np.array([0, 0])
+
+        self.water_current_data = None
+        self.times = None
+
+    def get_wave_vellocity(self, time):
+        if self.water_current_data == None or self.times == None:
+            return self.default_wave_velocity
+        
+        #temp
+        return np.array([self.water_current_data[0].v, self.water_current_data[0].u]) 
+
 
 class Point:
     world = []
@@ -107,7 +118,7 @@ class Point:
     def process_advection(self, delta_time: float) -> None:
         alpha = 1.1
         beta = 0.03
-        delta_r = (alpha * self.cell.wave_velocity + beta * self.cell.wind_velocity) * delta_time
+        delta_r = (alpha * self.cell.get_wave_vellocity(0) + beta * self.cell.wind_velocity) * delta_time
         delta_r /= POINT_SIDE_SIZE
         if 0 <= self.x+int(delta_r[0]) < WORLD_SIDE_SIZE and 0 <= self.y+int(delta_r[1]) < WORLD_SIDE_SIZE:
             self.world[self.x+int(delta_r[0])][self.y+int(delta_r[1])].oil_buffer += self.oil_mass
@@ -160,10 +171,22 @@ class SimulationEngine:
     def start(self, preset_path):
         # TODO load Topography - currently I have no idea how xD
         # TODO deserialize initial_values from json (preset_path)
+
+        self.load_water_current_data()
+
         for points in self.world:
             for point in points:
                 if point.x > 10 and point.x < 30 and point.y > 10 and point.y < 30:
                     point.oil_mass = randrange(0, 2)
+
+    def load_water_current_data(self):
+        stations, times, data = water_current_data.get_data()
+        for cell_row in self.cells:
+            for cell in cell_row:
+                station_id = water_current_data.get_nearest_station(stations, cell.latitude, cell.longitude)
+                cell.water_current_data = data[station_id]
+                cell.times = times
+            
 
     def is_finished(self):
         return self.total_time >= self.initial_values.time_limit

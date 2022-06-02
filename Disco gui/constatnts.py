@@ -8,7 +8,10 @@ LEFT_COORD = -88.77964
 DOWN_COORD = 30.19767
 RIGHT_COORD = -88.72648
 
+CELL_LAT_SIZE = (TOP_COORD - DOWN_COORD)/GRID_SIDE_SIZE
+CELL_LON_SIZE = (RIGHT_COORD - LEFT_COORD)/GRID_SIDE_SIZE
+
 ##############################################
-CELL_LAT = [DOWN_COORD + ((TOP_COORD - DOWN_COORD) * i) for i in range(GRID_SIDE_SIZE)]
-CELL_LON = [LEFT_COORD + ((RIGHT_COORD - LEFT_COORD) * i) for i in range(GRID_SIDE_SIZE)]
+CELL_LAT = [DOWN_COORD + CELL_LON_SIZE/2 + (CELL_LAT_SIZE * i) for i in range(GRID_SIDE_SIZE)]
+CELL_LON = [LEFT_COORD + CELL_LON_SIZE/2 + (CELL_LON_SIZE * i) for i in range(GRID_SIDE_SIZE)]
 ##############################################
