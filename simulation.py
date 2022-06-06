@@ -10,6 +10,7 @@ class TopographyState(Enum):
     LAND = 0
     SEA = 1
 
+
 class InitialValues:
     def __init__(self):
         self.density = 835  # [kg/m^3]
@@ -19,9 +20,10 @@ class InitialValues:
         self.emulsion_max_content_water = 0.7  # max content of water in the emulsion
         self.molar_mass = 348.23  # [g/mol] mean
         self.boiling_point = 609  # [K] mean
-        self.interfacial_tension = 30 # [dyna/cm]
+        self.interfacial_tension = 30  # [dyna/cm]
         self.propagation_factor = 2.5
         self.c = 1  # nie wiem co to jest ale oczekuje tego na 71 więc dodałem 1 jako placeholder
+
 
 class Cell:
     def __init__(self, x, y):
@@ -32,18 +34,18 @@ class Cell:
         self.longitude = CELL_LON[x]
         self.wind_velocity = np.array([1.2, -2.6]) #TODO load from topography
         self.temperature = 298  # [K]
-        
-        self.default_wave_velocity = np.array([0, 0])
+
+        self.default_wave_velocity = np.array([0.0, 0.0])
 
         self.water_current_data = None
         self.times = None
 
     def get_wave_vellocity(self, time):
-        if self.water_current_data == None or self.times == None:
+        if self.water_current_data is None or self.times is None:
             return self.default_wave_velocity
-        
-        #temp
-        return np.array([self.water_current_data[0].v, self.water_current_data[0].u]) 
+
+        # temp
+        return np.array([self.water_current_data[0].v, self.water_current_data[0].u])
 
 
 class Point:
@@ -59,6 +61,7 @@ class Point:
         self.emulsification_rate = 0  # tbh chuj wi
         self.viscosity = initial_values.viscosity  # [cP]
         self.oil_buffer = 0  # contains oil which was added in current step
+        self.advection_buffer = np.array([0, 0], dtype='f')
         self.evaporation_rate = 0
 
     def contain_oil(self) -> bool:
@@ -67,12 +70,13 @@ class Point:
     def update(self, delta_time: float) -> None:
         self.process_emulsification(delta_time)
         if self.topography == TopographyState.LAND:
-            self.process_seashore_ineraction(delta_time)
+            self.process_seashore_interaction(delta_time)
             return
         self.process_emulsification(delta_time)
+        # TODO other processes
         delta_f = self.process_evaporation(delta_time)
         self.process_natural_dispersion(delta_time)
-        self.viscosity_change(delta_f, 0.01) # #TODO water content?? 
+        self.viscosity_change(delta_f, 0.01)  # #TODO water content??
 
         # to na końcu na pewno
         self.process_advection(delta_time)
@@ -97,14 +101,14 @@ class Point:
         self.oil_mass += delta_f
         return delta_f
 
-    def process_seashore_ineraction(self, delta_time: float) -> None:
+    def process_seashore_interaction(self, delta_time: float) -> None:
         delta_mass = log(2) * self.oil_mass * delta_time / (3600 * 24)
         self.oil_mass -= delta_mass
         to_share = []
         for cords in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
-            if not ((0 <= self.x+cords[0] < WORLD_SIDE_SIZE) and (0 <= self.y+cords[1] < WORLD_SIDE_SIZE)):
+            if not ((0 <= self.x + cords[0] < WORLD_SIDE_SIZE) and (0 <= self.y + cords[1] < WORLD_SIDE_SIZE)):
                 continue
-            neighbor = self.world[self.x+cords[0]][self.y+cords[1]]
+            neighbor = self.world[self.x + cords[0]][self.y + cords[1]]
             if neighbor.topography == TopographyState.SEA:
                 to_share.append(neighbor)
         if len(to_share) == 0:  # in case of bug
@@ -118,13 +122,17 @@ class Point:
         beta = 0.03
         delta_r = (alpha * self.cell.get_wave_vellocity(0) + beta * self.cell.wind_velocity) * delta_time
         delta_r /= POINT_SIDE_SIZE
-        if 0 <= self.x+int(delta_r[0]) < WORLD_SIDE_SIZE and 0 <= self.y+int(delta_r[1]) < WORLD_SIDE_SIZE:
-            self.world[self.x+int(delta_r[0])][self.y+int(delta_r[1])].oil_buffer += self.oil_mass
+        self.advection_buffer += delta_r
+        next_x = self.x + int(self.advection_buffer[0])
+        next_y = self.y + int(self.advection_buffer[1])
+        if 0 <= next_x < WORLD_SIDE_SIZE and 0 <= next_y < WORLD_SIDE_SIZE:
+            self.world[next_x][next_y].oil_buffer += self.oil_mass
+            self.advection_buffer -= np.array([next_x-self.x, next_y-self.y])
         self.oil_mass = 0
 
     def process_natural_dispersion(self, delta_time: float) -> None:
-        Da = 0.11 * (sqrt(self.cell.wind_velocity[0]**2+self.cell.wind_velocity[1]**2) + 1) ** 2
-        interfacial_tension = self.initial_values.interfacial_tension * (1 + self.evaporation_rate) 
+        Da = 0.11 * (sqrt(self.cell.wind_velocity[0] ** 2 + self.cell.wind_velocity[1] ** 2) + 1) ** 2
+        interfacial_tension = self.initial_values.interfacial_tension * (1 + self.evaporation_rate)
         Db = 1 / (1 + 50 * sqrt(self.viscosity) * self.slick_thickness() * interfacial_tension)
         self.oil_mass -= self.oil_mass * Da * Db / (3600 * delta_time)
 
@@ -135,12 +143,13 @@ class Point:
     def viscosity_change(self, delta_F: float, delta_Y: float) -> None:
         C2 = 10
         delta_viscosity = (C2 * self.viscosity * delta_F + 2.5 * self.viscosity * delta_Y) / (
-                    (1 - self.initial_values.emulsion_max_content_water * delta_Y) ** 2)
+                (1 - self.initial_values.emulsion_max_content_water * delta_Y) ** 2)
         self.viscosity += delta_viscosity  # TODO check if sign is correct
 
     def pour_from_buffer(self):
         self.oil_mass += self.oil_buffer
         self.oil_buffer = 0
+
 
 class SimulationEngine:
     def __init__(self):
@@ -152,19 +161,18 @@ class SimulationEngine:
                        for y in range(WORLD_SIDE_SIZE)]
                       for x in range(WORLD_SIDE_SIZE)]
 
-        #temp ----------
+        # temp ----------
         for x in range(len(self.world)):
             for y in range(len(self.world[x])):
-                if(y < 9):
+                if (y < 9):
                     self.world[x][y].topography = TopographyState.LAND
                     self.world[x][y].oil_mass = 0
-        #---------------
+        # ---------------
 
         Point.world = self.world
         self.spreading_pairs = self.generate_spreading_pairs()
 
-        self.current_oil_volume = 0.1 # TODO 
-
+        self.current_oil_volume = 0.1  # TODO
 
     def start(self, preset_path):
         # TODO load Topography - currently I have no idea how xD
@@ -176,6 +184,7 @@ class SimulationEngine:
             for point in points:
                 if point.x > 10 and point.x < 30 and point.y > 10 and point.y < 30:
                     point.oil_mass = randrange(0, 2)
+                    point.oil_mass *= 100000
 
     def load_water_current_data(self):
         stations, times, data = water_current_data.get_data()
@@ -184,7 +193,6 @@ class SimulationEngine:
                 station_id = water_current_data.get_nearest_station(stations, cell.latitude, cell.longitude)
                 cell.water_current_data = data[station_id]
                 cell.times = times
-            
 
     def is_finished(self):
         return self.total_time >= self.initial_values.time_limit
@@ -205,27 +213,28 @@ class SimulationEngine:
                 point.pour_from_buffer()
 
     def generate_spreading_pairs(self):
-        rows = [((x, y), (x+1, y)) for x in range(WORLD_SIDE_SIZE - 1) for y in range(WORLD_SIDE_SIZE)]
-        cols = [((x, y), (x, y+1)) for y in range(WORLD_SIDE_SIZE - 1) for x in range(WORLD_SIDE_SIZE)]
+        rows = [((x, y), (x + 1, y)) for x in range(WORLD_SIDE_SIZE - 1) for y in range(WORLD_SIDE_SIZE)]
+        cols = [((x, y), (x, y + 1)) for y in range(WORLD_SIDE_SIZE - 1) for x in range(WORLD_SIDE_SIZE)]
         return rows + cols
 
     def spread_oil_points(self, delta_time: float):
         for pair in self.spreading_pairs:
             first, second = pair
             self.process_spread_between(delta_time, self.from_coords(first), self.from_coords(second))
-    
-    def process_spread_between(self, delta_time: float, first: Point, second: Point) -> None:  
-        length = 1 # TODO dunno xD
+
+    def process_spread_between(self, delta_time: float, first: Point, second: Point) -> None:
+        length = POINT_SIDE_SIZE  # TODO dunno xD
         V = self.current_oil_volume
-        g = 9.8 
-        delta = 1 # TODO
+        g = 9.8
+        delta = 1  # TODO
         viscosity = 0.5 * (first.viscosity + second.viscosity)
-        D = 0.48 / self.initial_values.propagation_factor * (V**2 * g * delta / sqrt(viscosity)) ** (1/3) / sqrt(delta_time) 
-        delta_mass = 0.5 * (first.oil_mass - second.oil_mass) * (1 - exp(-2 * D/(length**2) * delta_time))
-        #TODO dunno czy to powinno byc tu czy nie
+        D = 0.48 / self.initial_values.propagation_factor * (V ** 2 * g * delta / sqrt(viscosity)) ** (1 / 3) / sqrt(
+            delta_time)
+        delta_mass = 0.5 * (first.oil_mass - second.oil_mass) * (1 - exp(-2 * D / (length ** 2) * delta_time))
+        # TODO dunno czy to powinno byc tu czy nie
         first.oil_mass -= delta_mass
         second.oil_mass += delta_mass
 
     def from_coords(self, coord) -> Point:
         x, y = coord
-        return self.world[x][y]  
+        return self.world[x][y]
