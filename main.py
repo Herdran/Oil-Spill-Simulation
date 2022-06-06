@@ -133,8 +133,8 @@ class MainScreen(Screen):
         self.manager.get_screen('child').flag = self.flag
 
     def interval_change(self, instance):
-        if instance.text == '' or int(instance.text) < 0.5:
-            instance.text = '0.5'
+        if instance.text == '' or int(instance.text) < 0.1:
+            instance.text = '0.1'
 
         self.clock.cancel()
         self.clock = Clock.schedule_interval(lambda a: self.update(), float(instance.text))

@@ -68,12 +68,10 @@ class Point:
         return self.oil_mass > 0
 
     def update(self, delta_time: float) -> None:
-        self.process_emulsification(delta_time)
         if self.topography == TopographyState.LAND:
             self.process_seashore_interaction(delta_time)
             return
         self.process_emulsification(delta_time)
-        # TODO other processes
         delta_f = self.process_evaporation(delta_time)
         self.process_natural_dispersion(delta_time)
         self.viscosity_change(delta_f, 0.01)  # #TODO water content??
@@ -97,8 +95,9 @@ class Point:
         R = 8.314  # [J/(mol*K)]
 
         self.evaporation_rate = (K * (self.initial_values.molar_mass / 1000) * P) / (R * self.cell.temperature)
-        delta_f = -1 * delta_time * POINT_SIDE_SIZE * POINT_SIDE_SIZE * self.evaporation_rate
-        self.oil_mass += delta_f
+        delta_mass = -1 * delta_time * POINT_SIDE_SIZE * POINT_SIDE_SIZE * self.evaporation_rate
+        delta_f = -delta_mass / self.oil_mass
+        self.oil_mass += delta_mass
         return delta_f
 
     def process_seashore_interaction(self, delta_time: float) -> None:
@@ -206,7 +205,7 @@ class SimulationEngine:
     def update_oil_points(self, delta_time):
         for points in self.world:
             for point in points:
-                if point.contain_oil:
+                if point.contain_oil():
                     point.update(delta_time)
         for points in self.world:
             for point in points:
@@ -223,7 +222,7 @@ class SimulationEngine:
             self.process_spread_between(delta_time, self.from_coords(first), self.from_coords(second))
 
     def process_spread_between(self, delta_time: float, first: Point, second: Point) -> None:
-        length = POINT_SIDE_SIZE  # TODO dunno xD
+        length = POINT_SIDE_SIZE
         V = self.current_oil_volume
         g = 9.8
         delta = 1  # TODO
