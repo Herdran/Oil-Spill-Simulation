@@ -17,6 +17,7 @@ total_time = 0
 
 class InitialValues:
     def __init__(self):
+        self.water_density = 997 # [kg/m^3]
         self.density = 835  # [kg/m^3]
         self.viscosity = 10
         self.surface_tension = 30  # [dyne/s]
@@ -174,7 +175,7 @@ class SimulationEngine:
         Point.world = self.world
         self.spreading_pairs = self.generate_spreading_pairs()
 
-        self.current_oil_volume = 0.1  # TODO
+        self.current_oil_volume = 100
 
     def start(self, preset_path):
         # TODO load Topography - currently I have no idea how xD
@@ -201,6 +202,11 @@ class SimulationEngine:
 
     def update(self, delta_time):
         self.update_oil_points(delta_time)
+     
+        for points in self.world:
+            for point in points:
+                point.pour_from_buffer()
+     
         self.spread_oil_points(delta_time)
 
         global total_time
@@ -211,10 +217,7 @@ class SimulationEngine:
             for point in points:
                 if point.contain_oil():
                     point.update(delta_time)
-        for points in self.world:
-            for point in points:
-                point.pour_from_buffer()
-
+     
     def generate_spreading_pairs(self):
         rows = [((x, y), (x + 1, y)) for x in range(WORLD_SIDE_SIZE - 1) for y in range(WORLD_SIDE_SIZE)]
         cols = [((x, y), (x, y + 1)) for y in range(WORLD_SIDE_SIZE - 1) for x in range(WORLD_SIDE_SIZE)]
@@ -226,15 +229,18 @@ class SimulationEngine:
             self.process_spread_between(delta_time, self.from_coords(first), self.from_coords(second))
 
     def process_spread_between(self, delta_time: float, first: Point, second: Point) -> None:
+        if not first.contain_oil() and not second.contain_oil():
+            return
+        
         length = POINT_SIDE_SIZE
         V = self.current_oil_volume
         g = 9.8
-        delta = 1  # TODO
+        delta = (self.initial_values.water_density - self.initial_values.density) / self.initial_values.water_density;
         viscosity = 0.5 * (first.viscosity + second.viscosity)
         D = 0.48 / self.initial_values.propagation_factor * (V ** 2 * g * delta / sqrt(viscosity)) ** (1 / 3) / sqrt(
             delta_time)
         delta_mass = 0.5 * (first.oil_mass - second.oil_mass) * (1 - exp(-2 * D / (length ** 2) * delta_time))
-        # TODO dunno czy to powinno byc tu czy nie
+        
         first.oil_mass -= delta_mass
         second.oil_mass += delta_mass
 
