@@ -6,9 +6,13 @@ import numpy as np
 from constatnts import *
 import water_current_data
 
+
 class TopographyState(Enum):
     LAND = 0
     SEA = 1
+
+
+total_time = 0
 
 
 class InitialValues:
@@ -40,12 +44,12 @@ class Cell:
         self.water_current_data = None
         self.times = None
 
-    def get_wave_vellocity(self, time):
+    def get_wave_vellocity(self):
         if self.water_current_data is None or self.times is None:
             return self.default_wave_velocity
 
         # temp
-        return np.array([self.water_current_data[0].v, self.water_current_data[0].u])
+        return np.array([self.water_current_data[int(total_time/3600)].v, self.water_current_data[int(total_time/3600)].u])
 
 
 class Point:
@@ -119,7 +123,7 @@ class Point:
     def process_advection(self, delta_time: float) -> None:
         alpha = 1.1
         beta = 0.03
-        delta_r = (alpha * self.cell.get_wave_vellocity(0) + beta * self.cell.wind_velocity) * delta_time
+        delta_r = (alpha * self.cell.get_wave_vellocity() + beta * self.cell.wind_velocity) * delta_time
         delta_r /= POINT_SIDE_SIZE
         self.advection_buffer += delta_r
         next_x = self.x + int(self.advection_buffer[0])
@@ -152,7 +156,6 @@ class Point:
 
 class SimulationEngine:
     def __init__(self):
-        self.total_time = 0
         self.initial_values = InitialValues()
         self.cells = [[Cell(x, y) for y in range(GRID_SIDE_SIZE)]
                       for x in range(GRID_SIDE_SIZE)]
@@ -194,13 +197,14 @@ class SimulationEngine:
                 cell.times = times
 
     def is_finished(self):
-        return self.total_time >= self.initial_values.time_limit
+        return total_time >= self.initial_values.time_limit
 
     def update(self, delta_time):
         self.update_oil_points(delta_time)
         self.spread_oil_points(delta_time)
 
-        self.total_time += delta_time
+        global total_time
+        total_time += delta_time
 
     def update_oil_points(self, delta_time):
         for points in self.world:
