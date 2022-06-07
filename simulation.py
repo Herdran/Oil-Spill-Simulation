@@ -236,11 +236,11 @@ class SimulationEngine:
         V = self.current_oil_volume
         g = 9.8
         delta = (self.initial_values.water_density - self.initial_values.density) / self.initial_values.water_density;
-        viscosity = 0.5 * (first.viscosity + second.viscosity)
-        D = 0.48 / self.initial_values.propagation_factor * (V ** 2 * g * delta / sqrt(viscosity)) ** (1 / 3) / sqrt(
+        viscosity = 1e-6
+        D = 0.49 / self.initial_values.propagation_factor * (V ** 2 * g * delta / sqrt(viscosity)) ** (1 / 3) / sqrt(
             delta_time)
-        delta_mass = 0.5 * (first.oil_mass - second.oil_mass) * (1 - exp(-2 * D / (length ** 2) * delta_time))
-        
+        delta_mass = 0.5 * (second.oil_mass - first.oil_mass) * (1 - exp(-2 * D / (length ** 2) * delta_time))
+    
         first.oil_mass -= delta_mass
         second.oil_mass += delta_mass
 
