@@ -229,7 +229,7 @@ class SimulationEngine:
             self.process_spread_between(delta_time, self.from_coords(first), self.from_coords(second))
 
     def process_spread_between(self, delta_time: float, first: Point, second: Point) -> None:
-        if not first.contain_oil() and not second.contain_oil():
+        if not (first.contain_oil() or second.contain_oil() or first.topography == TopographyState.SEA and second.topography == TopographyState.SEA):
             return
         
         length = POINT_SIDE_SIZE
