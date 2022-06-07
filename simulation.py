@@ -49,7 +49,7 @@ class Cell:
             return self.default_wave_velocity
 
         # temp
-        return np.array([self.water_current_data[int(total_time/3600)].v, self.water_current_data[int(total_time/3600)].u])
+        return np.array([self.water_current_data[int(total_time/3600)%13].v, self.water_current_data[int(total_time/3600)%13].u])
 
 
 class Point:
