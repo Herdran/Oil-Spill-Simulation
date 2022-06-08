@@ -18,11 +18,11 @@ total_time = 0
 
 class InitialValues:
     def __init__(self):
-        self.water_density = 997 # [kg/m^3]
+        self.water_density = 997  # [kg/m^3]
         self.density = 835  # [kg/m^3]
         self.viscosity = 10
         self.surface_tension = 30  # [dyne/s]
-        self.time_limit = 24*60*60  # [s]
+        self.time_limit = 24 * 60 * 60  # [s]
         self.emulsion_max_content_water = 0.7  # max content of water in the emulsion
         self.molar_mass = 348.23  # [g/mol] mean
         self.boiling_point = 609  # [K] mean
@@ -38,7 +38,7 @@ class Cell:
 
         self.latitude = CELL_LAT[y]
         self.longitude = CELL_LON[x]
-        self.wind_velocity = np.array([1.2, -2.6]) #TODO load from topography
+        self.wind_velocity = np.array([1.2, -2.6])  # TODO load from topography
         self.temperature = 298  # [K]
 
         self.default_wave_velocity = np.array([0.0, 0.0])
@@ -51,7 +51,8 @@ class Cell:
             return self.default_wave_velocity
 
         # temp
-        return np.array([self.water_current_data[int(total_time/3600)%13].v, self.water_current_data[int(total_time/3600)%13].u])
+        return np.array([self.water_current_data[int(total_time / 3600) % 13].v,
+                         self.water_current_data[int(total_time / 3600) % 13].u])
 
 
 class Point:
@@ -84,7 +85,6 @@ class Point:
 
         # to na końcu na pewno
         self.process_advection(delta_time)
-
 
     def process_emulsification(self, delta_time: float) -> None:
         K = 2.0e-6
@@ -132,7 +132,7 @@ class Point:
         next_y = self.y + int(self.advection_buffer[1])
         if 0 <= next_x < WORLD_SIDE_SIZE and 0 <= next_y < WORLD_SIDE_SIZE:
             self.world[next_x][next_y].oil_buffer += self.oil_mass
-            self.advection_buffer -= np.array([next_x-self.x, next_y-self.y])
+            self.advection_buffer -= np.array([next_x - self.x, next_y - self.y])
         self.oil_mass = 0
 
     def process_natural_dispersion(self, delta_time: float) -> None:
@@ -203,11 +203,11 @@ class SimulationEngine:
 
     def update(self, delta_time):
         self.update_oil_points(delta_time)
-     
+
         for points in self.world:
             for point in points:
                 point.pour_from_buffer()
-     
+
         self.spread_oil_points(delta_time)
 
         for points in self.world:
@@ -222,13 +222,13 @@ class SimulationEngine:
             for point in points:
                 if point.contain_oil():
                     point.update(delta_time)
-     
+
     def generate_spreading_pairs(self):
         return (
-            [((x, y), (x + 1, y)) for x in range(WORLD_SIDE_SIZE - 1, 2) for y in range(WORLD_SIDE_SIZE)]
-            +[((x, y), (x + 1, y)) for x in range(1, WORLD_SIDE_SIZE - 1, 2) for y in range(WORLD_SIDE_SIZE)]
-            +[((x, y), (x, y + 1)) for y in range(WORLD_SIDE_SIZE - 1, 2) for x in range(WORLD_SIDE_SIZE)]
-            +[((x, y), (x, y + 1)) for y in range(1, WORLD_SIDE_SIZE - 1, 2) for x in range(WORLD_SIDE_SIZE)]
+                [((x, y), (x + 1, y)) for x in range(0, WORLD_SIDE_SIZE - 1, 2) for y in range(WORLD_SIDE_SIZE)]
+                + [((x, y), (x + 1, y)) for x in range(1, WORLD_SIDE_SIZE - 1, 2) for y in range(WORLD_SIDE_SIZE)]
+                + [((x, y), (x, y + 1)) for y in range(0, WORLD_SIDE_SIZE - 1, 2) for x in range(WORLD_SIDE_SIZE)]
+                + [((x, y), (x, y + 1)) for y in range(1, WORLD_SIDE_SIZE - 1, 2) for x in range(WORLD_SIDE_SIZE)]
         )
 
     def spread_oil_points(self, delta_time: float):
@@ -237,9 +237,10 @@ class SimulationEngine:
             self.process_spread_between(delta_time, self.from_coords(first), self.from_coords(second))
 
     def process_spread_between(self, delta_time: float, first: Point, second: Point) -> None:
-        if not (first.contain_oil() or second.contain_oil()) or not (first.topography == TopographyState.SEA and second.topography == TopographyState.SEA):
+        if not (first.contain_oil() or second.contain_oil()) or not (
+                first.topography == TopographyState.SEA and second.topography == TopographyState.SEA):
             return
-        
+
         length = POINT_SIDE_SIZE
         V = self.current_oil_volume
         g = 9.8
@@ -249,9 +250,6 @@ class SimulationEngine:
             delta_time)
         delta_mass = 0.5 * (second.oil_mass - first.oil_mass) * (1 - exp(-2 * D / (length ** 2) * delta_time))
 
-        ratio = 0
-        from_cell = None
-        to_cell = None
         if delta_mass < 0:
             ratio = delta_mass / -first.oil_mass
             from_cell = first
@@ -264,8 +262,6 @@ class SimulationEngine:
         real_delta = rand() * ratio * from_cell.oil_mass
         from_cell.oil_mass -= real_delta
         to_cell.oil_mass += real_delta
-
-
 
     def from_coords(self, coord) -> Point:
         x, y = coord
