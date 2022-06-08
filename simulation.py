@@ -1,6 +1,7 @@
 from enum import Enum
 from math import exp, log, sqrt
 from random import randrange
+from random import random as rand
 import numpy as np
 
 from constatnts import *
@@ -175,7 +176,7 @@ class SimulationEngine:
         Point.world = self.world
         self.spreading_pairs = self.generate_spreading_pairs()
 
-        self.current_oil_volume = 0.01
+        self.current_oil_volume = 100
 
     def start(self, preset_path):
         # TODO load Topography - currently I have no idea how xD
@@ -243,13 +244,28 @@ class SimulationEngine:
         V = self.current_oil_volume
         g = 9.8
         delta = (self.initial_values.water_density - self.initial_values.density) / self.initial_values.water_density;
-        viscosity = 1
+        viscosity = 10e-6
         D = 0.49 / self.initial_values.propagation_factor * (V ** 2 * g * delta / sqrt(viscosity)) ** (1 / 3) / sqrt(
             delta_time)
         delta_mass = 0.5 * (second.oil_mass - first.oil_mass) * (1 - exp(-2 * D / (length ** 2) * delta_time))
 
-        first.oil_mass -= delta_mass
-        second.oil_mass += delta_mass
+        ratio = 0
+        from_cell = None
+        to_cell = None
+        if delta_mass < 0:
+            ratio = delta_mass / -first.oil_mass
+            from_cell = first
+            to_cell = second
+        else:
+            ratio = delta_mass / second.oil_mass
+            from_cell = second
+            to_cell = first
+
+        real_delta = rand() * ratio * from_cell.oil_mass
+        from_cell.oil_mass -= real_delta
+        to_cell.oil_mass += real_delta
+
+
 
     def from_coords(self, coord) -> Point:
         x, y = coord
