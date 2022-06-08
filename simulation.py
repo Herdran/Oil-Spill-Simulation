@@ -209,6 +209,10 @@ class SimulationEngine:
      
         self.spread_oil_points(delta_time)
 
+        for points in self.world:
+            for point in points:
+                point.pour_from_buffer()
+
         global total_time
         total_time += delta_time
 
@@ -219,9 +223,12 @@ class SimulationEngine:
                     point.update(delta_time)
      
     def generate_spreading_pairs(self):
-        rows = [((x, y), (x + 1, y)) for x in range(WORLD_SIDE_SIZE - 1) for y in range(WORLD_SIDE_SIZE)]
-        cols = [((x, y), (x, y + 1)) for y in range(WORLD_SIDE_SIZE - 1) for x in range(WORLD_SIDE_SIZE)]
-        return rows + cols
+        return (
+            [((x, y), (x + 1, y)) for x in range(WORLD_SIDE_SIZE - 1, 2) for y in range(WORLD_SIDE_SIZE)]
+            +[((x, y), (x + 1, y)) for x in range(1, WORLD_SIDE_SIZE - 1, 2) for y in range(WORLD_SIDE_SIZE)]
+            +[((x, y), (x, y + 1)) for y in range(WORLD_SIDE_SIZE - 1, 2) for x in range(WORLD_SIDE_SIZE)]
+            +[((x, y), (x, y + 1)) for y in range(1, WORLD_SIDE_SIZE - 1, 2) for x in range(WORLD_SIDE_SIZE)]
+        )
 
     def spread_oil_points(self, delta_time: float):
         for pair in self.spreading_pairs:
@@ -236,13 +243,13 @@ class SimulationEngine:
         V = self.current_oil_volume
         g = 9.8
         delta = (self.initial_values.water_density - self.initial_values.density) / self.initial_values.water_density;
-        viscosity = 1e-6
+        viscosity = 0.1
         D = 0.49 / self.initial_values.propagation_factor * (V ** 2 * g * delta / sqrt(viscosity)) ** (1 / 3) / sqrt(
             delta_time)
         delta_mass = 0.5 * (second.oil_mass - first.oil_mass) * (1 - exp(-2 * D / (length ** 2) * delta_time))
     
-        first.oil_mass -= delta_mass
-        second.oil_mass += delta_mass
+        first.oil_buffer -= delta_mass
+        second.oil_buffer += delta_mass
 
     def from_coords(self, coord) -> Point:
         x, y = coord
