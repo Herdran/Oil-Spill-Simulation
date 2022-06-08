@@ -175,7 +175,7 @@ class SimulationEngine:
         Point.world = self.world
         self.spreading_pairs = self.generate_spreading_pairs()
 
-        self.current_oil_volume = 100
+        self.current_oil_volume = 0.01
 
     def start(self, preset_path):
         # TODO load Topography - currently I have no idea how xD
@@ -236,20 +236,20 @@ class SimulationEngine:
             self.process_spread_between(delta_time, self.from_coords(first), self.from_coords(second))
 
     def process_spread_between(self, delta_time: float, first: Point, second: Point) -> None:
-        if not (first.contain_oil() or second.contain_oil() or first.topography == TopographyState.SEA and second.topography == TopographyState.SEA):
+        if not (first.contain_oil() or second.contain_oil()) or not (first.topography == TopographyState.SEA and second.topography == TopographyState.SEA):
             return
         
         length = POINT_SIDE_SIZE
         V = self.current_oil_volume
         g = 9.8
         delta = (self.initial_values.water_density - self.initial_values.density) / self.initial_values.water_density;
-        viscosity = 0.1
+        viscosity = 1
         D = 0.49 / self.initial_values.propagation_factor * (V ** 2 * g * delta / sqrt(viscosity)) ** (1 / 3) / sqrt(
             delta_time)
         delta_mass = 0.5 * (second.oil_mass - first.oil_mass) * (1 - exp(-2 * D / (length ** 2) * delta_time))
-    
-        first.oil_buffer -= delta_mass
-        second.oil_buffer += delta_mass
+
+        first.oil_mass -= delta_mass
+        second.oil_mass += delta_mass
 
     def from_coords(self, coord) -> Point:
         x, y = coord
