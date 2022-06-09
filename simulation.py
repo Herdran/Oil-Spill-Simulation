@@ -186,7 +186,7 @@ class SimulationEngine:
 
         for points in self.world:
             for point in points:
-                if point.x > 10 and point.x < 30 and point.y > 10 and point.y < 30:
+                if 45 < point.x < 55 and 45 < point.y < 55:
                     point.oil_mass = randrange(0, 2)
                     point.oil_mass *= 100000
 

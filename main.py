@@ -20,6 +20,8 @@ from constatnts import WORLD_SIDE_SIZE, CELL_SIDE_SIZE, POINT_SIDE_SIZE, GRID_SI
     GUI_TER_COLOR, ITER_AS_SEC
 import simulation
 
+MINIMAL_VALUE_TO_SHOW = 10
+
 
 class MyButton(ButtonBehavior, Image):
     def __init__(self, **kwargs):
@@ -186,7 +188,7 @@ class MainScreen(Screen):
         for i in range(self.grid_size):
             curr_point = self.engine.world[i % CELL_SIDE_SIZE + 10 * ind[0]][i // CELL_SIDE_SIZE + 10 * ind[1]]
             arr.append(self.land_color if curr_point.topography == simulation.TopographyState.LAND
-                       else self.oil_color if curr_point.oil_mass > 0.01 else self.sea_color)
+                       else self.oil_color if curr_point.oil_mass > MINIMAL_VALUE_TO_SHOW else self.sea_color)
             self.global_oil_amount += curr_point.oil_mass
         return arr
 
@@ -261,7 +263,7 @@ class ChildGridScreen(Screen):
         self.currently_viewed = False
         self.curr = (0, 0)
         self.oil_to_add_on_click = 10000
-        self.decimal_places = 3
+        self.decimal_places = 2
 
         btn = Button(background_normal='', background_color=GUI_TER_COLOR,
                      text='<-- Main screen', size_hint=(.2, 1))
@@ -321,7 +323,7 @@ class ChildGridScreen(Screen):
                 child.text = ''
                 if point.topography == simulation.TopographyState.LAND:
                     child.background_color = self.land_color
-                elif point.oil_mass > 10 ** -self.decimal_places:
+                elif point.oil_mass > MINIMAL_VALUE_TO_SHOW:
                     child.background_color = self.oil_color
                     child.text = str(round(point.oil_mass, self.decimal_places))
                 else:
