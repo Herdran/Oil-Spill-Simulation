@@ -184,12 +184,7 @@ class SimulationEngine:
 
         self.load_water_current_data()
 
-        for points in self.world:
-            for point in points:
-                if 45 < point.x < 55 and 45 < point.y < 55:
-                    point.oil_mass = randrange(0, 2)
-                    point.oil_mass *= 100000
-
+        
     def load_water_current_data(self):
         stations, times, data = water_current_data.get_data()
         for cell_row in self.cells:
