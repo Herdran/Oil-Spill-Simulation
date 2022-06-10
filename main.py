@@ -47,7 +47,7 @@ class MainScreen(Screen):
         self.app_running = False
         self.clock = None
         self.grid_size = GRID_SIDE_SIZE * GRID_SIDE_SIZE
-        self.grid_parent = GridLayout(cols=self.grid_size // (int(self.grid_size ** 0.5)), spacing=1,
+        self.grid_parent = GridLayout(cols=self.grid_size // (int(self.grid_size ** 0.5)), spacing=0,
                                       size_hint=(.85, 1))
         self.sea_color = [15, 10, 222]
         self.land_color = [38, 166, 91]
@@ -281,7 +281,7 @@ class ChildGridScreen(Screen):
         self.num_label = Label(text='')
         up_widget.add_widget(self.num_label)
 
-        self.grid_parent = GridLayout(cols=self.grid_size // (int(self.grid_size ** 0.5)), spacing=1)
+        self.grid_parent = GridLayout(cols=self.grid_size // (int(self.grid_size ** 0.5)), spacing=0)
 
         for i in range(self.grid_size):
             ind = (
