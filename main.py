@@ -12,7 +12,6 @@ from kivy.graphics import Rectangle, Color
 from array import array
 from kivy.uix.image import Image
 from kivy.uix.behaviors import ButtonBehavior
-from kivymd.app import MDApp
 
 import random
 
@@ -352,11 +351,11 @@ class ScreenManagement(ScreenManager):
         super(ScreenManagement, self).__init__(**kwargs)
 
 
-class MainApp(MDApp):
+class MainApp(App):
     def build(self):
         # self.theme_cls.theme_style = "Light"
-        sm = ScreenManagement(transition=NoTransition())
-        # sm = ScreenManagement(transition=FadeTransition())
+        # sm = ScreenManagement(transition=NoTransition())
+        sm = ScreenManagement(transition=FadeTransition())
         sm.add_widget(MainScreen(name='main'))
         sm.add_widget(ChildGridScreen(name='child'))
         return sm
