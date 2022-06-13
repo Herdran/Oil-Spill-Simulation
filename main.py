@@ -2,9 +2,8 @@ from kivy.app import App
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
-from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition, NoTransition
+from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.uix.label import Label
-from kivy.uix.slider import Slider
 from kivy.uix.textinput import TextInput
 from kivy.clock import Clock
 from kivy.graphics.texture import Texture
@@ -12,8 +11,7 @@ from kivy.graphics import Rectangle, Color
 from array import array
 from kivy.uix.image import Image
 from kivy.uix.behaviors import ButtonBehavior
-
-import random
+from kivy.uix.switch import Switch
 
 from constatnts import WORLD_SIDE_SIZE, CELL_SIDE_SIZE, POINT_SIDE_SIZE, GRID_SIDE_SIZE, GUI_MAIN_COLOR, GUI_SEC_COLOR, \
     GUI_TER_COLOR, ITER_AS_SEC
@@ -46,7 +44,7 @@ class MainScreen(Screen):
         self.app_running = False
         self.clock = None
         self.grid_size = GRID_SIDE_SIZE * GRID_SIDE_SIZE
-        self.grid_parent = GridLayout(cols=self.grid_size // (int(self.grid_size ** 0.5)), spacing=1,
+        self.grid_parent = GridLayout(cols=self.grid_size // (int(self.grid_size ** 0.5)), spacing=0,
                                       size_hint=(.85, 1))
         self.sea_color = [15, 10, 222]
         self.land_color = [38, 166, 91]
@@ -55,7 +53,8 @@ class MainScreen(Screen):
         self.currently_viewed = True
         self.curr_iter = 0
         self.sim_sec_passed = 0
-        self.global_oil_amount = 0
+        self.global_oil_amount_sea = 0
+        self.global_oil_amount_land = 0
         self.engine = simulation.SimulationEngine()
         self.engine.start("bruh")
 
@@ -82,9 +81,9 @@ class MainScreen(Screen):
 
         self.clock = Clock.schedule_interval(lambda a: self.update(), 1)
 
-        side_panel_parent = BoxLayout(orientation='vertical', size_hint=(.15, 1))
+        side_panel_parent = BoxLayout(orientation='vertical', size_hint=(.18, 1))
 
-        self.info_tab = BoxLayout(orientation='vertical', size_hint=(1, .7), spacing=1)
+        self.info_tab = BoxLayout(orientation='vertical', size_hint=(1, .6), spacing=1)
 
         info_tab_1 = BoxLayout(orientation='horizontal', size_hint=(1, 1))
         info_tab_2 = BoxLayout(orientation='horizontal', size_hint=(1, 1))
@@ -121,40 +120,54 @@ class MainScreen(Screen):
         info_tab_2.add_widget(sim_time_box)
         self.info_tab.add_widget(info_tab_2)
 
-        info_tab_3.add_widget(Button(text='Global oil amount', halign='center', valign='middle',
+        info_tab_3.add_widget(Button(text='Global oil amount [sea]', halign='center', valign='middle',
                                      text_size=(self.width, None), background_color=GUI_MAIN_COLOR,
                                      disabled=True, background_normal='', background_disabled_normal='',
                                      disabled_color=[1, 1, 1, 1], size_hint=(.7, 1)))
-        sim_mass_box = BoxLayout(orientation='vertical', size_hint=(.3, 1))
-        sim_mass_box.add_widget(
-            Button(text=str(self.global_oil_amount // 10 ** 9) + 'Mt', halign='center', valign='bottom',
+        sim_mass_box_sea = BoxLayout(orientation='vertical', size_hint=(.3, 1))
+        sim_mass_box_sea.add_widget(
+            Button(text=str(self.global_oil_amount_sea // 10 ** 9) + 'Mt', halign='center', valign='bottom',
                    text_size=(self.width, None), background_color=GUI_SEC_COLOR,
                    disabled=True, background_normal='', background_disabled_normal='',
                    disabled_color=[1, 1, 1, 1], size_hint=(1, 1)))
-        sim_mass_box.add_widget(
-            Button(text=str((self.global_oil_amount // 10 ** 6) % 10 ** 3) + 'kt', halign='center', valign='bottom',
+        sim_mass_box_sea.add_widget(
+            Button(text=str((self.global_oil_amount_sea // 10 ** 6) % 10 ** 3) + 'kt', halign='center', valign='bottom',
                    text_size=(self.width, None), background_color=GUI_SEC_COLOR,
                    disabled=True, background_normal='', background_disabled_normal='',
                    disabled_color=[1, 1, 1, 1], size_hint=(1, 1)))
-        sim_mass_box.add_widget(
-            Button(text=str((self.global_oil_amount // 10 ** 3) % 10 ** 3) + 't', halign='center', valign='bottom',
+        sim_mass_box_sea.add_widget(
+            Button(text=str((self.global_oil_amount_sea // 10 ** 3) % 10 ** 3) + 't', halign='center', valign='bottom',
                    text_size=(self.width, None), background_color=GUI_SEC_COLOR,
                    disabled=True, background_normal='', background_disabled_normal='',
                    disabled_color=[1, 1, 1, 1], size_hint=(1, 1)))
-        info_tab_3.add_widget(sim_mass_box)
+        info_tab_3.add_widget(sim_mass_box_sea)
         self.info_tab.add_widget(info_tab_3)
 
-        info_tab_4.add_widget(Button(text='Simulation time', halign='center', valign='middle',
+        info_tab_4.add_widget(Button(text='Global oil amount [land]', halign='center', valign='middle',
                                      text_size=(self.width, None), background_color=GUI_MAIN_COLOR,
                                      disabled=True, background_normal='', background_disabled_normal='',
                                      disabled_color=[1, 1, 1, 1], size_hint=(.7, 1)))
-        info_tab_4.add_widget(Button(text='0s', halign='center', valign='bottom',
-                                     text_size=(self.width, None), background_color=GUI_SEC_COLOR,
-                                     disabled=True, background_normal='', background_disabled_normal='',
-                                     disabled_color=[1, 1, 1, 1], size_hint=(.3, 1)))
+        sim_mass_box_land = BoxLayout(orientation='vertical', size_hint=(.3, 1))
+        sim_mass_box_land.add_widget(
+            Button(text=str(self.global_oil_amount_land // 10 ** 9) + 'Mt', halign='center', valign='bottom',
+                   text_size=(self.width, None), background_color=GUI_SEC_COLOR,
+                   disabled=True, background_normal='', background_disabled_normal='',
+                   disabled_color=[1, 1, 1, 1], size_hint=(1, 1)))
+        sim_mass_box_land.add_widget(
+            Button(text=str((self.global_oil_amount_land // 10 ** 6) % 10 ** 3) + 'kt', halign='center',
+                   valign='bottom',
+                   text_size=(self.width, None), background_color=GUI_SEC_COLOR,
+                   disabled=True, background_normal='', background_disabled_normal='',
+                   disabled_color=[1, 1, 1, 1], size_hint=(1, 1)))
+        sim_mass_box_land.add_widget(
+            Button(text=str((self.global_oil_amount_land // 10 ** 3) % 10 ** 3) + 't', halign='center', valign='bottom',
+                   text_size=(self.width, None), background_color=GUI_SEC_COLOR,
+                   disabled=True, background_normal='', background_disabled_normal='',
+                   disabled_color=[1, 1, 1, 1], size_hint=(1, 1)))
+        info_tab_4.add_widget(sim_mass_box_land)
         self.info_tab.add_widget(info_tab_4)
 
-        config = BoxLayout(orientation='vertical', size_hint=(1, .3), padding=14)
+        config = BoxLayout(orientation='vertical', size_hint=(1, .4), padding=14)
 
         with config.canvas.before:
             Color(GUI_TER_COLOR[0], GUI_TER_COLOR[1], GUI_TER_COLOR[2], 1)
@@ -173,6 +186,12 @@ class MainScreen(Screen):
         interval_of_changes = TextInput(text='1', multiline=False, input_filter='float')
         interval_of_changes.bind(on_text_validate=self.interval_change)
         config.add_widget(interval_of_changes)
+
+        config.add_widget(Label(text='Grid switch'))
+
+        self.switch = Switch()
+        self.switch.bind(active=self.change_spacing)
+        config.add_widget(self.switch)
 
         side_panel_parent.add_widget(self.info_tab)
         side_panel_parent.add_widget(config)
@@ -199,7 +218,10 @@ class MainScreen(Screen):
             arr.append((self.land_with_oil_color if curr_point.oil_mass > MINIMAL_VALUE_TO_SHOW else self.land_color)
                        if curr_point.topography == simulation.TopographyState.LAND else self.oil_color
                        if curr_point.oil_mass > MINIMAL_VALUE_TO_SHOW else self.sea_color)
-            self.global_oil_amount += curr_point.oil_mass
+            if curr_point.topography == simulation.TopographyState.SEA:
+                self.global_oil_amount_sea += curr_point.oil_mass
+            else:
+                self.global_oil_amount_land += curr_point.oil_mass
         return arr
 
     def on_press_func(self, instance):
@@ -214,18 +236,28 @@ class MainScreen(Screen):
             self.curr_iter += 1
             self.sim_sec_passed += ITER_AS_SEC
         if self.currently_viewed:
-            self.global_oil_amount = 0
+            self.global_oil_amount_sea = 0
             for child in self.grid_parent.children:
                 self.update_texture(child)
             self.info_tab.children[3].children[0].text = str(self.curr_iter)
+
             self.info_tab.children[2].children[0].children[0].text = str(self.sim_sec_passed % 60) + 's'
             self.info_tab.children[2].children[0].children[1].text = str((self.sim_sec_passed // 60) % 60) + 'm'
             self.info_tab.children[2].children[0].children[2].text = str(self.sim_sec_passed // 3600) + 'h'
+
             self.info_tab.children[1].children[0].children[0].text = str(
-                int(self.global_oil_amount // 10 ** 3) % 10 ** 3) + 't'
+                int(self.global_oil_amount_sea // 10 ** 3) % 10 ** 3) + 't'
             self.info_tab.children[1].children[0].children[1].text = str(
-                int(self.global_oil_amount // 10 ** 6) % 10 ** 3) + 'kt'
-            self.info_tab.children[1].children[0].children[2].text = str(int(self.global_oil_amount // 10 ** 9)) + 'Mt'
+                int(self.global_oil_amount_sea // 10 ** 6) % 10 ** 3) + 'kt'
+            self.info_tab.children[1].children[0].children[2].text = str(
+                int(self.global_oil_amount_sea // 10 ** 9)) + 'Mt'
+
+            self.info_tab.children[0].children[0].children[0].text = str(
+                int(self.global_oil_amount_land // 10 ** 3) % 10 ** 3) + 't'
+            self.info_tab.children[0].children[0].children[1].text = str(
+                int(self.global_oil_amount_land // 10 ** 6) % 10 ** 3) + 'kt'
+            self.info_tab.children[0].children[0].children[2].text = str(
+                int(self.global_oil_amount_land // 10 ** 9)) + 'Mt'
 
     def update_texture(self, child):
         ind = child.coords
@@ -256,6 +288,14 @@ class MainScreen(Screen):
         if instance.text == '':
             instance.text = '0'
         self.manager.get_screen('child').oil_to_add_on_click = float(instance.text)
+
+    def change_spacing(self, switch_object, switch_value):
+        if switch_value:
+            self.grid_parent.spacing = 1
+            self.manager.get_screen('child').grid_parent.spacing = 1
+        else:
+            self.grid_parent.spacing = 0
+            self.manager.get_screen('child').grid_parent.spacing = 0
 
     def update_before_entering(self):
         self.currently_viewed = True
@@ -294,7 +334,7 @@ class ChildGridScreen(Screen):
         self.num_label = Label(text='')
         up_widget.add_widget(self.num_label)
 
-        self.grid_parent = GridLayout(cols=self.grid_size // (int(self.grid_size ** 0.5)), spacing=1)
+        self.grid_parent = GridLayout(cols=self.grid_size // (int(self.grid_size ** 0.5)), spacing=0)
 
         for i in range(self.grid_size):
             ind = (
@@ -330,7 +370,7 @@ class ChildGridScreen(Screen):
             if instance.background_color != self.oil_color:
                 instance.background_color = self.oil_color
                 self.manager.get_screen('main').update_texture(self.button_object)
-            self.manager.get_screen('main').global_oil_amount += self.oil_to_add_on_click
+            self.manager.get_screen('main').global_oil_amount_sea += self.oil_to_add_on_click
             instance.text = str(round(point.oil_mass, self.decimal_places))
 
     def update(self, entering=False):
@@ -377,8 +417,6 @@ class ScreenManagement(ScreenManager):
 
 class MainApp(App):
     def build(self):
-        # self.theme_cls.theme_style = "Light"
-        # sm = ScreenManagement(transition=NoTransition())
         sm = ScreenManagement(transition=FadeTransition())
         sm.add_widget(MainScreen(name='main'))
         sm.add_widget(ChildGridScreen(name='child'))
