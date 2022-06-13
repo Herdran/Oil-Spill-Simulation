@@ -127,7 +127,7 @@ class MainScreen(Screen):
         map_arr = np.array([[0 for _ in range(100)] for __ in range(100)])
         for i in range(100):
             for j in range(100):
-                map_arr[i][j] = (1 if self.engine.world[j][i].topography == simulation.TopographyState.LAND else 0)
+                map_arr[j][i] = (1 if self.engine.world[i][j].topography == simulation.TopographyState.LAND else 0)
         np.savetxt('data.csv', map_arr, delimiter='', fmt='%d')
 
     def change_spacing(self, switch_object, switch_value):
