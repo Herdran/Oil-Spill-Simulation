@@ -237,6 +237,7 @@ class MainScreen(Screen):
             self.sim_sec_passed += ITER_AS_SEC
         if self.currently_viewed:
             self.global_oil_amount_sea = 0
+            self.global_oil_amount_land = 0
             for child in self.grid_parent.children:
                 self.update_texture(child)
             self.info_tab.children[3].children[0].text = str(self.curr_iter)
