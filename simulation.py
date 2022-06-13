@@ -3,6 +3,7 @@ from math import exp, log, sqrt
 from random import randrange
 from random import random as rand
 import numpy as np
+import csv
 
 from constatnts import *
 import water_current_data
@@ -165,21 +166,13 @@ class SimulationEngine:
                        for y in range(WORLD_SIDE_SIZE)]
                       for x in range(WORLD_SIDE_SIZE)]
 
-        # temp ----------
-        for x in range(len(self.world)):
-            for y in range(len(self.world[x])):
-                if (y < 9):
-                    self.world[x][y].topography = TopographyState.LAND
-                    self.world[x][y].oil_mass = 0
-        # ---------------
-
         Point.world = self.world
         self.spreading_pairs = self.generate_spreading_pairs()
 
         self.current_oil_volume = 100
 
     def start(self, preset_path):
-        # TODO load Topography - currently I have no idea how xD
+        self.load_topography()
         # TODO deserialize initial_values from json (preset_path)
 
         self.load_water_current_data()
@@ -261,3 +254,11 @@ class SimulationEngine:
     def from_coords(self, coord) -> Point:
         x, y = coord
         return self.world[x][y]
+
+    def load_topography(self):
+        with open('topography.csv', 'r') as f:
+            reader = csv.reader(f, delimiter=',')
+            for y, row in enumerate(reader):
+                for x, state in enumerate(row):
+                    if state == '1':
+                        self.world[x][y].topography = TopographyState.LAND
