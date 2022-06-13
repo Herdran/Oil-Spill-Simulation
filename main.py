@@ -83,7 +83,7 @@ class MainScreen(Screen):
 
         side_panel_parent = BoxLayout(orientation='vertical', size_hint=(.18, 1))
 
-        self.info_tab = BoxLayout(orientation='vertical', size_hint=(1, .6), spacing=1)
+        self.info_tab = BoxLayout(orientation='vertical', size_hint=(1, .55), spacing=1)
 
         info_tab_1 = BoxLayout(orientation='horizontal', size_hint=(1, 1))
         info_tab_2 = BoxLayout(orientation='horizontal', size_hint=(1, 1))
@@ -167,7 +167,7 @@ class MainScreen(Screen):
         info_tab_4.add_widget(sim_mass_box_land)
         self.info_tab.add_widget(info_tab_4)
 
-        config = BoxLayout(orientation='vertical', size_hint=(1, .4), padding=14)
+        config = BoxLayout(orientation='vertical', size_hint=(1, .45), padding=14, spacing=10)
 
         with config.canvas.before:
             Color(GUI_TER_COLOR[0], GUI_TER_COLOR[1], GUI_TER_COLOR[2], 1)
