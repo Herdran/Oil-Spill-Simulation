@@ -15,7 +15,7 @@ from kivy.uix.behaviors import ButtonBehavior
 
 import random
 
-from constatnts import WORLD_SIDE_SIZE, CELL_SIDE_SIZE, POINT_SIDE_SIZE, GRID_SIDE_SIZE, GUI_MAIN_COLOR, GUI_SEC_COLOR,\
+from constatnts import WORLD_SIDE_SIZE, CELL_SIDE_SIZE, POINT_SIDE_SIZE, GRID_SIDE_SIZE, GUI_MAIN_COLOR, GUI_SEC_COLOR, \
     GUI_TER_COLOR, ITER_AS_SEC
 import simulation
 
@@ -46,11 +46,12 @@ class MainScreen(Screen):
         self.app_running = False
         self.clock = None
         self.grid_size = GRID_SIDE_SIZE * GRID_SIDE_SIZE
-        self.grid_parent = GridLayout(cols=self.grid_size // (int(self.grid_size ** 0.5)), spacing=0,
+        self.grid_parent = GridLayout(cols=self.grid_size // (int(self.grid_size ** 0.5)), spacing=1,
                                       size_hint=(.85, 1))
         self.sea_color = [15, 10, 222]
         self.land_color = [38, 166, 91]
         self.oil_color = [0, 0, 0]
+        self.land_with_oil_color = [0, 100, 0]
         self.currently_viewed = True
         self.curr_iter = 0
         self.sim_sec_passed = 0
@@ -72,6 +73,12 @@ class MainScreen(Screen):
             btn.update(arr)
             btn.coords = ind
             self.grid_parent.add_widget(btn)
+
+        with self.grid_parent.canvas.before:
+            Color(1, 1, 1, 1)
+            self.grid_parent.rect = Rectangle(size=self.grid_parent.size, pos=self.grid_parent.pos)
+
+        self.grid_parent.bind(pos=update_rect, size=update_rect)
 
         self.clock = Clock.schedule_interval(lambda a: self.update(), 1)
 
@@ -119,18 +126,21 @@ class MainScreen(Screen):
                                      disabled=True, background_normal='', background_disabled_normal='',
                                      disabled_color=[1, 1, 1, 1], size_hint=(.7, 1)))
         sim_mass_box = BoxLayout(orientation='vertical', size_hint=(.3, 1))
-        sim_mass_box.add_widget(Button(text=str(self.global_oil_amount // 10**9) + 'Mt', halign='center', valign='bottom',
-                                       text_size=(self.width, None), background_color=GUI_SEC_COLOR,
-                                       disabled=True, background_normal='', background_disabled_normal='',
-                                       disabled_color=[1, 1, 1, 1], size_hint=(1, 1)))
-        sim_mass_box.add_widget(Button(text=str((self.global_oil_amount // 10**6) % 10**3) + 'kt', halign='center', valign='bottom',
-                                       text_size=(self.width, None), background_color=GUI_SEC_COLOR,
-                                       disabled=True, background_normal='', background_disabled_normal='',
-                                       disabled_color=[1, 1, 1, 1], size_hint=(1, 1)))
-        sim_mass_box.add_widget(Button(text=str((self.global_oil_amount // 10**3) % 10**3) + 't', halign='center', valign='bottom',
-                                       text_size=(self.width, None), background_color=GUI_SEC_COLOR,
-                                       disabled=True, background_normal='', background_disabled_normal='',
-                                       disabled_color=[1, 1, 1, 1], size_hint=(1, 1)))
+        sim_mass_box.add_widget(
+            Button(text=str(self.global_oil_amount // 10 ** 9) + 'Mt', halign='center', valign='bottom',
+                   text_size=(self.width, None), background_color=GUI_SEC_COLOR,
+                   disabled=True, background_normal='', background_disabled_normal='',
+                   disabled_color=[1, 1, 1, 1], size_hint=(1, 1)))
+        sim_mass_box.add_widget(
+            Button(text=str((self.global_oil_amount // 10 ** 6) % 10 ** 3) + 'kt', halign='center', valign='bottom',
+                   text_size=(self.width, None), background_color=GUI_SEC_COLOR,
+                   disabled=True, background_normal='', background_disabled_normal='',
+                   disabled_color=[1, 1, 1, 1], size_hint=(1, 1)))
+        sim_mass_box.add_widget(
+            Button(text=str((self.global_oil_amount // 10 ** 3) % 10 ** 3) + 't', halign='center', valign='bottom',
+                   text_size=(self.width, None), background_color=GUI_SEC_COLOR,
+                   disabled=True, background_normal='', background_disabled_normal='',
+                   disabled_color=[1, 1, 1, 1], size_hint=(1, 1)))
         info_tab_3.add_widget(sim_mass_box)
         self.info_tab.add_widget(info_tab_3)
 
@@ -186,8 +196,9 @@ class MainScreen(Screen):
         arr = []
         for i in range(self.grid_size):
             curr_point = self.engine.world[i % CELL_SIDE_SIZE + 10 * ind[0]][i // CELL_SIDE_SIZE + 10 * ind[1]]
-            arr.append(self.land_color if curr_point.topography == simulation.TopographyState.LAND
-                       else self.oil_color if curr_point.oil_mass > MINIMAL_VALUE_TO_SHOW else self.sea_color)
+            arr.append((self.land_with_oil_color if curr_point.oil_mass > MINIMAL_VALUE_TO_SHOW else self.land_color)
+                       if curr_point.topography == simulation.TopographyState.LAND else self.oil_color
+                       if curr_point.oil_mass > MINIMAL_VALUE_TO_SHOW else self.sea_color)
             self.global_oil_amount += curr_point.oil_mass
         return arr
 
@@ -210,9 +221,11 @@ class MainScreen(Screen):
             self.info_tab.children[2].children[0].children[0].text = str(self.sim_sec_passed % 60) + 's'
             self.info_tab.children[2].children[0].children[1].text = str((self.sim_sec_passed // 60) % 60) + 'm'
             self.info_tab.children[2].children[0].children[2].text = str(self.sim_sec_passed // 3600) + 'h'
-            self.info_tab.children[1].children[0].children[0].text = str(int(self.global_oil_amount // 10**3) % 10**3) + 't'
-            self.info_tab.children[1].children[0].children[1].text = str(int(self.global_oil_amount // 10**6) % 10**3) + 'kt'
-            self.info_tab.children[1].children[0].children[2].text = str(int(self.global_oil_amount // 10**9)) + 'Mt'
+            self.info_tab.children[1].children[0].children[0].text = str(
+                int(self.global_oil_amount // 10 ** 3) % 10 ** 3) + 't'
+            self.info_tab.children[1].children[0].children[1].text = str(
+                int(self.global_oil_amount // 10 ** 6) % 10 ** 3) + 'kt'
+            self.info_tab.children[1].children[0].children[2].text = str(int(self.global_oil_amount // 10 ** 9)) + 'Mt'
 
     def update_texture(self, child):
         ind = child.coords
@@ -263,6 +276,7 @@ class ChildGridScreen(Screen):
         self.curr = (0, 0)
         self.oil_to_add_on_click = 10000
         self.decimal_places = 2
+        self.land_with_oil_color = [0, 100 / 255, 0, 1]
 
         btn = Button(background_normal='', background_color=GUI_TER_COLOR,
                      text='<-- Main screen', size_hint=(.2, 1))
@@ -280,7 +294,7 @@ class ChildGridScreen(Screen):
         self.num_label = Label(text='')
         up_widget.add_widget(self.num_label)
 
-        self.grid_parent = GridLayout(cols=self.grid_size // (int(self.grid_size ** 0.5)), spacing=0)
+        self.grid_parent = GridLayout(cols=self.grid_size // (int(self.grid_size ** 0.5)), spacing=1)
 
         for i in range(self.grid_size):
             ind = (
@@ -290,6 +304,12 @@ class ChildGridScreen(Screen):
             btn.coords = (ind[0], ind[1])
             btn.bind(on_press=self.on_press_func)
             self.grid_parent.add_widget(btn)
+
+        with self.grid_parent.canvas.before:
+            Color(1, 1, 1, 1)
+            self.grid_parent.rect = Rectangle(size=self.grid_parent.size, pos=self.grid_parent.pos)
+
+        self.grid_parent.bind(pos=update_rect, size=update_rect)
 
         self.clock = Clock.schedule_interval(lambda a: self.update(), 1)
 
@@ -319,14 +339,18 @@ class ChildGridScreen(Screen):
             for child in self.grid_parent.children:
                 coords = (x // CELL_SIDE_SIZE, x % CELL_SIDE_SIZE)
                 point = self.get_point_object(coords)
-                child.text = ''
-                if point.topography == simulation.TopographyState.LAND:
-                    child.background_color = self.land_color
-                elif point.oil_mass > MINIMAL_VALUE_TO_SHOW:
-                    child.background_color = self.oil_color
+                if point.oil_mass > MINIMAL_VALUE_TO_SHOW:
                     child.text = str(round(point.oil_mass, self.decimal_places))
+                    if point.topography == simulation.TopographyState.LAND:
+                        child.background_color = self.land_with_oil_color
+                    else:
+                        child.background_color = self.oil_color
                 else:
-                    child.background_color = self.sea_color
+                    child.text = ''
+                    if point.topography == simulation.TopographyState.LAND:
+                        child.background_color = self.land_color
+                    else:
+                        child.background_color = self.sea_color
                 x -= 1
 
     def change_screen(self, *args):

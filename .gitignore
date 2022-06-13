@@ -1,2 +1,9 @@
 .vscode
 **.pyc
+.idea/inspectionProfiles/Project_Default.xml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/modules.xml
+.idea/misc.xml
+.idea/Oil-Spill-Simulation.iml
+.idea/vcs.xml
+.idea/workspace.xml
