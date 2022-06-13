@@ -200,14 +200,14 @@ class MainScreen(Screen):
         up.add_widget(self.grid_parent)
         up.add_widget(side_panel_parent)
 
-        screen_change_button = Button(background_normal='',
-                                      background_color=GUI_MAIN_COLOR,
-                                      text='START/STOP', size_hint=(1, .05))
-        screen_change_button.bind(on_press=self.start_stop)
+        start_stop_button = Button(background_normal='',
+                                   background_color=GUI_MAIN_COLOR,
+                                   text='START/STOP', size_hint=(1, .05))
+        start_stop_button.bind(on_press=self.start_stop)
 
         main_widget = BoxLayout(orientation='vertical')
         main_widget.add_widget(up)
-        main_widget.add_widget(screen_change_button)
+        main_widget.add_widget(start_stop_button)
 
         self.add_widget(main_widget)
 
