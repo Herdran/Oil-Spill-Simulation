@@ -19,8 +19,13 @@ import simulation
 
 MINIMAL_VALUE_TO_SHOW = 100
 
-def blend_color(color1, color2, ratio):
-        return [color1[i] * ratio + color2[i] * (1 - ratio) for i in range(len(color1))]
+
+def blend_color(color1, color2, ratio, rgb=False):
+    ratio = min(ratio, 1)
+    if rgb:
+        return [int(255 * (color1[i] * ratio + color2[i] * (1 - ratio))) for i in range(len(color1))]
+    return [color1[i] * ratio + color2[i] * (1 - ratio) for i in range(len(color1))]
+
 
 class MyButton(ButtonBehavior, Image):
     def __init__(self, **kwargs):
@@ -48,10 +53,10 @@ class MainScreen(Screen):
         self.grid_size = GRID_SIDE_SIZE * GRID_SIDE_SIZE
         self.grid_parent = GridLayout(cols=self.grid_size // (int(self.grid_size ** 0.5)), spacing=0,
                                       size_hint=(.85, 1))
-        self.sea_color = [15, 10, 222]
-        self.land_color = [38, 166, 91]
+        self.sea_color = [15 / 255, 10 / 255, 222 / 255]
+        self.land_color = [38 / 255, 166 / 255, 91 / 255]
         self.oil_color = [0, 0, 0]
-        self.land_with_oil_color = [0, 100, 0]
+        self.land_with_oil_color = [0, 100 / 255, 0]
         self.currently_viewed = True
         self.curr_iter = 0
         self.sim_sec_passed = 0
@@ -217,9 +222,9 @@ class MainScreen(Screen):
         arr = []
         for i in range(self.grid_size):
             curr_point = self.engine.world[i % CELL_SIDE_SIZE + 10 * ind[0]][i // CELL_SIDE_SIZE + 10 * ind[1]]
-            arr.append((self.land_with_oil_color if curr_point.oil_mass > MINIMAL_VALUE_TO_SHOW else self.land_color)
-                       if curr_point.topography == simulation.TopographyState.LAND else self.oil_color
-                       if curr_point.oil_mass > MINIMAL_VALUE_TO_SHOW else self.sea_color)
+            arr.append(blend_color(self.land_with_oil_color, self.land_color, curr_point.oil_mass / MINIMAL_VALUE_TO_SHOW, True)
+                       if curr_point.topography == simulation.TopographyState.LAND
+                       else blend_color(self.oil_color, self.sea_color, curr_point.oil_mass / MINIMAL_VALUE_TO_SHOW, True))
             if curr_point.topography == simulation.TopographyState.SEA:
                 self.global_oil_amount_sea += curr_point.oil_mass
             else:
@@ -384,7 +389,7 @@ class ChildGridScreen(Screen):
                 point = self.get_point_object(coords)
                 if point.oil_mass > MINIMAL_VALUE_TO_SHOW:
                     child.text = str(round(point.oil_mass, self.decimal_places))
-                else:    
+                else:
                     child.text = ''
                 if point.topography == simulation.TopographyState.LAND:
                     child.background_color = blend_color(self.land_with_oil_color, self.land_color, point.oil_mass / MINIMAL_VALUE_TO_SHOW)
