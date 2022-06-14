@@ -16,7 +16,3 @@ CELL_LON_SIZE = (RIGHT_COORD - LEFT_COORD)/GRID_SIDE_SIZE
 CELL_LAT = [DOWN_COORD + CELL_LON_SIZE/2 + (CELL_LAT_SIZE * i) for i in range(GRID_SIDE_SIZE)]
 CELL_LON = [LEFT_COORD + CELL_LON_SIZE/2 + (CELL_LON_SIZE * i) for i in range(GRID_SIDE_SIZE)]
 ##############################################
-
-GUI_MAIN_COLOR = [51 / 255, 96 / 255, 121 / 255, 1]
-GUI_SEC_COLOR = [121 / 255, 111 / 255, 51 / 255, 1]
-GUI_TER_COLOR = [121 / 255, 51 / 255, 61 / 255, 1]

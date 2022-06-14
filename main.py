@@ -13,16 +13,20 @@ from kivy.uix.image import Image
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.switch import Switch
 
-from constatnts import WORLD_SIDE_SIZE, CELL_SIDE_SIZE, POINT_SIDE_SIZE, GRID_SIDE_SIZE, GUI_MAIN_COLOR, GUI_SEC_COLOR, \
-    GUI_TER_COLOR, ITER_AS_SEC
+from constatnts import CELL_SIDE_SIZE, GRID_SIDE_SIZE, ITER_AS_SEC
 import simulation
 
 MINIMAL_VALUE_TO_SHOW = 100
+
+GUI_MAIN_COLOR = [51 / 255, 96 / 255, 121 / 255, 1]
+GUI_SEC_COLOR = [121 / 255, 111 / 255, 51 / 255, 1]
+GUI_TER_COLOR = [121 / 255, 51 / 255, 61 / 255, 1]
 
 sea_color = [15 / 255, 10 / 255, 222 / 255, 1]
 land_color = [38 / 255, 166 / 255, 91 / 255, 1]
 oil_color = [0 / 255, 0 / 255, 0 / 255, 1]
 land_with_oil_color = [0, 100 / 255, 0, 1]
+
 
 def blend_color(color1, color2, ratio, rgb=False):
     ratio = min(ratio, 1)
