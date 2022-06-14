@@ -29,7 +29,7 @@ class InitialValues:
         self.boiling_point = 609  # [K] mean
         self.interfacial_tension = 30  # [dyna/cm]
         self.propagation_factor = 2.5
-        self.c = 1  # nie wiem co to jest ale oczekuje tego na 71 więc dodałem 1 jako placeholder
+        self.c = 0.7  # constant from paper
 
 
 class Cell:
@@ -39,8 +39,8 @@ class Cell:
 
         self.latitude = CELL_LAT[y]
         self.longitude = CELL_LON[x]
-        self.wind_velocity = np.array([1.2, -2.6])  # TODO load from topography
-        self.temperature = 298  # [K]
+        self.wind_velocity = np.array([2.08753, -3.54677])
+        self.temperature = 302.15  # [K]
 
         self.default_wave_velocity = np.array([0.0, 0.0])
 
@@ -66,7 +66,7 @@ class Point:
         self.cell = cell
         self.oil_mass = 0  # [kg]
         self.initial_values = initial_values
-        self.emulsification_rate = 0  # tbh chuj wi
+        self.emulsification_rate = 0.01  # tbh chuj wi
         self.viscosity = initial_values.viscosity  # [cP]
         self.oil_buffer = 0  # contains oil which was added in current step
         self.advection_buffer = np.array([0, 0], dtype='f')
@@ -82,7 +82,7 @@ class Point:
         self.process_emulsification(delta_time)
         delta_f = self.process_evaporation(delta_time)
         self.process_natural_dispersion(delta_time)
-        self.viscosity_change(delta_f, 0.01)  # #TODO water content??
+        self.viscosity_change(delta_f, self.emulsification_rate)
 
         # to na końcu na pewno
         self.process_advection(delta_time)
@@ -91,7 +91,7 @@ class Point:
         K = 2.0e-6
 
         self.emulsification_rate += delta_time * K * (
-                ((self.cell.wind_velocity + 1) ** 2) * (
+                ((np.linalg.norm(self.cell.wind_velocity) + 1) ** 2) * (
                 1 - self.emulsification_rate / self.initial_values.c))
 
     def process_evaporation(self, delta_time: float) -> float:
@@ -150,7 +150,7 @@ class Point:
         C2 = 10
         delta_viscosity = (C2 * self.viscosity * delta_F + 2.5 * self.viscosity * delta_Y) / (
                 (1 - self.initial_values.emulsion_max_content_water * delta_Y) ** 2)
-        self.viscosity += delta_viscosity  # TODO check if sign is correct
+        self.viscosity += delta_viscosity 
 
     def pour_from_buffer(self):
         self.oil_mass += self.oil_buffer
@@ -173,8 +173,6 @@ class SimulationEngine:
 
     def start(self, preset_path):
         self.load_topography()
-        # TODO deserialize initial_values from json (preset_path)
-
         self.load_water_current_data()
 
         
