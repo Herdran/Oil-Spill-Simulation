@@ -2,7 +2,7 @@ import netCDF4
 import math
 
 # CONST ------------------------------------
-DATA_PATH = "data/VDATUM_EC2001.nc" #TODO: get it from input when program starts?
+DATA_PATH = "data/VDATUM_EC2001.nc"
 # ------------------------------------------
 
 class WaterCurrentData:

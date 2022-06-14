@@ -17,8 +17,10 @@ from constatnts import WORLD_SIDE_SIZE, CELL_SIDE_SIZE, POINT_SIDE_SIZE, GRID_SI
     GUI_TER_COLOR, ITER_AS_SEC
 import simulation
 
-MINIMAL_VALUE_TO_SHOW = 10
+MINIMAL_VALUE_TO_SHOW = 100
 
+def blend_color(color1, color2, ratio):
+        return [color1[i] * ratio + color2[i] * (1 - ratio) for i in range(len(color1))]
 
 class MyButton(ButtonBehavior, Image):
     def __init__(self, **kwargs):
@@ -382,16 +384,12 @@ class ChildGridScreen(Screen):
                 point = self.get_point_object(coords)
                 if point.oil_mass > MINIMAL_VALUE_TO_SHOW:
                     child.text = str(round(point.oil_mass, self.decimal_places))
-                    if point.topography == simulation.TopographyState.LAND:
-                        child.background_color = self.land_with_oil_color
-                    else:
-                        child.background_color = self.oil_color
-                else:
+                else:    
                     child.text = ''
-                    if point.topography == simulation.TopographyState.LAND:
-                        child.background_color = self.land_color
-                    else:
-                        child.background_color = self.sea_color
+                if point.topography == simulation.TopographyState.LAND:
+                    child.background_color = blend_color(self.land_with_oil_color, self.land_color, point.oil_mass / MINIMAL_VALUE_TO_SHOW)
+                else:
+                    child.background_color = blend_color(self.oil_color, self.sea_color, point.oil_mass / MINIMAL_VALUE_TO_SHOW)
                 x -= 1
 
     def change_screen(self, *args):
