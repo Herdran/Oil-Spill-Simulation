@@ -198,7 +198,7 @@ class SimulationEngine:
 
         self.current_oil_volume = 100
 
-    def start(self, preset_path):
+    def start(self, preset_path=None):
         self.load_topography()
         self.load_water_current_data()
 
