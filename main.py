@@ -212,7 +212,7 @@ class MainScreen(Screen):
 
         start_stop_button = Button(background_normal='',
                                    background_color=GUI_MAIN_COLOR,
-                                   text='START/STOP', size_hint=(1, .05))
+                                   text='START SIMULATION', size_hint=(1, .05))
         start_stop_button.bind(on_press=self.start_stop)
 
         main_widget = BoxLayout(orientation='vertical')
@@ -280,11 +280,14 @@ class MainScreen(Screen):
         texture.flip_vertical()
         child.texture = texture
 
-    def start_stop(self, *args):
+    def start_stop(self, instance):
         if self.app_running:
             self.app_running = False
+            instance.text = "START SIMULATION"
+
         else:
             self.app_running = True
+            instance.text = "STOP SIMULATION"
         self.manager.get_screen('child').app_running = self.app_running
 
     def interval_change(self, instance):
