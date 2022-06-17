@@ -1,7 +1,8 @@
 from enum import Enum
-from math import exp, log, sqrt
+from math import exp, log, sqrt, floor, ceil
 from random import randrange
 from random import random as rand
+from time import sleep
 import numpy as np
 import csv
 
@@ -123,11 +124,37 @@ class Point:
         for neighbor in to_share:
             neighbor.oil_mass += delta_mass
 
+    def into_min_max(self, x, y):
+        return [
+            [x - 0.5, y - 0.5],
+            [x + 0.5, y + 0.5],
+        ]
+
     def process_advection(self, delta_time: float) -> None:
         alpha = 1.1
         beta = 0.03
         delta_r = (alpha * self.cell.get_wave_vellocity() + beta * self.cell.wind_velocity) * delta_time
         delta_r /= POINT_SIDE_SIZE
+
+        next_x = self.x + delta_r[0]
+        next_y = self.y + delta_r[1]
+        min_next, max_next = self.into_min_max(next_x, next_y)
+
+        # for x in range(floor(min_next[0]), ceil(max_next[0]) + 1):
+        #     for y in range(floor(min_next[1]), ceil(max_next[1]) + 1):
+        #         if(x < 0 or x >= WORLD_SIDE_SIZE or y < 0 or y >= WORLD_SIDE_SIZE):
+        #             continue
+                
+        #         min_curr, max_curr = self.into_min_max(x, y)
+        #         if not(min_curr[0] > max_next[0] or min_curr[1] > max_next[1] or max_curr[0] < min_next[0] or max_curr[1] < min_next[1]):
+        #             overlap_x = max(min_curr[0], min_next[0]) - min(max_curr[0], max_next[0])
+        #             overlap_y = max(min_curr[1], min_next[1]) - min(max_curr[1], max_next[1])
+        #             overlap_area = overlap_x * overlap_y
+        #             self.world[x][y].oil_buffer += self.oil_mass * overlap_area
+        # self.oil_mass = 0
+
+
+
         self.advection_buffer += delta_r
         next_x = self.x + int(self.advection_buffer[0])
         next_y = self.y + int(self.advection_buffer[1])
