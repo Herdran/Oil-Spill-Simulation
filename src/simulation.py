@@ -281,7 +281,7 @@ class SimulationEngine:
         return self.world[x][y]
 
     def load_topography(self):
-        with open('topography.csv', 'r') as f:
+        with open('data/topography.csv', 'r') as f:
             reader = csv.reader(f, delimiter=',')
             for y, row in enumerate(reader):
                 for x, state in enumerate(row):
