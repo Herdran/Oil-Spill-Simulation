@@ -1,13 +1,13 @@
-from enum import Enum
-from math import exp, log, sqrt, floor, ceil
-from random import randrange
-from random import random as rand
-from time import sleep
-import numpy as np
 import csv
+import os
+from enum import Enum
+from math import exp, log, sqrt
+from random import random as rand
 
-from constatnts import *
+import numpy as np
+
 import water_current_data
+from constatnts import *
 
 
 class TopographyState(Enum):
@@ -109,7 +109,8 @@ class Point:
         return delta_f
 
     def process_seashore_interaction(self, delta_time: float) -> None:
-        delta_mass = log(2) * self.oil_mass * delta_time / (3600 * 24)
+        half_time = 3600 * 24  # 24h for sand beach / sand and gravel beach
+        delta_mass = log(2) * self.oil_mass * delta_time / half_time
         self.oil_mass -= delta_mass
         to_share = []
         for cords in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
@@ -144,7 +145,7 @@ class Point:
         #     for y in range(floor(min_next[1]), ceil(max_next[1]) + 1):
         #         if(x < 0 or x >= WORLD_SIDE_SIZE or y < 0 or y >= WORLD_SIDE_SIZE):
         #             continue
-                
+
         #         min_curr, max_curr = self.into_min_max(x, y)
         #         if not(min_curr[0] > max_next[0] or min_curr[1] > max_next[1] or max_curr[0] < min_next[0] or max_curr[1] < min_next[1]):
         #             overlap_x = max(min_curr[0], min_next[0]) - min(max_curr[0], max_next[0])
@@ -152,8 +153,6 @@ class Point:
         #             overlap_area = overlap_x * overlap_y
         #             self.world[x][y].oil_buffer += self.oil_mass * overlap_area
         # self.oil_mass = 0
-
-
 
         self.advection_buffer += delta_r
         next_x = self.x + int(self.advection_buffer[0])
@@ -177,7 +176,7 @@ class Point:
         C2 = 10
         delta_viscosity = (C2 * self.viscosity * delta_F + 2.5 * self.viscosity * delta_Y) / (
                 (1 - self.initial_values.emulsion_max_content_water * delta_Y) ** 2)
-        self.viscosity += delta_viscosity 
+        self.viscosity += delta_viscosity
 
     def pour_from_buffer(self):
         self.oil_mass += self.oil_buffer
@@ -202,7 +201,6 @@ class SimulationEngine:
         self.load_topography()
         self.load_water_current_data()
 
-        
     def load_water_current_data(self):
         stations, times, data = water_current_data.get_data()
         for cell_row in self.cells:
@@ -281,7 +279,10 @@ class SimulationEngine:
         return self.world[x][y]
 
     def load_topography(self):
-        with open('data/topography.csv', 'r') as f:
+        path = 'data/topography.csv'
+        if os.getcwd().endswith('src'):
+            path = '../' + path
+        with open(path, 'r') as f:
             reader = csv.reader(f, delimiter=',')
             for y, row in enumerate(reader):
                 for x, state in enumerate(row):
