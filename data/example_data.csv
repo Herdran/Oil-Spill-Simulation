@@ -1,0 +1,5 @@
+lat,lon,year,month,day,hour,min,wind dir,wind speed,current dir,current speed
+28.118,-93.670,2010,03,01,00,14,NaN,NaN,290,0.03
+28.118,-93.670,2010,03,01,00,29,NaN,NaN,350,0.02
+28.118,-93.670,2010,03,01,00,33,350,0.02,350,0.02
+
