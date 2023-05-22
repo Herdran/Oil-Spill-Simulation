@@ -72,6 +72,7 @@ class Point:
         self.oil_buffer = 0  # contains oil which was added in current step
         self.advection_buffer = np.array([0, 0], dtype='f')
         self.evaporation_rate = 0
+        self.change_occurred = True  # TODO to be set when point is updated
 
     def contain_oil(self) -> bool:
         return self.oil_mass > 0
