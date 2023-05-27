@@ -156,6 +156,8 @@ class DataValidator:
         pass
 
     def validate(self, csv_path: PathLike):
+        # TODO i guess check if file exists and if it is csv
+        # also if contains all necessary columns
         pass
 
 
