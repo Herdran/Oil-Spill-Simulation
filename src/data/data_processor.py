@@ -151,19 +151,26 @@ class DataProcessor:
         return self._impl.get_nearest(coordinates, time_stamp)
 
 
+class DataValidationException(Exception):
+    pass
+
 class DataValidator:
     def __init__(self):
         pass
 
     def validate(self, csv_path: PathLike):
-        # TODO i guess check if file exists and if it is csv
-        # also if contains all necessary columns
-        pass
-
-
-class DataValidationException(Exception):
-    pass
-
+        if not os.path.isfile(csv_path):
+            raise DataValidationException("File does not exist")
+        
+        self.check_columns(csv_path)
+        
+    def check_columns(self, csv_path: PathLike):
+        pd.read_csv(csv_path)
+        columns = pd.read_csv(csv_path).columns
+        for column in DataDescriptor:
+            if column.value not in columns:
+                raise DataValidationException(f"File {csv_path} does not contain all required columns - {column.value}")
+        
 
 class DataReader:
     def __init__(self):
