@@ -54,11 +54,13 @@ class SimpleDataProcessorImpl:
         return wind_for_station.loc[time_index][DataAggregatesDecriptior.wind.value]
 
     def _get_current(self, coordinates: Coordinates, time_stamp: pd.Timestamp) -> SpeedMeasure:
-        current_for_station = self._get_current_for_station(coordinates)
+        # the problem is that it search for nearest station and thet use that
+        # but if may happend that the nearest station has no current data :v
+        current_for_station = self._get_current_for_station(coordinates)        
         time_index = self._get_time_index(current_for_station, time_stamp)
         return current_for_station.loc[time_index][DataAggregatesDecriptior.current.value]
 
-    def _get_time_index(self, data: pd.DataFrame, time_stamp: pd.Timestamp) -> int:
+    def _get_time_index(self, data: pd.DataFrame, time_stamp: pd.Timestamp) -> int:    
         return (
             data[DataAggregatesDecriptior.time_stamp.value]
             .map(lambda ts: (ts - time_stamp).total_seconds())

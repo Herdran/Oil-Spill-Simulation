@@ -1,5 +1,4 @@
 year,month,day,hour,min,wind dir,wind speed,lat,lon,current dir,current speed
-yr,mo,dy,hr,mn,degT,m/s,30.06,87.548,,
 2009,12,31,23,50,261,1.7,30.06,87.548,,
 2010,01,01,00,50,277,1.4,30.06,87.548,,
 2010,01,01,01,50,268,0.7,30.06,87.548,,
