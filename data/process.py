@@ -1,8 +1,8 @@
-# import os
-# import pandas as pd
+import os
+import pandas as pd
 
-# raw_data_path = "raw"
-# processed_data_path = "processed"
+raw_data_path = "raw"
+processed_data_path = "processed"
 
 # to_replace = "name"
 # locations_col_names = ["lat", "lon"]
@@ -38,14 +38,14 @@
 # # #     "YY", "MM", "DD", "hh", "mm", "WDIR", "WSPD", "name", "DIR01", "SPD01"
 # # # ]
 
-# def replace_quote(f):
-#     with open(os.path.join(processed_data_path, f), 'r') as file:
-#         filedata = file.read()
-#         filedata = filedata.replace('"', '')
-#         filedata = filedata.replace('#', '')
+def replace_quote(f):
+    with open(os.path.join(processed_data_path, f), 'r') as file:
+        filedata = file.read()
+        filedata = filedata.replace('"', '')
+        filedata = filedata.replace('#', '')
 
-#     with open(os.path.join(processed_data_path, f), 'w') as file:
-#         file.write(filedata)
+    with open(os.path.join(processed_data_path, f), 'w') as file:
+        file.write(filedata)
     
 
 # # # paths_with_same_stations = {}    
@@ -103,3 +103,31 @@
 # # for f in os.listdir(processed_data_path):
 # #     name = f[:-4]
 # #     print(name)
+
+
+columns = [
+    "lat",
+    "lon",
+    "year",
+    "month",
+    "day",
+    "hour",
+    "min",
+    "wind dir",
+    "wind speed",
+    "current dir",
+    "current speed"
+]
+
+for f in os.listdir(processed_data_path):
+    df = pd.read_csv(os.path.join(processed_data_path, f))
+    
+    # if any of the columns is not present, then add it with NaN values
+    for col in columns:
+        if col not in df.columns.to_list():
+            df[col] = None
+    
+    
+    df.to_csv(os.path.join(processed_data_path, f), index=False)
+    replace_quote(f)        
+    print(f"Processed {f}")

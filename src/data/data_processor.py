@@ -176,8 +176,9 @@ class DataReader:
 
     def add_all_from_dir(self, dir_path: PathLike):
         CSV_EXT = ".csv"
-        for csv_path in dir_path.glob(CSV_EXT):
-            self.add_data(csv_path)
+        for file in os.listdir(dir_path):
+            if file.endswith(CSV_EXT):
+                self.add_data(os.path.join(dir_path, file))
 
     def load_into_memory(self) -> DataProcessor:
         return DataProcessor(self._dataset_paths)
@@ -196,7 +197,8 @@ if __name__ == "__main__":
     sym_data_reader = DataReader()
 
     try:
-        sym_data_reader.add_data(os.path.join("data", "example_data.csv"))
+        #sym_data_reader.add_data(os.path.join("data", "example_data.csv"))
+        sym_data_reader.add_all_from_dir(os.path.join("data", "processed"))
     except DataValidationException as ex:
         # some error handling
         # bla bla bla
