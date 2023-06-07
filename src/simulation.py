@@ -1,7 +1,7 @@
 import csv
 import os
 from enum import Enum
-from math import exp, log, sqrt
+from math import exp, log, sqrt, isnan
 from random import random as rand
 
 import numpy as np
@@ -31,6 +31,7 @@ class InitialValues:
         self.interfacial_tension = 30  # [dyna/cm]
         self.propagation_factor = 2.5
         self.c = 0.7  # constant from paper
+        self.emulsification_rate = 0.01
 
 
 class Cell:
@@ -48,7 +49,7 @@ class Cell:
         self.water_current_data = None
         self.times = None
 
-    def get_wave_vellocity(self):
+    def get_wave_velocity(self):
         if self.water_current_data is None or self.times is None:
             return self.default_wave_velocity
 
@@ -67,9 +68,9 @@ class Point:
         self.cell = cell
         self.oil_mass = 0  # [kg]
         self.initial_values = initial_values
-        self.emulsification_rate = 0.01  # tbh chuj wi
+        self.emulsification_rate = initial_values.emulsification_rate
         self.viscosity = initial_values.viscosity  # [cP]
-        self.oil_buffer = 0  # contains oil which was added in current step
+        self.oil_buffer = []  # contains tuples (mass, viscosity, emulsification_rate)
         self.advection_buffer = np.array([0, 0], dtype='f')
         self.evaporation_rate = 0
         self.change_occurred = True  # TODO to be set when point is updated
@@ -77,24 +78,33 @@ class Point:
     def contain_oil(self) -> bool:
         return self.oil_mass > 0
 
+    def add_oil(self, mass: float) -> None:
+        # maybe initial emulsification rate will be changed
+        self.emulsification_rate = (self.oil_mass * self.emulsification_rate + mass * self.initial_values.emulsification_rate) / (self.oil_mass + mass)
+        self.viscosity = (self.oil_mass * self.viscosity + mass * self.initial_values.viscosity) / (self.oil_mass + mass)
+        self.oil_mass += mass
+
     def update(self, delta_time: float) -> None:
         if self.topography == TopographyState.LAND:
             self.process_seashore_interaction(delta_time)
             return
-        self.process_emulsification(delta_time)
+        delta_y = self.process_emulsification(delta_time)
         delta_f = self.process_evaporation(delta_time)
         self.process_natural_dispersion(delta_time)
-        self.viscosity_change(delta_f, self.emulsification_rate)
+        self.viscosity_change(delta_f, delta_y)
 
         # to na końcu na pewno
         self.process_advection(delta_time)
 
-    def process_emulsification(self, delta_time: float) -> None:
+    def process_emulsification(self, delta_time: float) -> float:
         K = 2.0e-6
-
+        old_emulsification_rate = self.emulsification_rate
         self.emulsification_rate += delta_time * K * (
                 ((np.linalg.norm(self.cell.wind_velocity) + 1) ** 2) * (
                 1 - self.emulsification_rate / self.initial_values.c))
+        if self.emulsification_rate > self.initial_values.emulsion_max_content_water:
+            self.emulsification_rate = self.initial_values.emulsion_max_content_water
+        return self.emulsification_rate - old_emulsification_rate
 
     def process_evaporation(self, delta_time: float) -> float:
         K = 1.25e-3
@@ -104,7 +114,7 @@ class Point:
         R = 8.314  # [J/(mol*K)]
 
         self.evaporation_rate = (K * (self.initial_values.molar_mass / 1000) * P) / (R * self.cell.temperature)
-        delta_mass = -1 * delta_time * POINT_SIDE_SIZE * POINT_SIDE_SIZE * self.evaporation_rate
+        delta_mass = -1 * min(delta_time * POINT_SIDE_SIZE * POINT_SIDE_SIZE * self.evaporation_rate, self.oil_mass)
         delta_f = -delta_mass / self.oil_mass
         self.oil_mass += delta_mass
         return delta_f
@@ -125,6 +135,8 @@ class Point:
         delta_mass /= len(to_share)
         for neighbor in to_share:
             neighbor.oil_mass += delta_mass
+        if isnan(self.oil_mass):
+            print("sea shore interaction")
 
     def into_min_max(self, x, y):
         return [
@@ -135,36 +147,20 @@ class Point:
     def process_advection(self, delta_time: float) -> None:
         alpha = 1.1
         beta = 0.03
-        delta_r = (alpha * self.cell.get_wave_vellocity() + beta * self.cell.wind_velocity) * delta_time
+        delta_r = (alpha * self.cell.get_wave_velocity() + beta * self.cell.wind_velocity) * delta_time
         delta_r /= POINT_SIDE_SIZE
 
-        next_x = self.x + delta_r[0]
-        next_y = self.y + delta_r[1]
-        min_next, max_next = self.into_min_max(next_x, next_y)
-
-        # for x in range(floor(min_next[0]), ceil(max_next[0]) + 1):
-        #     for y in range(floor(min_next[1]), ceil(max_next[1]) + 1):
-        #         if(x < 0 or x >= WORLD_SIDE_SIZE or y < 0 or y >= WORLD_SIDE_SIZE):
-        #             continue
-
-        #         min_curr, max_curr = self.into_min_max(x, y)
-        #         if not(min_curr[0] > max_next[0] or min_curr[1] > max_next[1] or max_curr[0] < min_next[0] or max_curr[1] < min_next[1]):
-        #             overlap_x = max(min_curr[0], min_next[0]) - min(max_curr[0], max_next[0])
-        #             overlap_y = max(min_curr[1], min_next[1]) - min(max_curr[1], max_next[1])
-        #             overlap_area = overlap_x * overlap_y
-        #             self.world[x][y].oil_buffer += self.oil_mass * overlap_area
-        # self.oil_mass = 0
-
+        # buffering how far oil went in time step
         self.advection_buffer += delta_r
         next_x = self.x + int(self.advection_buffer[0])
         next_y = self.y + int(self.advection_buffer[1])
         if 0 <= next_x < WORLD_SIDE_SIZE and 0 <= next_y < WORLD_SIDE_SIZE:
-            self.world[next_x][next_y].oil_buffer += self.oil_mass
+            self.world[next_x][next_y].oil_buffer.append((self.oil_mass, self.viscosity, self.emulsification_rate))
             self.advection_buffer -= np.array([next_x - self.x, next_y - self.y])
         self.oil_mass = 0
 
     def process_natural_dispersion(self, delta_time: float) -> None:
-        Da = 0.11 * (sqrt(self.cell.wind_velocity[0] ** 2 + self.cell.wind_velocity[1] ** 2) + 1) ** 2
+        Da = 0.11 * (np.linalg.norm(self.cell.wind_velocity) + 1) ** 2
         interfacial_tension = self.initial_values.interfacial_tension * (1 + self.evaporation_rate)
         Db = 1 / (1 + 50 * sqrt(self.viscosity) * self.slick_thickness() * interfacial_tension)
         self.oil_mass -= self.oil_mass * Da * Db / (3600 * delta_time)
@@ -175,13 +171,21 @@ class Point:
 
     def viscosity_change(self, delta_F: float, delta_Y: float) -> None:
         C2 = 10
-        delta_viscosity = (C2 * self.viscosity * delta_F + 2.5 * self.viscosity * delta_Y) / (
-                (1 - self.initial_values.emulsion_max_content_water * delta_Y) ** 2)
+        delta_viscosity = C2 * self.viscosity * delta_F + (2.5 * self.viscosity * delta_Y) / (
+                (1 - self.initial_values.emulsion_max_content_water * self.emulsification_rate) ** 2)
         self.viscosity += delta_viscosity
 
     def pour_from_buffer(self):
-        self.oil_mass += self.oil_buffer
-        self.oil_buffer = 0
+        # nie uwzględniamy masy w punkcie, bo wszystko powinno być w buforze
+        oil_mass = sum([tup[0] for tup in self.oil_buffer])
+        if oil_mass < 1:
+            return
+        self.viscosity = sum([tup[0] * tup[1] for tup in self.oil_buffer]) / oil_mass
+        self.emulsification_rate = sum([tup[0] * tup[2] for tup in self.oil_buffer]) / oil_mass
+        self.oil_buffer = []
+        self.oil_mass = oil_mass
+        if isnan(self.oil_mass):
+            print("pouring")
 
 
 class SimulationEngine:
@@ -256,7 +260,7 @@ class SimulationEngine:
         length = POINT_SIDE_SIZE
         V = self.current_oil_volume
         g = 9.8
-        delta = (self.initial_values.water_density - self.initial_values.density) / self.initial_values.water_density;
+        delta = (self.initial_values.water_density - self.initial_values.density) / self.initial_values.water_density
         viscosity = 10e-6
         D = 0.49 / self.initial_values.propagation_factor * (V ** 2 * g * delta / sqrt(viscosity)) ** (1 / 3) / sqrt(
             delta_time)

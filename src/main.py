@@ -368,7 +368,7 @@ class ChildGridScreen(Screen):
     def on_press_func(self, instance):
         point = self.get_point_object(instance.coords)
         if self.oil_to_add_on_click > 0 and point.topography == simulation.TopographyState.SEA:
-            point.oil_mass += self.oil_to_add_on_click
+            point.add_oil(self.oil_to_add_on_click)
             if instance.background_color != oil_color:
                 instance.background_color = oil_color
                 self.manager.get_screen('main').update_texture(self.button_object)
