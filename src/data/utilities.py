@@ -2,7 +2,10 @@ from math import acos, cos, radians, sin
 from typing import Callable
 from measurment_data import Coordinates
 import pandas as pd
-
+    
+def minutes(time_delta: pd.Timedelta) -> float:
+    SECONDS_IN_MINUTE = 60
+    return time_delta.total_seconds() / SECONDS_IN_MINUTE
 
 def great_circle_distance(first: Coordinates, second: Coordinates) -> float:
     lon1, lat1, lon2, lat2 = map(

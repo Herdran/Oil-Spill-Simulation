@@ -1,22 +1,30 @@
 from dataclasses import dataclass
-from typing import Optional
-
+import math
+from typing import Generic, Optional
+from generic import GenericT
 
 @dataclass
-class Coordinates:
-    '''
-    latitude range: -90.0 to 90.0
-    longitude range: -180.0 to 180.0
-    '''
-
+class CoordinatesBase(Generic[GenericT]):
     latitude: float
     longitude: float
 
+Coordinates = CoordinatesBase[float]
+'''
+latitude range: -90.0 to 90.0
+longitude range: -180.0 to 180.0
+'''
 
 @dataclass
 class SpeedMeasure:
-    speed: float      # m/s
-    direction: float  # degrees
+    speed_north: float  # m/s
+    speed_east: float   # m/s
+    
+    @staticmethod
+    def from_direction(speed: float, direction: float) -> 'SpeedMeasure':
+        speed_north = speed * math.cos(math.radians(direction))
+        speed_east = speed * math.sin(math.radians(direction))
+        return SpeedMeasure(speed_north, speed_east)
+        
 
 
 @dataclass
