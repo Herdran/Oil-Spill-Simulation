@@ -8,7 +8,7 @@ from scipy.interpolate import NearestNDInterpolator
 from generic import Range
 from utilities import dataframe_replace_applay, great_circle_distance, minutes
 from measurment_data import CertainMeasurment, CoordinatesBase, Coordinates, SpeedMeasure
-from simulation_run_parameters import SimulationRunParameters
+from simulation_run_parameters import SimulationRunParameters, CellSideCount
 
 
 class DataDescriptor(Enum):
@@ -35,14 +35,12 @@ class DataAggregatesDecriptior(Enum):
 class DataProcessorImpl:
     def __init__(self, csv_paths: list[PathLike], simulation_run_parameters: SimulationRunParameters):
         self.run_parameters = simulation_run_parameters
-        self._data = self._load_all_data(csv_paths)
-        self._stations_coordinates = self._get_stations_coordinates()        
-        
+        self._data = self._load_all_data(csv_paths)      
         
         time_points = self._create_envirement_time_range(simulation_run_parameters)
         latitude_points = self._create_envirement_latitude_range(simulation_run_parameters)
         longitude_points = self._create_envirement_longitude_range(simulation_run_parameters)
-        
+    
         time_points, latitude_points, longitude_points = np.meshgrid(time_points, latitude_points, longitude_points)
         
         points_wind_n, values_wind_n = self._get_interpolation_area(DataAggregatesDecriptior.WIND, lambda row: row[DataAggregatesDecriptior.WIND.value].speed_north)
@@ -51,11 +49,11 @@ class DataProcessorImpl:
         points_wind_e, values_wind_e = self._get_interpolation_area(DataAggregatesDecriptior.WIND, lambda row: row[DataAggregatesDecriptior.WIND.value].speed_east)
         wind_e_interpolated = self._get_interpolated__data(time_points, latitude_points, longitude_points, points_wind_e, values_wind_e)
         
-        # points_current_n, values_current_n = self._get_interpolation_area(DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_north)
-        # current_n_interpolated = self._get_interpolated__data(time_points, latitude_points, longitude_points, points_current_n, values_current_n)
+        points_current_n, values_current_n = self._get_interpolation_area(DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_north)
+        current_n_interpolated = self._get_interpolated__data(time_points, latitude_points, longitude_points, points_current_n, values_current_n)
         
-        # points_current_e, values_current_e = self._get_interpolation_area(DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_east)
-        # current_e_interpolated = self._get_interpolated__data(time_points, latitude_points, longitude_points, points_current_e, values_current_e)
+        points_current_e, values_current_e = self._get_interpolation_area(DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_east)
+        current_e_interpolated = self._get_interpolated__data(time_points, latitude_points, longitude_points, points_current_e, values_current_e)
         
         
         # into one dataframe
@@ -64,9 +62,11 @@ class DataProcessorImpl:
                 DataAggregatesDecriptior.TIME_STAMP.value: time_points.flatten(),
                 DataAggregatesDecriptior.COORDINATE.value : [Coordinates(latitude, longitude) for latitude, longitude in zip(latitude_points.flatten(), longitude_points.flatten())],
                 DataAggregatesDecriptior.WIND.value: [SpeedMeasure(wind_n, wind_e) for wind_n, wind_e in zip(wind_n_interpolated.flatten(), wind_e_interpolated.flatten())],
-                #DataAggregatesDecriptior.CURRENT.value: [SpeedMeasure(current_n, current_e) for current_n, current_e in zip(current_n_interpolated, current_e_interpolated)]
+                DataAggregatesDecriptior.CURRENT.value: [SpeedMeasure(current_n, current_e) for current_n, current_e in zip(current_n_interpolated.flatten(), current_e_interpolated.flatten())]
             }
         )
+        
+        envirement_area.sort_values(inplace=True, by=[DataAggregatesDecriptior.TIME_STAMP.value])
 
         path_to_save = "data/processed_data/"
         MINUTES_IN_HOUR = 60
@@ -294,12 +294,12 @@ if __name__ == "__main__":
         ),
         time=Range(
             min=pd.Timestamp("2010-04-01 00:00:00"),
-            max=pd.Timestamp("2010-04-02 00:00:00"),
+            max=pd.Timestamp("2010-04-01 06:00:00"),
         ),
-        data_time_step=pd.Timedelta(minutes=10),
-        cells_side_count=CoordinatesBase(
-            latitude=100,
-            longitude=100
+        data_time_step=pd.Timedelta(minutes=30),
+        cells_side_count=CellSideCount(
+            latitude=10,
+            longitude=10
         )
     )
         
