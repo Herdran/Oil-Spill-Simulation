@@ -80,8 +80,10 @@ class Point:
 
     def add_oil(self, mass: float) -> None:
         # maybe initial emulsification rate will be changed
-        self.emulsification_rate = (self.oil_mass * self.emulsification_rate + mass * self.initial_values.emulsification_rate) / (self.oil_mass + mass)
-        self.viscosity = (self.oil_mass * self.viscosity + mass * self.initial_values.viscosity) / (self.oil_mass + mass)
+        self.emulsification_rate = (self.oil_mass * self.emulsification_rate +
+                                    mass * self.initial_values.emulsification_rate) / (self.oil_mass + mass)
+        self.viscosity = (self.oil_mass * self.viscosity + mass * self.initial_values.viscosity) / (
+                self.oil_mass + mass)
         self.oil_mass += mass
 
     def update(self, delta_time: float) -> None:
@@ -135,8 +137,6 @@ class Point:
         delta_mass /= len(to_share)
         for neighbor in to_share:
             neighbor.oil_mass += delta_mass
-        if isnan(self.oil_mass):
-            print("sea shore interaction")
 
     def into_min_max(self, x, y):
         return [
@@ -174,6 +174,8 @@ class Point:
         delta_viscosity = C2 * self.viscosity * delta_F + (2.5 * self.viscosity * delta_Y) / (
                 (1 - self.initial_values.emulsion_max_content_water * self.emulsification_rate) ** 2)
         self.viscosity += delta_viscosity
+        if self.oil_mass < 1:
+            self.viscosity = self.initial_values.viscosity
 
     def pour_from_buffer(self):
         # nie uwzględniamy masy w punkcie, bo wszystko powinno być w buforze
@@ -184,8 +186,6 @@ class Point:
         self.emulsification_rate = sum([tup[0] * tup[2] for tup in self.oil_buffer]) / oil_mass
         self.oil_buffer = []
         self.oil_mass = oil_mass
-        if isnan(self.oil_mass):
-            print("pouring")
 
 
 class SimulationEngine:
@@ -266,7 +266,9 @@ class SimulationEngine:
             delta_time)
         delta_mass = 0.5 * (second.oil_mass - first.oil_mass) * (1 - exp(-2 * D / (length ** 2) * delta_time))
 
-        if delta_mass < 0:
+        if delta_mass == 0:
+            return
+        elif delta_mass < 0:
             ratio = delta_mass / -first.oil_mass
             from_cell = first
             to_cell = second
@@ -277,6 +279,10 @@ class SimulationEngine:
 
         real_delta = rand() * ratio * from_cell.oil_mass
         from_cell.oil_mass -= real_delta
+        to_cell.viscosity = (to_cell.viscosity * to_cell.oil_mass + from_cell.viscosity * real_delta) / (
+                to_cell.oil_mass + real_delta)
+        to_cell.emulsification_rate = (to_cell.emulsification_rate * to_cell.oil_mass + from_cell.emulsification_rate * real_delta) / (
+                to_cell.oil_mass + real_delta)
         to_cell.oil_mass += real_delta
 
     def from_coords(self, coord) -> Point:
