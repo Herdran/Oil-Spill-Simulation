@@ -35,7 +35,7 @@ class DataAggregatesDecriptior(Enum):
 class DataProcessorImpl:
     def __init__(self, csv_paths: list[PathLike], simulation_run_parameters: SimulationRunParameters):
         self.run_parameters = simulation_run_parameters
-        self._data = self._load_all_data(csv_paths)      
+        data = self._load_all_data(csv_paths)      
         
         time_points = self._create_envirement_time_range(simulation_run_parameters)
         latitude_points = self._create_envirement_latitude_range(simulation_run_parameters)
@@ -43,16 +43,16 @@ class DataProcessorImpl:
     
         time_points, latitude_points, longitude_points = np.meshgrid(time_points, latitude_points, longitude_points)
         
-        points_wind_n, values_wind_n = self._get_interpolation_area(DataAggregatesDecriptior.WIND, lambda row: row[DataAggregatesDecriptior.WIND.value].speed_north)
+        points_wind_n, values_wind_n = self._get_interpolation_area(data, DataAggregatesDecriptior.WIND, lambda row: row[DataAggregatesDecriptior.WIND.value].speed_north)
         wind_n_interpolated = self._get_interpolated__data(time_points, latitude_points, longitude_points, points_wind_n, values_wind_n)
         
-        points_wind_e, values_wind_e = self._get_interpolation_area(DataAggregatesDecriptior.WIND, lambda row: row[DataAggregatesDecriptior.WIND.value].speed_east)
+        points_wind_e, values_wind_e = self._get_interpolation_area(data, DataAggregatesDecriptior.WIND, lambda row: row[DataAggregatesDecriptior.WIND.value].speed_east)
         wind_e_interpolated = self._get_interpolated__data(time_points, latitude_points, longitude_points, points_wind_e, values_wind_e)
         
-        points_current_n, values_current_n = self._get_interpolation_area(DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_north)
+        points_current_n, values_current_n = self._get_interpolation_area(data, DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_north)
         current_n_interpolated = self._get_interpolated__data(time_points, latitude_points, longitude_points, points_current_n, values_current_n)
         
-        points_current_e, values_current_e = self._get_interpolation_area(DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_east)
+        points_current_e, values_current_e = self._get_interpolation_area(data, DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_east)
         current_e_interpolated = self._get_interpolated__data(time_points, latitude_points, longitude_points, points_current_e, values_current_e)
         
         
@@ -86,9 +86,11 @@ class DataProcessorImpl:
             to_save = pd.concat([to_save, pd.DataFrame([row])], ignore_index=True)
         to_save.to_csv(path_to_save + f"{hour}.csv", index=False)
         
-        
 
     def get_nearest(self, coordinates: Coordinates, time_stamp: pd.Timestamp) -> CertainMeasurment:
+        
+        
+        
         # nearest_coordinates = self._get_nearest_coordinates(coordinates)
         # return self._get_certain_measurment(nearest_coordinates, time_stamp)
         pass
@@ -97,11 +99,11 @@ class DataProcessorImpl:
         interpolator = NearestNDInterpolator(points, values)
         return interpolator(time_points, latitude_points, longitude_points)
         
-    def _get_interpolation_area(self, column_filter: DataAggregatesDecriptior, value_getter: Callable[[pd.Series], float]) -> tuple[np.ndarray, np.ndarray]:
+    def _get_interpolation_area(self, data: pd.DataFrame, column_filter: DataAggregatesDecriptior, value_getter: Callable[[pd.Series], float]) -> tuple[np.ndarray, np.ndarray]:
         points: list[list] = []
         values: list[float] = []
         
-        data_with_column = self._data[self._data[column_filter.value].notna()]
+        data_with_column = data[data[column_filter.value].notna()]
         
         for _, row in data_with_column.iterrows():
             coord = row[DataAggregatesDecriptior.COORDINATE.value]
@@ -129,41 +131,41 @@ class DataProcessorImpl:
         times_count = int((time_range.max - time_range.min) / time_step)
         return np.array([minutes(i * time_step) for i in range(times_count)])
 
-    def _get_certain_measurment(self, coordinates: Coordinates, time_stamp: pd.Timestamp) -> CertainMeasurment:
-        return CertainMeasurment(
-            wind=self._get_wind(coordinates, time_stamp),
-            current=self._get_current(coordinates, time_stamp)
-        )
+    # def _get_certain_measurment(self, coordinates: Coordinates, time_stamp: pd.Timestamp) -> CertainMeasurment:
+    #     return CertainMeasurment(
+    #         wind=self._get_wind(coordinates, time_stamp),
+    #         current=self._get_current(coordinates, time_stamp)
+    #     )
 
-    def _get_wind(self, coordinates: Coordinates, time_stamp: pd.Timestamp) -> SpeedMeasure:
-        wind_for_station = self._get_wind_for_station(coordinates)
-        time_index = self._get_time_index(wind_for_station, time_stamp)
-        return wind_for_station.loc[time_index][DataAggregatesDecriptior.WIND.value]
+    # def _get_wind(self, coordinates: Coordinates, time_stamp: pd.Timestamp) -> SpeedMeasure:
+    #     wind_for_station = self._get_wind_for_station(coordinates)
+    #     time_index = self._get_time_index(wind_for_station, time_stamp)
+    #     return wind_for_station.loc[time_index][DataAggregatesDecriptior.WIND.value]
 
-    def _get_current(self, coordinates: Coordinates, time_stamp: pd.Timestamp) -> SpeedMeasure:
-        # the problem is that it search for nearest station and thet use that
-        # but if may happend that the nearest station has no current data :v
-        current_for_station = self._get_current_for_station(coordinates)        
-        time_index = self._get_time_index(current_for_station, time_stamp)
-        return current_for_station.loc[time_index][DataAggregatesDecriptior.CURRENT.value]
+    # def _get_current(self, coordinates: Coordinates, time_stamp: pd.Timestamp) -> SpeedMeasure:
+    #     # the problem is that it search for nearest station and thet use that
+    #     # but if may happend that the nearest station has no current data :v
+    #     current_for_station = self._get_current_for_station(coordinates)        
+    #     time_index = self._get_time_index(current_for_station, time_stamp)
+    #     return current_for_station.loc[time_index][DataAggregatesDecriptior.CURRENT.value]
 
-    def _get_time_index(self, data: pd.DataFrame, time_stamp: pd.Timestamp) -> int:    
-        return (
-            data[DataAggregatesDecriptior.TIME_STAMP.value]
-            .map(lambda ts: (ts - time_stamp).total_seconds())
-            .idxmin()
-        )
+    # def _get_time_index(self, data: pd.DataFrame, time_stamp: pd.Timestamp) -> int:    
+    #     return (
+    #         data[DataAggregatesDecriptior.TIME_STAMP.value]
+    #         .map(lambda ts: (ts - time_stamp).total_seconds())
+    #         .idxmin()
+    #     )
 
-    def _get_current_for_station(self, coordinates: Coordinates) -> pd.Series:
-        station_data = self._get_station_data(coordinates)
-        return station_data[[DataAggregatesDecriptior.TIME_STAMP.value, DataAggregatesDecriptior.CURRENT.value]].dropna()
+    # def _get_current_for_station(self, coordinates: Coordinates) -> pd.Series:
+    #     station_data = self._get_station_data(coordinates)
+    #     return station_data[[DataAggregatesDecriptior.TIME_STAMP.value, DataAggregatesDecriptior.CURRENT.value]].dropna()
 
-    def _get_wind_for_station(self, coordinates: Coordinates) -> pd.Series:
-        station_data = self._get_station_data(coordinates)
-        return station_data[[DataAggregatesDecriptior.TIME_STAMP.value, DataAggregatesDecriptior.WIND.value]].dropna()
+    # def _get_wind_for_station(self, coordinates: Coordinates) -> pd.Series:
+    #     station_data = self._get_station_data(coordinates)
+    #     return station_data[[DataAggregatesDecriptior.TIME_STAMP.value, DataAggregatesDecriptior.WIND.value]].dropna()
 
-    def _get_station_data(self, coordinates: Coordinates) -> pd.DataFrame:
-        return self._data[self._data[DataAggregatesDecriptior.COORDINATE.value] == coordinates]
+    # def _get_station_data(self, coordinates: Coordinates) -> pd.DataFrame:
+    #     return self._data[self._data[DataAggregatesDecriptior.COORDINATE.value] == coordinates]
 
     def _load_single_dataset(self, csv_path: PathLike) -> pd.DataFrame:
         return pd.read_csv(csv_path)
