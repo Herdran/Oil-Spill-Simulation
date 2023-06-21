@@ -1,6 +1,8 @@
+import datetime
 from enum import Enum
+from math import floor
 from os import PathLike
-from typing import Callable
+from typing import Callable, Optional
 import numpy as np
 import pandas as pd
 from scipy.interpolate import NearestNDInterpolator
@@ -34,6 +36,8 @@ class DataAggregatesDecriptior(Enum):
 
 class DataProcessorImpl:
     def __init__(self, csv_paths: list[PathLike], simulation_run_parameters: SimulationRunParameters):
+        self.loaded_data: dict[int, pd.DataFrame] = {}
+        
         self.run_parameters = simulation_run_parameters
         data = self._load_all_data(csv_paths)      
         
@@ -68,32 +72,99 @@ class DataProcessorImpl:
         
         envirement_area.sort_values(inplace=True, by=[DataAggregatesDecriptior.TIME_STAMP.value])
 
-        path_to_save = "data/processed_data/"
+        path_to_save = self.run_parameters.path_to_data
         MINUTES_IN_HOUR = 60
 
         to_save = pd.DataFrame()
         
         hour = 0
         last_minutes = -1
+        
+        get_data_path = lambda: os.path.join(path_to_save, f"{hour}.csv")
+        
         for _, row in envirement_area.iterrows():
             time = row[DataAggregatesDecriptior.TIME_STAMP.value]
             if time > 0 and time % MINUTES_IN_HOUR == 0 and last_minutes != time:
-                to_save.to_csv(path_to_save + f"{hour}.csv", index=False)
+                to_save.to_csv(get_data_path(), index=False)
                 to_save = pd.DataFrame()
                 print(f"saved: {hour} hour")
                 hour += 1
             last_minutes = time
             to_save = pd.concat([to_save, pd.DataFrame([row])], ignore_index=True)
-        to_save.to_csv(path_to_save + f"{hour}.csv", index=False)
+        to_save.to_csv(get_data_path(), index=False)
+        print(f"saved: {hour} hour")
         
 
     def get_nearest(self, coordinates: Coordinates, time_stamp: pd.Timestamp) -> CertainMeasurment:
+        # TODO: check if input is correct e.g. time_stamp is in range of simulation
+        
+        data = self._get_data_for_time(time_stamp)
+        time_stamp = self._get_nearest_data_time(time_stamp)
+        coordinates = self._get_nearest_data_coordinates(coordinates)
+        return self._get_certain_measurment(data, coordinates, time_stamp)
+    
+    def _get_measurment_row_data(self, data: pd.DataFrame, coordinates: Coordinates, time_stamp: pd.Timestamp) -> pd.Series:
+        SECONDS_IN_MINUTE = 60
+        duration_till_start = (time_stamp - self.run_parameters.time.min).seconds // SECONDS_IN_MINUTE
         
         
+        row =  data[
+            (data[DataAggregatesDecriptior.TIME_STAMP.value] == duration_till_start) & 
+            (data[DataAggregatesDecriptior.COORDINATE.value] == str(coordinates))
+        ]
         
-        # nearest_coordinates = self._get_nearest_coordinates(coordinates)
-        # return self._get_certain_measurment(nearest_coordinates, time_stamp)
-        pass
+        return row.iloc[0]
+        
+        
+
+    def _get_certain_measurment(self, data: pd.DataFrame, coordinates: Coordinates, time_stamp: pd.Timestamp) -> CertainMeasurment:
+        row = self._get_measurment_row_data(data, coordinates, time_stamp)
+        return CertainMeasurment(
+            wind=row[DataAggregatesDecriptior.WIND.value],
+            current=row[DataAggregatesDecriptior.CURRENT.value]
+        )
+
+    def _get_nearest_data_time(self, time_stamp: pd.Timestamp) -> pd.Timestamp:
+        duration_till_start = time_stamp - self.run_parameters.time.min
+        time_smamps_passed = duration_till_start / self.run_parameters.data_time_step
+        return self.run_parameters.time.min + (floor(time_smamps_passed) * self.run_parameters.data_time_step)
+    
+    def _get_nearest_data_coordinates(self, coordinates: Coordinates) -> Coordinates:
+        # for now just asume that coordinates are exacly like preprocessed
+        # TODO: somehow get closest coordinates that are for sure in data
+        return coordinates 
+    
+    def _get_data_for_time(self, time_stamp: pd.Timestamp) -> Optional[pd.DataFrame]:
+        needed_hour = self._get_run_hour_for_time_stamp(time_stamp)
+        
+        if len(self.loaded_data) == 0:
+            self._load_data_for_time(needed_hour)
+        
+        
+        first_loaded_hour = next(iter(self.loaded_data.keys()))
+        if needed_hour > first_loaded_hour:
+            self.loaded_data.pop(first_loaded_hour)
+            return self._get_data_for_time(time_stamp)
+        
+        # preloading next data <- could be done in another process?
+        preload_factor = 2
+        if (time_stamp + (self.run_parameters.data_time_step / preload_factor)).hour  > time_stamp.hour:
+            self._load_data_for_time(first_loaded_hour + 1)
+            
+        return next(iter(self.loaded_data.values()))
+    
+    def _get_run_hour_for_time_stamp(self, time_stamp: pd.Timestamp) -> int:
+        SECONDS_IN_HOUR = 3600
+        return (time_stamp - self.run_parameters.time.min).seconds // SECONDS_IN_HOUR
+        
+    def _load_data_for_time(self, simulation_hour: int) -> None:
+        readed_data = self._read_data_for_time(simulation_hour)
+        if readed_data is not None:
+            self.loaded_data[simulation_hour] = readed_data
+        
+    def _read_data_for_time(self, simulation_hour: int) -> Optional[pd.DataFrame]:
+        path = os.path.join(self.run_parameters.path_to_data, f"{simulation_hour}.csv")
+        return pd.read_csv(path) if os.path.exists(path) else None
 
     def _get_interpolated__data(self, time_points: np.array, latitude_points: np.array, longitude_points: np.array, points: np.array, values: np.array) -> np.array:
         interpolator = NearestNDInterpolator(points, values)
@@ -130,42 +201,6 @@ class DataProcessorImpl:
         time_step = simulation_run_parameters.data_time_step
         times_count = int((time_range.max - time_range.min) / time_step)
         return np.array([minutes(i * time_step) for i in range(times_count)])
-
-    # def _get_certain_measurment(self, coordinates: Coordinates, time_stamp: pd.Timestamp) -> CertainMeasurment:
-    #     return CertainMeasurment(
-    #         wind=self._get_wind(coordinates, time_stamp),
-    #         current=self._get_current(coordinates, time_stamp)
-    #     )
-
-    # def _get_wind(self, coordinates: Coordinates, time_stamp: pd.Timestamp) -> SpeedMeasure:
-    #     wind_for_station = self._get_wind_for_station(coordinates)
-    #     time_index = self._get_time_index(wind_for_station, time_stamp)
-    #     return wind_for_station.loc[time_index][DataAggregatesDecriptior.WIND.value]
-
-    # def _get_current(self, coordinates: Coordinates, time_stamp: pd.Timestamp) -> SpeedMeasure:
-    #     # the problem is that it search for nearest station and thet use that
-    #     # but if may happend that the nearest station has no current data :v
-    #     current_for_station = self._get_current_for_station(coordinates)        
-    #     time_index = self._get_time_index(current_for_station, time_stamp)
-    #     return current_for_station.loc[time_index][DataAggregatesDecriptior.CURRENT.value]
-
-    # def _get_time_index(self, data: pd.DataFrame, time_stamp: pd.Timestamp) -> int:    
-    #     return (
-    #         data[DataAggregatesDecriptior.TIME_STAMP.value]
-    #         .map(lambda ts: (ts - time_stamp).total_seconds())
-    #         .idxmin()
-    #     )
-
-    # def _get_current_for_station(self, coordinates: Coordinates) -> pd.Series:
-    #     station_data = self._get_station_data(coordinates)
-    #     return station_data[[DataAggregatesDecriptior.TIME_STAMP.value, DataAggregatesDecriptior.CURRENT.value]].dropna()
-
-    # def _get_wind_for_station(self, coordinates: Coordinates) -> pd.Series:
-    #     station_data = self._get_station_data(coordinates)
-    #     return station_data[[DataAggregatesDecriptior.TIME_STAMP.value, DataAggregatesDecriptior.WIND.value]].dropna()
-
-    # def _get_station_data(self, coordinates: Coordinates) -> pd.DataFrame:
-    #     return self._data[self._data[DataAggregatesDecriptior.COORDINATE.value] == coordinates]
 
     def _load_single_dataset(self, csv_path: PathLike) -> pd.DataFrame:
         return pd.read_csv(csv_path)
@@ -302,12 +337,11 @@ if __name__ == "__main__":
         cells_side_count=CellSideCount(
             latitude=10,
             longitude=10
-        )
+        ),
+        path_to_data="data/processed_data"
     )
         
         
-
-
     # DataReader - i guess we need to have initial window in gui when user will provide path(s) to data
     # I'm not sure how we gonna do it so i want to provide interface that takes some input path(s) and returns DataHolder
     # where DataHolder already has (maybe) all data loaded into memory? or at least have enought information
@@ -330,17 +364,8 @@ if __name__ == "__main__":
     # maybe we neeed to by chunks? dunno how many data that will be
     sym_data = sym_data_reader.preprocess(simulation_run_parameters)
 
-    # # I thought that kinds of classes will be useful in readability of simulation code
-    # coordinates = Coordinates(latitude=0.0, longitude=0.0)
-    # time_stamp = pd.Timestamp(year=2010, month=4, day=1, hour=2, minute=10)
+    coordinates = Coordinates(latitude=50.6, longitude=-88.75306)
+    time_stamp = pd.Timestamp("2010-04-01 01:01:12")
 
-    # # that gonna interpolate and serach for nearest data
-    # # measurment = sym_data.get_nearest(coordinates, time_stamp)
-
-    # print(sym_data._impl._data.head())
-    # print(sym_data._impl._stations_coordinates.head())
-
-
-    # # chaching will be probably needed 
-    # measurment = sym_data.get_nearest(coordinates, time_stamp)
-    # print(measurment)
+    measurment = sym_data.get_nearest(coordinates, time_stamp)
+    print(measurment)

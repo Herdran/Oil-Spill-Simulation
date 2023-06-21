@@ -7,6 +7,7 @@ from generic import GenericT
 class CoordinatesBase(Generic[GenericT]):
     latitude: GenericT
     longitude: GenericT
+            
 
 Coordinates = CoordinatesBase[float]
 '''
