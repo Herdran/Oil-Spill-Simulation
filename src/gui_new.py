@@ -30,12 +30,17 @@ class ImageViewer(tk.Canvas):
         self.prev_y = 0
         self.pan_x = 0
         self.pan_y = 0
+        self.is_holding = None
+        self.is_panning = None
+        self.tooltip = None
         self.image_change_controller = image_change_controller
 
-        self.bind("<MouseWheel>", self._on_mousewheel)
-        self.bind("<ButtonPress-1>", self._on_button_press)
-        self.bind("<B1-Motion>", self._on_button_motion)
-        self.bind("<ButtonRelease-1>", self._on_button_release)
+        self.bind("<MouseWheel>", self.on_mousewheel)
+        self.bind("<ButtonPress-1>", self.on_button_press)
+        self.bind("<B1-Motion>", self.on_button_motion)
+        self.bind("<ButtonRelease-1>", self.on_button_release)
+        self.bind("<Motion>", self.on_motion)
+        self.bind("<Leave>", self.on_leave)
 
         self.update_image()
 
@@ -52,39 +57,101 @@ class ImageViewer(tk.Canvas):
         self.current_image = ImageTk.PhotoImage(img)
         self.image_id = self.create_image(self.pan_x, self.pan_y, anchor=tk.NW, image=self.current_image)
 
-    def _on_mousewheel(self, event):
+    def on_mousewheel(self, event):
         zoom_factor = 1.1 if event.delta > 0 else 0.9
         self.zoom_level *= zoom_factor
         self.update_image()
 
-    def _on_button_press(self, event):
+    def on_button_press(self, event):
         self.prev_x = event.x
         self.prev_y = event.y
+        self.is_holding = True
 
-    def _on_button_release(self, event):
+    def on_button_release(self, event):
+        self.is_holding = False
+        if self.is_panning:
+            self.is_panning = False
+        else:
+            x = int((event.x - self.pan_x) / self.zoom_level)
+            y = int((event.y - self.pan_y) / self.zoom_level)
+            oil_to_add_on_click = self.image_change_controller.oil_to_add_on_click
+            if 0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]:
+                point_clicked = engine.world[x][y]
+                if point_clicked.topography == simulation.TopographyState.SEA:
+                    point_clicked.add_oil(oil_to_add_on_click)
+
+                    var = blend_color(oil_color, sea_color,
+                                      point_clicked.oil_mass / self.image_change_controller.minimal_oil_to_show, True)
+                    self.image_change_controller.global_oil_amount_sea += oil_to_add_on_click
+                    self.image_change_controller.update_infoboxes()
+                    image_array[y][x] = var[:3]
+                    self.update_image()
+                    oil_mass = point_clicked.oil_mass
+                    self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {oil_mass}kg")
+
+    def on_button_motion(self, event):
+        if self.is_holding:
+            self.is_panning = True
+            delta_x = event.x - self.prev_x
+            delta_y = event.y - self.prev_y
+            self.pan_x += delta_x
+            self.pan_y += delta_y
+            self.prev_x = event.x
+            self.prev_y = event.y
+            self.update_image()
+            self.tooltip.update_position(event.x_root, event.y_root)
+
+    def on_motion(self, event):
         x = int((event.x - self.pan_x) / self.zoom_level)
         y = int((event.y - self.pan_y) / self.zoom_level)
-        oil_to_add_on_click = self.image_change_controller.oil_to_add_on_click
+
         if 0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]:
-            point_clicked = engine.world[x][y]
-            if point_clicked.topography == simulation.TopographyState.SEA:
-                point_clicked.add_oil(oil_to_add_on_click)
+            oil_mass = engine.world[x][y].oil_mass
+            self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {oil_mass}kg")
+        else:
+            self.hide_tooltip()
 
-                var = blend_color(oil_color, sea_color,
-                                  point_clicked.oil_mass / self.image_change_controller.minimal_oil_to_show, True)
-                self.image_change_controller.global_oil_amount_sea += oil_to_add_on_click
-                self.image_change_controller.update_infoboxes()
-                image_array[y][x] = var[:3]
-                self.update_image()
+    def on_leave(self, event):
+        self.hide_tooltip()
 
-    def _on_button_motion(self, event):
-        delta_x = event.x - self.prev_x
-        delta_y = event.y - self.prev_y
-        self.pan_x += delta_x
-        self.pan_y += delta_y
-        self.prev_x = event.x
-        self.prev_y = event.y
-        self.update_image()
+    def show_tooltip(self, x, y, text):
+        if self.tooltip is None:
+            self.tooltip = ToolTip(self, x, y, text)
+        else:
+            self.tooltip.update_text(text)
+            self.tooltip.update_position(x, y)
+
+    def hide_tooltip(self):
+        if self.tooltip is not None:
+            self.tooltip.hide()
+
+
+class ToolTip:
+    def __init__(self, parent, x, y, text):
+        self.parent = parent
+        self.text = text
+        self.tooltip_window = tk.Toplevel(parent)
+        self.tooltip_label = tk.Label(
+            self.tooltip_window,
+            text=text,
+            background="#ffffe0",
+            relief=tk.SOLID,
+            borderwidth=1,
+        )
+        self.tooltip_label.pack()
+        self.tooltip_window.wm_overrideredirect(True)
+        self.tooltip_window.wm_geometry(f"+{x + 15}+{y + 10}")
+        self.tooltip_window.attributes("-topmost", True)
+
+    def update_text(self, text):
+        self.tooltip_label.config(text=text)
+
+    def update_position(self, x, y):
+        self.tooltip_window.wm_geometry(f"+{x + 15}+{y + 10}")
+
+    def hide(self):
+        self.tooltip_window.destroy()
+        self.parent.tooltip = None
 
 
 class ImageChangeController(tk.Frame):
@@ -92,7 +159,7 @@ class ImageChangeController(tk.Frame):
         super().__init__(parent)
         self.image_array = image_array
         self.is_running = False
-        self.interval = 1000
+        self.interval = 1
         self.job_id = None
         self.is_updating = False
         self.curr_iter = 0
@@ -101,23 +168,32 @@ class ImageChangeController(tk.Frame):
         self.global_oil_amount_land = 0
         self.oil_to_add_on_click = 10000
         self.minimal_oil_to_show = 100
+        self.iter_as_sec = ITER_AS_SEC
 
         options_frame = tk.Frame(window)
         options_frame.grid(row=1, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S + tk.E)
         start_stop_frame = tk.Frame(options_frame)
         interval_frame = tk.Frame(options_frame)
+        iter_as_sec_frame = tk.Frame(options_frame)
         oil_added_frame = tk.Frame(options_frame)
         minimal_oil_value_to_show_frame = tk.Frame(options_frame)
 
         start_stop_frame.grid(row=1, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
         interval_frame.grid(row=1, column=1, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
-        oil_added_frame.grid(row=1, column=2, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
-        minimal_oil_value_to_show_frame.grid(row=1, column=3, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+        iter_as_sec_frame.grid(row=1, column=2, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+        oil_added_frame.grid(row=1, column=3, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+        minimal_oil_value_to_show_frame.grid(row=1, column=4, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
 
-        self.set_interval_label = tk.Label(interval_frame, text="Interval of changes [s]",
+        self.set_interval_label = tk.Label(interval_frame,
+                                           text="Interval of changes [s]",
                                            font=("Arial", 14, "bold"), padx=10, pady=5)
         self.set_interval_label.pack(side=tk.TOP)
-        self.set_oil_added_label = tk.Label(oil_added_frame, text="Oil added on click [kg]",
+        self.set_iter_as_sec_label = tk.Label(iter_as_sec_frame,
+                                              text="Time per iteration [s]",
+                                              font=("Arial", 14, "bold"), padx=10, pady=5)
+        self.set_iter_as_sec_label.pack(side=tk.TOP)
+        self.set_oil_added_label = tk.Label(oil_added_frame,
+                                            text="Oil added on click [kg]",
                                             font=("Arial", 14, "bold"), padx=10, pady=5)
         self.set_oil_added_label.pack(side=tk.TOP)
         self.set_minimal_oil_value_to_show = tk.Label(minimal_oil_value_to_show_frame,
@@ -127,11 +203,18 @@ class ImageChangeController(tk.Frame):
 
         self.btn_start_stop = tk.Button(start_stop_frame, text="Start", width=10, command=self.toggle_start_stop)
         self.btn_start_stop.pack(side=tk.TOP, padx=5, pady=5)
+
         self.text_interval = tk.Entry(interval_frame, width=10)
         self.text_interval.insert(tk.END, str(self.interval / 1000))
         self.text_interval.pack(side=tk.BOTTOM, padx=5, pady=5)
         self.text_interval.bind("<KeyPress>", self.on_key_press_interval)
         self.text_interval.bind("<FocusOut>", self.on_focus_out_interval)
+
+        self.text_iter_as_sec = tk.Entry(iter_as_sec_frame, width=10)
+        self.text_iter_as_sec.insert(tk.END, str(self.iter_as_sec))
+        self.text_iter_as_sec.pack(side=tk.BOTTOM, padx=5, pady=5)
+        self.text_iter_as_sec.bind("<KeyPress>", self.on_key_press_iter_as_sec)
+        self.text_iter_as_sec.bind("<FocusOut>", self.on_focus_out_iter_as_sec)
 
         self.text_oil_added = tk.Entry(oil_added_frame, width=10)
         self.text_oil_added.insert(tk.END, str(self.oil_to_add_on_click))
@@ -187,6 +270,13 @@ class ImageChangeController(tk.Frame):
     def on_focus_out_interval(self, event):
         self.validate_interval()
 
+    def on_key_press_iter_as_sec(self, event):
+        if event.keysym == "Return":
+            self.validate_iter_as_sec()
+
+    def on_focus_out_iter_as_sec(self, event):
+        self.validate_iter_as_sec()
+
     def on_key_press_oil_to_add(self, event):
         if event.keysym == "Return":
             self.validate_oil_to_add()
@@ -209,8 +299,23 @@ class ImageChangeController(tk.Frame):
             self.interval = int(interval * 1000)
             self.text_interval.delete(0, tk.END)
             self.text_interval.insert(tk.END, str(interval))
-            self.after_cancel(self.job_id)
-            self.job_id = self.after(self.interval, self.update_image_array)
+            if self.is_running:
+                self.after_cancel(self.job_id)
+                self.job_id = self.after(self.interval, self.update_image_array)
+        except ValueError:
+            pass
+
+    def validate_iter_as_sec(self):
+        new_value = self.text_iter_as_sec.get()
+        try:
+            iter_as_sec = int(new_value)
+            iter_as_sec = max(1, iter_as_sec)
+            self.iter_as_sec = iter_as_sec
+            self.text_iter_as_sec.delete(0, tk.END)
+            self.text_iter_as_sec.insert(tk.END, str(iter_as_sec))
+            if self.is_running:
+                self.after_cancel(self.job_id)
+                self.job_id = self.after(self.interval, self.update_image_array)
         except ValueError:
             pass
 
@@ -255,8 +360,7 @@ class ImageChangeController(tk.Frame):
 
     def update_image_array(self):
         if self.is_running:
-            engine.update(20)
-
+            engine.update(self.iter_as_sec)
         new_oil_mass_sea = 0
         new_oil_mass_land = 0
         for i in range(len(engine.world)):
@@ -276,13 +380,13 @@ class ImageChangeController(tk.Frame):
         self.global_oil_amount_sea = new_oil_mass_sea
         self.global_oil_amount_land = new_oil_mass_land
 
-        self.curr_iter += 1
-        self.sim_sec_passed += ITER_AS_SEC
-        self.update_infoboxes()
-
         if self.is_running:
             viewer.update_image()
+            self.curr_iter += 1
+            self.sim_sec_passed += self.iter_as_sec
             self.job_id = self.after(self.interval, self.update_image_array)
+
+        self.update_infoboxes()
 
     def update_infoboxes(self):
         val1 = str(self.curr_iter)
