@@ -99,7 +99,8 @@ class ImageViewer(tk.Canvas):
             self.prev_x = event.x
             self.prev_y = event.y
             self.update_image()
-            self.tooltip.update_position(event.x_root, event.y_root)
+            if self.tooltip:
+                self.tooltip.update_position(event.x_root, event.y_root)
 
     def on_motion(self, event):
         x = int((event.x - self.pan_x) / self.zoom_level)
