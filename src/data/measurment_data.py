@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import math
 from typing import Generic, Optional
-from generic import GenericT
+from data.generic import GenericT
 
 @dataclass
 class CoordinatesBase(Generic[GenericT]):

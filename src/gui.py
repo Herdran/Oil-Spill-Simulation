@@ -1,23 +1,17 @@
+import os
 import tkinter as tk
-
 import numpy as np
 from PIL import Image, ImageTk
 
 import simulation
-from constatnts import ITER_AS_SEC, CELL_SIDE_SIZE, GRID_SIDE_SIZE
+from constatnts import ITER_AS_SEC, CELL_SIDE_SIZE, GRID_SIDE_SIZE, SIMULATION_INITIAL_PARAMETERS
+from data.data_processor import DataProcessor, DataReader, DataValidationException
+from color import rgba, blend_color
 
-sea_color = [15 / 255, 10 / 255, 222 / 255, 1]
-land_color = [38 / 255, 166 / 255, 91 / 255, 1]
-oil_color = [0 / 255, 0 / 255, 0 / 255, 1]
-land_with_oil_color = [0, 100 / 255, 0, 1]
-
-
-def blend_color(color1, color2, ratio, rgb=False):
-    ratio = min(ratio, 1)
-    if rgb:
-        return [int(255 * (color1[i] * ratio + color2[i] * (1 - ratio))) for i in range(len(color1))]
-    return [color1[i] * ratio + color2[i] * (1 - ratio) for i in range(len(color1))]
-
+SEA_COLOR = rgba(15, 10, 222)
+LAND_COLOR = rgba(38, 166, 91)
+OIL_COLOR = rgba(0, 0, 0)
+LAND_WITH_OIL_COLOR = rgba(0, 100, 0)
 
 class ImageViewer(tk.Canvas):
     def __init__(self, parent, image_array, image_change_controller):
@@ -80,14 +74,14 @@ class ImageViewer(tk.Canvas):
                 if point_clicked.topography == simulation.TopographyState.SEA:
                     point_clicked.add_oil(oil_to_add_on_click)
 
-                    var = blend_color(oil_color, sea_color,
+                    var = blend_color(OIL_COLOR, SEA_COLOR,
                                       point_clicked.oil_mass / self.image_change_controller.minimal_oil_to_show, True)
                     self.image_change_controller.global_oil_amount_sea += oil_to_add_on_click
                     self.image_change_controller.update_infoboxes()
                     image_array[y][x] = var[:3]
                     self.update_image()
                     oil_mass = point_clicked.oil_mass
-                    self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {oil_mass}kg")
+                    self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {oil_mass: .2f} kg")
 
     def on_button_motion(self, event):
         if self.is_holding:
@@ -108,7 +102,7 @@ class ImageViewer(tk.Canvas):
 
         if 0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]:
             oil_mass = engine.world[x][y].oil_mass
-            self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {oil_mass}kg")
+            self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {oil_mass: .2f} kg") # TODO: please clean up to be only in one place 
         else:
             self.hide_tooltip()
 
@@ -369,12 +363,12 @@ class ImageChangeController(tk.Frame):
                 curr_point = engine.world[j][i]
                 if curr_point.change_occurred:
                     if curr_point.topography == simulation.TopographyState.LAND:
-                        var = blend_color(land_with_oil_color, land_color,
+                        var = blend_color(LAND_WITH_OIL_COLOR, LAND_COLOR,
                                           curr_point.oil_mass / self.minimal_oil_to_show,
                                           True)
                         new_oil_mass_land += curr_point.oil_mass
                     else:
-                        var = blend_color(oil_color, sea_color, curr_point.oil_mass / self.minimal_oil_to_show, True)
+                        var = blend_color(OIL_COLOR, SEA_COLOR, curr_point.oil_mass / self.minimal_oil_to_show, True)
                         new_oil_mass_sea += curr_point.oil_mass
                     image_array[i][j] = var[:3]
 
@@ -400,16 +394,34 @@ class ImageChangeController(tk.Frame):
         self.infobox4_values_label.configure(text=val4)
 
 
+# TODO: what if user already data has been processed?
+# maybe interface for choosing already processed data?
+# for time saving
+def get_data_processor() -> DataProcessor:
+    sym_data_reader = DataReader()
+
+    try:
+        sym_data_reader.add_all_from_dir(os.path.join("data", "test_1"))
+    except DataValidationException as ex:
+        # TODO: some kind of error popup?
+        print("Error with Data Validation: ", ex)
+        exit(1)
+        
+    return sym_data_reader.preprocess(SIMULATION_INITIAL_PARAMETERS)
+
+
 simulation_size = CELL_SIDE_SIZE * GRID_SIDE_SIZE
 image_array = np.random.randint(0, 256, (simulation_size, simulation_size, 3), dtype=np.uint8)
-engine = simulation.SimulationEngine()
+
+
+engine = simulation.SimulationEngine(get_data_processor())
 engine.start()
 
-window_width = 1280
-window_height = 720
+WINDOW_WIDTH = 1280
+WINDOW_HEIGHT = 720
 
 window = tk.Tk()
-window.geometry(f"{window_width}x{window_height}")
+window.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
 window.title('Oil Spill Simulation')
 
 frame_viewer = tk.Frame(window)

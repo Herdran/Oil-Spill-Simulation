@@ -1,6 +1,6 @@
 from math import acos, cos, radians, sin
 from typing import Callable
-from measurment_data import Coordinates
+from data.measurment_data import Coordinates
 import pandas as pd
     
 def minutes(time_delta: pd.Timedelta) -> float:
@@ -16,8 +16,7 @@ def great_circle_distance(first: Coordinates, second: Coordinates) -> float:
         acos(sin(lat1) * sin(lat2) + cos(lat1)
              * cos(lat2) * cos(lon1 - lon2))
     )
-
-
+    
 def dataframe_replace_applay(dataframe: pd.DataFrame, result_column: str, function: Callable, columns: list[str]):
     def is_any_nan(row: pd.Series) -> bool:
         return any([pd.isna(row[column]) for column in columns])

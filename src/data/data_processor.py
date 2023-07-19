@@ -1,16 +1,15 @@
-import datetime
 from enum import Enum
 from math import floor
-from os import PathLike
+from os import PathLike, path, listdir
 from typing import Callable, Optional
 import numpy as np
 import pandas as pd
 from scipy.interpolate import NearestNDInterpolator
 
-from generic import Range
-from utilities import dataframe_replace_applay, great_circle_distance, minutes
-from measurment_data import CertainMeasurment, CoordinatesBase, Coordinates, SpeedMeasure
-from simulation_run_parameters import SimulationRunParameters, CellSideCount
+from data.generic import Range
+from data.utilities import dataframe_replace_applay, great_circle_distance, minutes
+from data.measurment_data import CertainMeasurment, Coordinates, SpeedMeasure
+from data.simulation_run_parameters import SimulationRunParameters, CellSideCount
 
 
 class DataDescriptor(Enum):
@@ -48,16 +47,16 @@ class DataProcessorImpl:
         time_points, latitude_points, longitude_points = np.meshgrid(time_points, latitude_points, longitude_points)
         
         points_wind_n, values_wind_n = self._get_interpolation_area(data, DataAggregatesDecriptior.WIND, lambda row: row[DataAggregatesDecriptior.WIND.value].speed_north)
-        wind_n_interpolated = self._get_interpolated__data(time_points, latitude_points, longitude_points, points_wind_n, values_wind_n)
+        wind_n_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_wind_n, values_wind_n)
         
         points_wind_e, values_wind_e = self._get_interpolation_area(data, DataAggregatesDecriptior.WIND, lambda row: row[DataAggregatesDecriptior.WIND.value].speed_east)
-        wind_e_interpolated = self._get_interpolated__data(time_points, latitude_points, longitude_points, points_wind_e, values_wind_e)
+        wind_e_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_wind_e, values_wind_e)
         
         points_current_n, values_current_n = self._get_interpolation_area(data, DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_north)
-        current_n_interpolated = self._get_interpolated__data(time_points, latitude_points, longitude_points, points_current_n, values_current_n)
+        current_n_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_current_n, values_current_n)
         
         points_current_e, values_current_e = self._get_interpolation_area(data, DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_east)
-        current_e_interpolated = self._get_interpolated__data(time_points, latitude_points, longitude_points, points_current_e, values_current_e)
+        current_e_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_current_e, values_current_e)
         
         
         # into one dataframe
@@ -80,7 +79,7 @@ class DataProcessorImpl:
         hour = 0
         last_minutes = -1
         
-        get_data_path = lambda: os.path.join(path_to_save, f"{hour}.csv")
+        get_data_path = lambda: path.join(path_to_save, f"{hour}.csv")
         
         for _, row in envirement_area.iterrows():
             time = row[DataAggregatesDecriptior.TIME_STAMP.value]
@@ -163,10 +162,10 @@ class DataProcessorImpl:
             self.loaded_data[simulation_hour] = readed_data
         
     def _read_data_for_time(self, simulation_hour: int) -> Optional[pd.DataFrame]:
-        path = os.path.join(self.run_parameters.path_to_data, f"{simulation_hour}.csv")
-        return pd.read_csv(path) if os.path.exists(path) else None
+        path = path.join(self.run_parameters.path_to_data, f"{simulation_hour}.csv")
+        return pd.read_csv(path) if path.exists(path) else None
 
-    def _get_interpolated__data(self, time_points: np.array, latitude_points: np.array, longitude_points: np.array, points: np.array, values: np.array) -> np.array:
+    def _get_interpolated_data(self, time_points: np.array, latitude_points: np.array, longitude_points: np.array, points: np.array, values: np.array) -> np.array:
         interpolator = NearestNDInterpolator(points, values)
         return interpolator(time_points, latitude_points, longitude_points)
         
@@ -285,7 +284,7 @@ class DataValidator:
         pass
 
     def validate(self, csv_path: PathLike):
-        if not os.path.isfile(csv_path):
+        if not path.isfile(csv_path):
             raise DataValidationException("File does not exist")
         
         self.check_columns(csv_path)
@@ -309,9 +308,9 @@ class DataReader:
 
     def add_all_from_dir(self, dir_path: PathLike):
         CSV_EXT = ".csv"
-        for file in os.listdir(dir_path):
+        for file in listdir(dir_path):
             if file.endswith(CSV_EXT):
-                self.add_data(os.path.join(dir_path, file))
+                self.add_data(path.join(dir_path, file))
 
     def preprocess(self, simulation_run_parameters: SimulationRunParameters) -> DataProcessor:
         return DataProcessor(self._dataset_paths, simulation_run_parameters)
@@ -360,8 +359,6 @@ if __name__ == "__main__":
         # bla bla bla
         pass
 
-    # dunno if this is a good idea
-    # maybe we neeed to by chunks? dunno how many data that will be
     sym_data = sym_data_reader.preprocess(simulation_run_parameters)
 
     coordinates = Coordinates(latitude=50.6, longitude=-88.75306)
