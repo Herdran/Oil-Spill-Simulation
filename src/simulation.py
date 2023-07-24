@@ -5,9 +5,11 @@ from math import exp, log, sqrt
 from random import random as rand
 
 import numpy as np
+import pandas as pd
 
 import constatnts as const
 from data.data_processor import DataProcessor
+from data.measurment_data import Coordinates
 
 
 class TopographyState(Enum):
@@ -27,7 +29,7 @@ class InitialValues:
         self.water_density = 997  # [kg/m^3]
         self.density = 835  # [kg/m^3]
         self.surface_tension = 30  # [dyne/s]
-        self.time_limit = 24 * 60 * 60  # [s]
+        self.time_limit = 24 * 60 * 60  # [s]    TODO: use that from simulation parameters
         self.emulsion_max_content_water = 0.7  # max content of water in the emulsion
         self.molar_mass = 348.23  # [g/mol] mean
         self.boiling_point = 609  # [K] mean
@@ -45,6 +47,8 @@ class Point:
         self.topography = TopographyState.SEA
         self.x = x
         self.y = y
+        self.coordinates = Coordinates(latitude=const.POINT_LAT_CENTERS[x], longitude=const.POINT_LON_CENTERS[y])
+        self.weather_station_coordinates = data_processor.weather_station_coordinates(self.coordinates)
         self.oil_mass = 0  # [kg]
         self.initial_values = initial_values
         self.emulsification_rate = initial_values.emulsification_rate
@@ -57,6 +61,7 @@ class Point:
         self.change_occurred = True  # TODO to be set when point is updated
         self.wind_velocity = DEFAULT_WIND_VELOCITY
         self.wave_velocity = DEFAULT_WAVE_VELOCITY
+        self.last_weather_update_time = None
 
     def contain_oil(self) -> bool:
         # TODO: epsilon for optimalisation?
@@ -70,11 +75,18 @@ class Point:
                 self.oil_mass + mass)
         self.oil_mass += mass
 
+    def should_update_weather_data(self, time_delta: pd.Timedelta) -> bool:
+        return (self.last_weather_update_time is None 
+                or self.data_processor.should_update_data(time_delta - self.last_weather_update_time))
+
     def update_weather_data(self) -> None:
-        # TODO: propably store last change time
-        # if there is a time when value could chage then interpolate 
-        # else just do nothing
-        pass
+        time_delta = pd.Timedelta(seconds=int(total_time))
+        if self.should_update_weather_data(time_delta):
+            time_stamp = const.SIMULATION_INITIAL_PARAMETERS.time.min + time_delta
+            measurment = self.data_processor.get_measurment(self.coordinates, self.weather_station_coordinates, time_stamp)
+            self.wave_velocity = measurment.current.to_numpy()
+            self.wind_velocity = measurment.wind.to_numpy()
+            self.last_weather_update_time = time_delta
 
     def update(self, delta_time: float) -> None:
         self.update_weather_data()
@@ -146,7 +158,7 @@ class Point:
         self.advection_buffer += delta_r
         next_x = self.x + int(self.advection_buffer[0])
         next_y = self.y + int(self.advection_buffer[1])
-        if 0 <= next_x < const.WORLD_SIDE_SIZE and 0 <= next_y < const.WORLD_SIDE_SIZE:
+        if 0 <= next_x < const.POINTS_SIDE_COUNT and 0 <= next_y < const.POINTS_SIDE_COUNT:
             self.world[next_x][next_y].oil_buffer.append((self.oil_mass, self.viscosity, self.emulsification_rate))
             self.advection_buffer -= np.array([next_x - self.x, next_y - self.y])
         self.oil_mass = 0
@@ -184,8 +196,8 @@ class SimulationEngine:
     def __init__(self, data_processor: DataProcessor):
         self.initial_values = InitialValues()
         self.world = [[Point(x, y, self.initial_values, data_processor)
-                       for y in range(const.WORLD_SIDE_SIZE)]
-                      for x in range(const.WORLD_SIDE_SIZE)]
+                       for y in range(const.POINTS_SIDE_COUNT)]
+                      for x in range(const.POINTS_SIDE_COUNT)]
 
         Point.world = self.world
         self.spreading_pairs = self.generate_spreading_pairs()
@@ -222,10 +234,10 @@ class SimulationEngine:
 
     def generate_spreading_pairs(self):
         return (
-                [((x, y), (x + 1, y)) for x in range(0, const.WORLD_SIDE_SIZE - 1, 2) for y in range(const.WORLD_SIDE_SIZE)]
-                + [((x, y), (x + 1, y)) for x in range(1, const.WORLD_SIDE_SIZE - 1, 2) for y in range(const.WORLD_SIDE_SIZE)]
-                + [((x, y), (x, y + 1)) for y in range(0, const.WORLD_SIDE_SIZE - 1, 2) for x in range(const.WORLD_SIDE_SIZE)]
-                + [((x, y), (x, y + 1)) for y in range(1, const.WORLD_SIDE_SIZE - 1, 2) for x in range(const.WORLD_SIDE_SIZE)]
+                [((x, y), (x + 1, y)) for x in range(0, const.POINTS_SIDE_COUNT - 1, 2) for y in range(const.POINTS_SIDE_COUNT)]
+                + [((x, y), (x + 1, y)) for x in range(1, const.POINTS_SIDE_COUNT - 1, 2) for y in range(const.POINTS_SIDE_COUNT)]
+                + [((x, y), (x, y + 1)) for y in range(0, const.POINTS_SIDE_COUNT - 1, 2) for x in range(const.POINTS_SIDE_COUNT)]
+                + [((x, y), (x, y + 1)) for y in range(1, const.POINTS_SIDE_COUNT - 1, 2) for x in range(const.POINTS_SIDE_COUNT)]
         )
 
     def spread_oil_points(self, delta_time: float):

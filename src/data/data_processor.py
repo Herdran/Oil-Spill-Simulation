@@ -7,10 +7,12 @@ import pandas as pd
 from scipy.interpolate import NearestNDInterpolator
 
 from data.generic import Range
-from data.utilities import dataframe_replace_applay, great_circle_distance, minutes
-from data.measurment_data import CertainMeasurment, Coordinates, SpeedMeasure
+from data.utilities import dataframe_replace_applay, great_circle_distance, minutes, or_default
+from data.measurment_data import CertainMeasurment, Coordinates, SpeedMeasure, CoordinatesBase
 from data.simulation_run_parameters import SimulationRunParameters, CellSideCount
 
+
+DataStationInfo = CoordinatesBase[int]
 
 class DataDescriptor(Enum):
     LATITUDE = "lat"
@@ -41,10 +43,12 @@ class DataProcessorImpl:
         data = self._load_all_data(csv_paths)      
         
         time_points = self._create_envirement_time_range(simulation_run_parameters)
-        latitude_points = self._create_envirement_latitude_range(simulation_run_parameters)
-        longitude_points = self._create_envirement_longitude_range(simulation_run_parameters)
+        self.latitude_points = self._create_envirement_latitude_range(simulation_run_parameters)
+        self.longitude_points = self._create_envirement_longitude_range(simulation_run_parameters)
+        
     
-        time_points, latitude_points, longitude_points = np.meshgrid(time_points, latitude_points, longitude_points)
+        time_points, latitude_points, longitude_points = np.meshgrid(time_points, self.latitude_points, self.longitude_points)
+
         
         points_wind_n, values_wind_n = self._get_interpolation_area(data, DataAggregatesDecriptior.WIND, lambda row: row[DataAggregatesDecriptior.WIND.value].speed_north)
         wind_n_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_wind_n, values_wind_n)
@@ -93,14 +97,19 @@ class DataProcessorImpl:
         to_save.to_csv(get_data_path(), index=False)
         print(f"saved: {hour} hour")
         
+    def should_update_data(self, time_from_last_update: pd.Timedelta) -> bool:
+        return time_from_last_update > self.run_parameters.data_time_step
 
-    def get_nearest(self, coordinates: Coordinates, time_stamp: pd.Timestamp) -> CertainMeasurment:
-        # TODO: check if input is correct e.g. time_stamp is in range of simulation
-        
+    def get_measurment(self, coordinates: Coordinates, nearest_station_info: DataStationInfo,  time_stamp: pd.Timestamp) -> CertainMeasurment:
         data = self._get_data_for_time(time_stamp)
         time_stamp = self._get_nearest_data_time(time_stamp)
-        coordinates = self._get_nearest_data_coordinates(coordinates)
-        return self._get_certain_measurment(data, coordinates, time_stamp)
+        
+        station_coordinates = Coordinates(
+            self.latitude_points[nearest_station_info.latitude],
+            self.longitude_points[nearest_station_info.longitude]
+        )
+        
+        return self._get_certain_measurment(data, station_coordinates, time_stamp)
     
     def _get_measurment_row_data(self, data: pd.DataFrame, coordinates: Coordinates, time_stamp: pd.Timestamp) -> pd.Series:
         SECONDS_IN_MINUTE = 60
@@ -118,20 +127,23 @@ class DataProcessorImpl:
 
     def _get_certain_measurment(self, data: pd.DataFrame, coordinates: Coordinates, time_stamp: pd.Timestamp) -> CertainMeasurment:
         row = self._get_measurment_row_data(data, coordinates, time_stamp)
+        wind = SpeedMeasure.try_from_repr(row[DataAggregatesDecriptior.WIND.value])
+        current = SpeedMeasure.try_from_repr(row[DataAggregatesDecriptior.CURRENT.value])
+
+        if wind is None or current is None:
+            print(f"WARNING: can't parse measurment for given coordinates {coordinates} and time stamp {time_stamp}")
+
+        DEFAULT_SPEED = SpeedMeasure(0, 0)
+
         return CertainMeasurment(
-            wind=row[DataAggregatesDecriptior.WIND.value],
-            current=row[DataAggregatesDecriptior.CURRENT.value]
+            wind=or_default(wind, DEFAULT_SPEED),
+            current=or_default(current, DEFAULT_SPEED)
         )
 
     def _get_nearest_data_time(self, time_stamp: pd.Timestamp) -> pd.Timestamp:
         duration_till_start = time_stamp - self.run_parameters.time.min
-        time_smamps_passed = duration_till_start / self.run_parameters.data_time_step
-        return self.run_parameters.time.min + (floor(time_smamps_passed) * self.run_parameters.data_time_step)
-    
-    def _get_nearest_data_coordinates(self, coordinates: Coordinates) -> Coordinates:
-        # for now just asume that coordinates are exacly like preprocessed
-        # TODO: somehow get closest coordinates that are for sure in data
-        return coordinates 
+        time_stamps_passed = duration_till_start / self.run_parameters.data_time_step
+        return self.run_parameters.time.min + (floor(time_stamps_passed) * self.run_parameters.data_time_step)
     
     def _get_data_for_time(self, time_stamp: pd.Timestamp) -> Optional[pd.DataFrame]:
         needed_hour = self._get_run_hour_for_time_stamp(time_stamp)
@@ -146,8 +158,8 @@ class DataProcessorImpl:
             return self._get_data_for_time(time_stamp)
         
         # preloading next data <- could be done in another process?
-        preload_factor = 2
-        if (time_stamp + (self.run_parameters.data_time_step / preload_factor)).hour  > time_stamp.hour:
+        PRELOAD_FACTOR = 2
+        if (time_stamp + (self.run_parameters.data_time_step / PRELOAD_FACTOR)).hour  > time_stamp.hour:
             self._load_data_for_time(first_loaded_hour + 1)
             
         return next(iter(self.loaded_data.values()))
@@ -162,8 +174,8 @@ class DataProcessorImpl:
             self.loaded_data[simulation_hour] = readed_data
         
     def _read_data_for_time(self, simulation_hour: int) -> Optional[pd.DataFrame]:
-        path = path.join(self.run_parameters.path_to_data, f"{simulation_hour}.csv")
-        return pd.read_csv(path) if path.exists(path) else None
+        data_path = path.join(self.run_parameters.path_to_data, f"{simulation_hour}.csv")
+        return pd.read_csv(data_path) if path.exists(data_path) else None
 
     def _get_interpolated_data(self, time_points: np.array, latitude_points: np.array, longitude_points: np.array, points: np.array, values: np.array) -> np.array:
         interpolator = NearestNDInterpolator(points, values)
@@ -261,19 +273,32 @@ class DataProcessorImpl:
             ]
         )
 
-    def _get_stations_coordinates(self) -> pd.Series:
-        return self._data[DataAggregatesDecriptior.COORDINATE.value].drop_duplicates().dropna()
-
-    def _get_nearest_coordinates(self, coordinates: Coordinates) -> Coordinates:
-        return self._stations_coordinates.iloc[self._stations_coordinates.map(lambda row: great_circle_distance(row, coordinates)).idxmin()]
-
+    def weather_station_coordinates(self, coordinates: Coordinates) -> DataStationInfo:
+        min_value = float("inf")
+        result = None
+        
+        for lat_idx, lat in enumerate(self.latitude_points.flatten()):
+            for lon_idx, lon in enumerate(self.longitude_points.flatten()):
+                coord = Coordinates(lat, lon)
+                dist = great_circle_distance(coordinates, coord)
+                if dist < min_value:
+                    min_value = dist
+                    result = DataStationInfo(lat_idx, lon_idx)
+                
+        return result
 
 class DataProcessor:
     def __init__(self, *args):
         self._impl = DataProcessorImpl(*args)
 
-    def get_nearest(self, coordinates: Coordinates, time_stamp: pd.Timestamp) -> CertainMeasurment:
-        return self._impl.get_nearest(coordinates, time_stamp)
+    def get_measurment(self, coordinates: Coordinates, nearest_station_info: DataStationInfo, time_stamp: pd.Timestamp) -> CertainMeasurment:
+        return self._impl.get_measurment(coordinates, nearest_station_info, time_stamp)
+    
+    def should_update_data(self, time_from_last_update: pd.Timestamp) -> bool:
+        return self._impl.should_update_data(time_from_last_update) 
+    
+    def weather_station_coordinates(self, coordinates: Coordinates) -> DataStationInfo:
+        return self._impl.weather_station_coordinates(coordinates)
 
 
 class DataValidationException(Exception):
@@ -364,5 +389,5 @@ if __name__ == "__main__":
     coordinates = Coordinates(latitude=50.6, longitude=-88.75306)
     time_stamp = pd.Timestamp("2010-04-01 01:01:12")
 
-    measurment = sym_data.get_nearest(coordinates, time_stamp)
+    measurment = sym_data.get_measurment(coordinates, coordinates, time_stamp)
     print(measurment)

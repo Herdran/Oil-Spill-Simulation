@@ -1,5 +1,5 @@
 from math import acos, cos, radians, sin
-from typing import Callable
+from typing import Callable, Optional
 from data.measurment_data import Coordinates
 import pandas as pd
     
@@ -35,3 +35,8 @@ def dataframe_replace_applay(dataframe: pd.DataFrame, result_column: str, functi
         columns=columns,
         inplace=True
     )
+
+def or_default(value: Optional[object], default: object) -> object:
+    if value is None:
+        return default
+    return value

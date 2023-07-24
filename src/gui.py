@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image, ImageTk
 
 import simulation
-from constatnts import ITER_AS_SEC, CELL_SIDE_SIZE, GRID_SIDE_SIZE, SIMULATION_INITIAL_PARAMETERS
+from constatnts import ITER_AS_SEC, POINTS_SIDE_COUNT, SIMULATION_INITIAL_PARAMETERS
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from color import rgba, blend_color
 
@@ -410,8 +410,7 @@ def get_data_processor() -> DataProcessor:
     return sym_data_reader.preprocess(SIMULATION_INITIAL_PARAMETERS)
 
 
-simulation_size = CELL_SIDE_SIZE * GRID_SIDE_SIZE
-image_array = np.random.randint(0, 256, (simulation_size, simulation_size, 3), dtype=np.uint8)
+image_array = np.random.randint(0, 256, (POINTS_SIDE_COUNT, POINTS_SIDE_COUNT, 3), dtype=np.uint8)
 
 
 engine = simulation.SimulationEngine(get_data_processor())

@@ -3,10 +3,8 @@ from data.generic import Range
 from data.measurment_data import Coordinates
 from data.simulation_run_parameters import CellSideCount, SimulationRunParameters
 
-POINT_SIDE_SIZE = 50  # [m]
-CELL_SIDE_SIZE = 10  # points per cell side size
-GRID_SIDE_SIZE = 10  # cells per grid side size
-WORLD_SIDE_SIZE = CELL_SIDE_SIZE * GRID_SIDE_SIZE
+POINT_SIDE_SIZE = 50  # [m] #TODO: right now that could be different from what we have from coordinates :v
+POINTS_SIDE_COUNT = 100
 ITER_AS_SEC = 20
 
 TOP_COORD = 30.24268
@@ -14,13 +12,12 @@ LEFT_COORD = -88.77964
 DOWN_COORD = 30.19767
 RIGHT_COORD = -88.72648
 
-CELL_LAT_SIZE = (TOP_COORD - DOWN_COORD)/GRID_SIDE_SIZE
-CELL_LON_SIZE = (RIGHT_COORD - LEFT_COORD)/GRID_SIDE_SIZE
+POINT_LAT_SIZE = (TOP_COORD - DOWN_COORD)/POINTS_SIDE_COUNT
+POINT_LON_SIZE = (RIGHT_COORD - LEFT_COORD)/POINTS_SIDE_COUNT
 
-##############################################
-CELL_LAT = [DOWN_COORD + CELL_LON_SIZE/2 + (CELL_LAT_SIZE * i) for i in range(GRID_SIDE_SIZE)]
-CELL_LON = [LEFT_COORD + CELL_LON_SIZE/2 + (CELL_LON_SIZE * i) for i in range(GRID_SIDE_SIZE)]
-##############################################
+POINT_LAT_CENTERS = [DOWN_COORD + POINT_LAT_SIZE/2 + (POINT_LAT_SIZE * i) for i in range(POINTS_SIDE_COUNT)]
+POINT_LON_CENTERS = [LEFT_COORD + POINT_LON_SIZE/2 + (POINT_LON_SIZE * i) for i in range(POINTS_SIDE_COUNT)]
+
 
 # need to be seted from GUI initial window
 SIMULATION_INITIAL_PARAMETERS = SimulationRunParameters(
