@@ -11,7 +11,6 @@ import constatnts as const
 from data.data_processor import DataProcessor
 from data.measurment_data import Coordinates
 
-
 class TopographyState(Enum):
     LAND = 0
     SEA = 1
@@ -35,9 +34,8 @@ class InitialValues:
         self.boiling_point = 609  # [K] mean
         self.interfacial_tension = 30  # [dyna/cm]
         self.propagation_factor = 2.5
-        self.c = 0.7  # constant from paper
-        #TODO: find out what is this: 
-        self.viscosity = 10
+        self.c = 0.7  # constant from paper 
+        self.viscosity = 10 # TODO: what is that value?
         self.emulsification_rate = 0.01
 
 class Point:
@@ -49,19 +47,25 @@ class Point:
         self.y = y
         self.coordinates = Coordinates(latitude=const.POINT_LAT_CENTERS[x], longitude=const.POINT_LON_CENTERS[y])
         self.weather_station_coordinates = data_processor.weather_station_coordinates(self.coordinates)
+        self.wind_velocity = DEFAULT_WIND_VELOCITY
+        self.wave_velocity = DEFAULT_WAVE_VELOCITY
+        self.temperature = DEFAULT_TEMPERATUTRE
+        self.last_weather_update_time = None
+        self.change_occurred = True 
         self.oil_mass = 0  # [kg]
         self.initial_values = initial_values
         self.emulsification_rate = initial_values.emulsification_rate
-        self.temperature = DEFAULT_TEMPERATUTRE
         self.data_processor = data_processor
         self.viscosity = initial_values.viscosity  # [cP]
         self.oil_buffer = []  # contains tuples (mass, viscosity, emulsification_rate)
         self.advection_buffer = np.array([0, 0], dtype='f')
         self.evaporation_rate = 0
-        self.change_occurred = True  # TODO to be set when point is updated
-        self.wind_velocity = DEFAULT_WIND_VELOCITY
-        self.wave_velocity = DEFAULT_WAVE_VELOCITY
-        self.last_weather_update_time = None
+        
+    def reset_change(self, value: bool):
+        self.change_occurred = value
+        
+    def update_change(self, value: bool):
+        self.change_occurred = self.change_occurred or value
 
     def contain_oil(self) -> bool:
         # TODO: epsilon for optimalisation?
@@ -100,6 +104,7 @@ class Point:
 
         # to na końcu na pewno
         self.process_advection(delta_time)
+
 
     def process_emulsification(self, delta_time: float) -> float:
         K = 2.0e-6
@@ -182,6 +187,8 @@ class Point:
             self.viscosity = self.initial_values.viscosity
 
     def pour_from_buffer(self):
+        prev_mas = self.oil_mass
+        
         # nie uwzględniamy masy w punkcie, bo wszystko powinno być w buforze
         oil_mass = sum([tup[0] for tup in self.oil_buffer])
         if oil_mass < 1:
@@ -190,6 +197,8 @@ class Point:
         self.emulsification_rate = sum([tup[0] * tup[2] for tup in self.oil_buffer]) / oil_mass
         self.oil_buffer = []
         self.oil_mass = oil_mass
+        
+        self.update_change(prev_mas != self.oil_mass)
 
 
 class SimulationEngine:
@@ -201,7 +210,7 @@ class SimulationEngine:
 
         Point.world = self.world
         self.spreading_pairs = self.generate_spreading_pairs()
-        self.current_oil_volume = 100
+        self.current_oil_volume = 100 # TODO: is that value ok??
         self.data_processor = data_processor
         
     def start(self):
@@ -231,6 +240,9 @@ class SimulationEngine:
             for point in points:
                 if point.contain_oil():
                     point.update(delta_time)
+                    point.reset_change(True)
+                else:
+                    point.reset_change(False)
 
     def generate_spreading_pairs(self):
         return (
@@ -277,7 +289,11 @@ class SimulationEngine:
         to_cell.emulsification_rate = (to_cell.emulsification_rate * to_cell.oil_mass + from_cell.emulsification_rate * real_delta) / (
                 to_cell.oil_mass + real_delta)
         to_cell.oil_mass += real_delta
-
+        
+        to_cell.change_occurred = True
+        from_cell.change_occurred = True
+        
+        
     def from_coords(self, coord) -> Point:
         x, y = coord
         return self.world[x][y]
