@@ -12,6 +12,9 @@ from data.measurment_data import CertainMeasurment, Coordinates, SpeedMeasure, C
 from data.simulation_run_parameters import SimulationRunParameters, CellSideCount
 
 
+MINUTES_IN_HOUR = 60
+SECONDS_IN_MINUTE = 60
+
 DataStationInfo = CoordinatesBase[int]
 
 class DataDescriptor(Enum):
@@ -26,8 +29,30 @@ class DataDescriptor(Enum):
     WIND_DIRECTION = "wind dir"
     CURRENT_SPEED = "current speed"
     CURRENT_DIRECTION = "current dir"
+    
 
+class StationNeigbourType(Enum):
+    NORTH = DataStationInfo(longitude=0, latitude=-1)
+    SOUTH = DataStationInfo(longitude=0, latitude=1)
+    WEST = DataStationInfo(longitude=-1, latitude=0)
+    EAST = DataStationInfo(longitude=1, latitude=0)
+    NORTH_WEST = DataStationInfo(longitude=-1, latitude=-1)
+    NORTH_EAST = DataStationInfo(longitude=1, latitude=-1)
+    SOUTH_WEST = DataStationInfo(longitude=-1, latitude=1)
+    SOUTH_EAST = DataStationInfo(longitude=1, latitude=1)
+    CENTER = DataStationInfo(longitude=0, latitude=0)
 
+    def get_interpolation_neigbours(self) -> Optional[list['StationNeigbourType']]:
+        return INTERPOLATION_NEIGHBOURS.get(self)
+
+    
+INTERPOLATION_NEIGHBOURS = {
+    StationNeigbourType.NORTH_WEST: [StationNeigbourType.NORTH, StationNeigbourType.CENTER, StationNeigbourType.WEST, StationNeigbourType.NORTH_WEST],
+    StationNeigbourType.NORTH_EAST: [StationNeigbourType.NORTH, StationNeigbourType.CENTER, StationNeigbourType.EAST, StationNeigbourType.NORTH_EAST],
+    StationNeigbourType.SOUTH_WEST: [StationNeigbourType.SOUTH, StationNeigbourType.CENTER, StationNeigbourType.WEST, StationNeigbourType.SOUTH_WEST],
+    StationNeigbourType.SOUTH_EAST: [StationNeigbourType.SOUTH, StationNeigbourType.CENTER, StationNeigbourType.EAST, StationNeigbourType.SOUTH_EAST]
+}
+    
 class DataAggregatesDecriptior(Enum):
     COORDINATE = "coord"
     TIME_STAMP = "time"
@@ -46,10 +71,8 @@ class DataProcessorImpl:
         self.latitude_points = self._create_envirement_latitude_range(simulation_run_parameters)
         self.longitude_points = self._create_envirement_longitude_range(simulation_run_parameters)
         
-    
         time_points, latitude_points, longitude_points = np.meshgrid(time_points, self.latitude_points, self.longitude_points)
 
-        
         points_wind_n, values_wind_n = self._get_interpolation_area(data, DataAggregatesDecriptior.WIND, lambda row: row[DataAggregatesDecriptior.WIND.value].speed_north)
         wind_n_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_wind_n, values_wind_n)
         
@@ -62,8 +85,6 @@ class DataProcessorImpl:
         points_current_e, values_current_e = self._get_interpolation_area(data, DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_east)
         current_e_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_current_e, values_current_e)
         
-        
-        # into one dataframe
         envirement_area = pd.DataFrame(
             {
                 DataAggregatesDecriptior.TIME_STAMP.value: time_points.flatten(),
@@ -76,8 +97,9 @@ class DataProcessorImpl:
         envirement_area.sort_values(inplace=True, by=[DataAggregatesDecriptior.TIME_STAMP.value])
 
         path_to_save = self.run_parameters.path_to_data
-        MINUTES_IN_HOUR = 60
 
+
+        # TODO: code below is a mess propably need to be refactored in the future
         to_save = pd.DataFrame()
         
         hour = 0
@@ -99,29 +121,71 @@ class DataProcessorImpl:
         
     def should_update_data(self, time_from_last_update: pd.Timedelta) -> bool:
         return time_from_last_update > self.run_parameters.data_time_step
-
+    
     def get_measurment(self, coordinates: Coordinates, nearest_station_info: DataStationInfo,  time_stamp: pd.Timestamp) -> CertainMeasurment:
         data = self._get_data_for_time(time_stamp)
         time_stamp = self._get_nearest_data_time(time_stamp)
         
-        station_coordinates = Coordinates(
-            self.latitude_points[nearest_station_info.latitude],
-            self.longitude_points[nearest_station_info.longitude]
-        )
+        station_coordinates = self._get_coord_for_station(nearest_station_info)
         
-        return self._get_certain_measurment(data, station_coordinates, time_stamp)
+        if coordinates == station_coordinates:
+            return self._get_certain_measurment(data, station_coordinates, time_stamp)
+        
+        interpolation_neigbours = self._get_direction_of_stataion(coordinates, station_coordinates).get_interpolation_neigbours()
+        neigbours_stations_info = self._get_neigbours_station_info(interpolation_neigbours, nearest_station_info)
+        neigbours_stations_coords = [self._get_coord_for_station(station_info) for station_info in neigbours_stations_info]
+        weights = [great_circle_distance(coordinates, coord) for coord in neigbours_stations_coords]
+        measurments = [self._get_certain_measurment(data, coord, time_stamp) for coord in neigbours_stations_coords]    
+    
+        return CertainMeasurment(
+            wind = SpeedMeasure.from_average([measurment.wind for measurment in measurments], weights),
+            current= SpeedMeasure.from_average([measurment.current for measurment in measurments], weights)
+        )
+            
+        
+    def _get_coord_for_station(self, station_info: DataStationInfo) -> Coordinates:
+        return Coordinates(
+            self.latitude_points[station_info.latitude],
+            self.longitude_points[station_info.longitude]
+        )
+    
+            
+    def _get_neigbours_station_info(self, interpolation_neigbours: list['StationNeigbourType'],  nearest_station_info: DataStationInfo) -> list[DataStationInfo]:
+        result = []
+        for neigbour_type in interpolation_neigbours:
+            station_info_opt = self._neigbour_station_info(nearest_station_info, neigbour_type)
+            if station_info_opt is not None:
+                result.append(station_info_opt)
+        return result
+    
+    def _get_direction_of_stataion(self, coordinates: Coordinates, station_coordinates: Coordinates) -> StationNeigbourType:
+        lat_diff = (StationNeigbourType.NORTH if coordinates.latitude > station_coordinates.latitude else StationNeigbourType.SOUTH).value.latitude
+        lon_diff = (StationNeigbourType.EAST if coordinates.longitude > station_coordinates.longitude else StationNeigbourType.WEST).value.longitude
+        return StationNeigbourType(DataStationInfo(lat_diff, lon_diff))
+    
+    def _neigbour_station_info(self, station_info: DataStationInfo, neigbour_type: StationNeigbourType) -> Optional[DataStationInfo]:
+        lat_candidate = station_info.latitude + neigbour_type.value.latitude
+        lon_candidate = station_info.longitude + neigbour_type.value.longitude
+        
+        MIN_COORD = 0
+        if (not (MIN_COORD <= lat_candidate < self.run_parameters.cells_side_count.latitude) or 
+            not (MIN_COORD <= lon_candidate < self.run_parameters.cells_side_count.longitude)):
+            return None
+        
+        return DataStationInfo(lat_candidate, lon_candidate) 
+        
     
     def _get_measurment_row_data(self, data: pd.DataFrame, coordinates: Coordinates, time_stamp: pd.Timestamp) -> pd.Series:
-        SECONDS_IN_MINUTE = 60
-        duration_till_start = (time_stamp - self.run_parameters.time.min).seconds // SECONDS_IN_MINUTE
+        FIRST_MATCHED_ROW_IDX = 0
         
+        duration_till_start = (time_stamp - self.run_parameters.time.min).seconds // SECONDS_IN_MINUTE
         
         row =  data[
             (data[DataAggregatesDecriptior.TIME_STAMP.value] == duration_till_start) & 
             (data[DataAggregatesDecriptior.COORDINATE.value] == str(coordinates))
         ]
         
-        return row.iloc[0]
+        return row.iloc[FIRST_MATCHED_ROW_IDX]
         
         
 
@@ -157,9 +221,10 @@ class DataProcessorImpl:
             self.loaded_data.pop(first_loaded_hour)
             return self._get_data_for_time(time_stamp)
         
-        # preloading next data <- could be done in another process?
+        #TODO: preloading next data <- could be done in another process?
         PRELOAD_FACTOR = 2
-        if (time_stamp + (self.run_parameters.data_time_step / PRELOAD_FACTOR)).hour  > time_stamp.hour:
+        ONLY_ONE_HOUR_LEFT_COUNT = 1
+        if len(self.loaded_data) == ONLY_ONE_HOUR_LEFT_COUNT and (time_stamp + (self.run_parameters.data_time_step / PRELOAD_FACTOR)).hour  > time_stamp.hour:
             self._load_data_for_time(first_loaded_hour + 1)
             
         return next(iter(self.loaded_data.values()))
@@ -174,6 +239,7 @@ class DataProcessorImpl:
             self.loaded_data[simulation_hour] = readed_data
         
     def _read_data_for_time(self, simulation_hour: int) -> Optional[pd.DataFrame]:
+        print(f"Reading data for hour {simulation_hour}")
         data_path = path.join(self.run_parameters.path_to_data, f"{simulation_hour}.csv")
         return pd.read_csv(data_path) if path.exists(data_path) else None
 
@@ -311,12 +377,14 @@ class DataValidator:
     def validate(self, csv_path: PathLike):
         if not path.isfile(csv_path):
             raise DataValidationException("File does not exist")
-        
         self.check_columns(csv_path)
         
     def check_columns(self, csv_path: PathLike):
-        pd.read_csv(csv_path)
-        columns = pd.read_csv(csv_path).columns
+        try:
+            file = pd.read_csv(csv_path)
+        except Exception as e:
+            raise DataValidationException(f"File {csv_path} is not a valid csv file: {e}")
+        columns = file.columns
         for column in DataDescriptor:
             if column.value not in columns:
                 raise DataValidationException(f"File {csv_path} does not contain all required columns - {column.value}")
@@ -333,61 +401,9 @@ class DataReader:
 
     def add_all_from_dir(self, dir_path: PathLike):
         CSV_EXT = ".csv"
-        for file in listdir(dir_path):
-            if file.endswith(CSV_EXT):
-                self.add_data(path.join(dir_path, file))
+        IS_CSV = lambda file: file.endswith(CSV_EXT)
+        for file in filter(IS_CSV, listdir(dir_path)):
+            self.add_data(path.join(dir_path, file))
 
     def preprocess(self, simulation_run_parameters: SimulationRunParameters) -> DataProcessor:
         return DataProcessor(self._dataset_paths, simulation_run_parameters)
-
-
-if __name__ == "__main__":
-    simulation_run_parameters = SimulationRunParameters(
-        area=Range(
-            min=Coordinates(
-                latitude=50.0,
-                longitude=-88.77964
-            ),
-            max=Coordinates(
-                latitude=51.0,
-                longitude=-88.72648
-            )
-        ),
-        time=Range(
-            min=pd.Timestamp("2010-04-01 00:00:00"),
-            max=pd.Timestamp("2010-04-01 06:00:00"),
-        ),
-        data_time_step=pd.Timedelta(minutes=30),
-        cells_side_count=CellSideCount(
-            latitude=10,
-            longitude=10
-        ),
-        path_to_data="data/processed_data"
-    )
-        
-        
-    # DataReader - i guess we need to have initial window in gui when user will provide path(s) to data
-    # I'm not sure how we gonna do it so i want to provide interface that takes some input path(s) and returns DataHolder
-    # where DataHolder already has (maybe) all data loaded into memory? or at least have enought information
-    # for returning complete! data of measurment (already interpolated, without missing values, etc.)
-    # neearest to given coordinates and time stamp
-
-    import os
-
-    sym_data_reader = DataReader()
-
-    try:
-        #sym_data_reader.add_data(os.path.join("data", "example_data.csv"))
-        sym_data_reader.add_all_from_dir(os.path.join("data", "processed"))
-    except DataValidationException as ex:
-        # some error handling
-        # bla bla bla
-        pass
-
-    sym_data = sym_data_reader.preprocess(simulation_run_parameters)
-
-    coordinates = Coordinates(latitude=50.6, longitude=-88.75306)
-    time_stamp = pd.Timestamp("2010-04-01 01:01:12")
-
-    measurment = sym_data.get_measurment(coordinates, coordinates, time_stamp)
-    print(measurment)
