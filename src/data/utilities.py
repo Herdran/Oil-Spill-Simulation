@@ -22,9 +22,7 @@ def dataframe_replace_applay(dataframe: pd.DataFrame, result_column: str, functi
         return any([pd.isna(row[column]) for column in columns])
 
     def apply_function(row: pd.Series) -> object:
-        if (is_any_nan(row)):
-            return pd.NA
-        return function(*[row[column] for column in columns])
+        return pd.NA if is_any_nan(row) else function(*[row[column] for column in columns])
 
     dataframe[result_column] = dataframe.apply(
         lambda row: apply_function(row),

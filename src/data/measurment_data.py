@@ -24,22 +24,39 @@ class SpeedMeasure():
     
     @staticmethod
     def from_direction(speed: float, direction: float) -> 'SpeedMeasure':
-        speed_north = speed * math.cos(math.radians(direction))
-        speed_east = speed * math.sin(math.radians(direction))
-        return SpeedMeasure(speed_north, speed_east)
+        return SpeedMeasure(
+            speed_north = speed * math.cos(math.radians(direction)), 
+            speed_east = speed * math.sin(math.radians(direction))
+        )
+    
+    @staticmethod
+    def from_average(measurments: 'SpeedMeasure', weights: float) -> 'SpeedMeasure':
+        return SpeedMeasure(
+            speed_north = np.average([measurment.speed_north for measurment in measurments], weights=weights),
+            speed_east = np.average([measurment.speed_east for measurment in measurments], weights=weights)
+        )
     
     @staticmethod
     def try_from_repr(repr: str) -> Optional['SpeedMeasure']:
+        NORTH_SPEED_IDX = 1
+        EAST_SPEED_IDX = 2
+        GROUPS_COUNTS = 2
+        
         re_result = re.match(r"SpeedMeasure\((.*),(.*)\)", repr)
-        if re_result is None or len(re_result.groups()) != 2:
+        if re_result is None or len(re_result.groups()) != GROUPS_COUNTS:
             return None
-        speed_north = float(re_result.group(1))
-        speed_east = float(re_result.group(2))
-        return SpeedMeasure(speed_north, speed_east)
+        return SpeedMeasure(
+            speed_north = float(re_result.group(NORTH_SPEED_IDX)),
+            speed_east = float(re_result.group(EAST_SPEED_IDX))
+        )
+    
+    @staticmethod
+    def from_numpy(np_array):
+        return SpeedMeasure(np_array[0], np_array[1])
     
     def to_numpy(self):
         return np.array([self.speed_north, self.speed_east])
-        
+    
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.speed_north},{self.speed_east})"
 
