@@ -376,8 +376,12 @@ class DataValidator:
 
     def validate(self, csv_path: PathLike):
         if not path.isfile(csv_path):
-            raise DataValidationException("File does not exist")
+            raise DataValidationException(f"File '{csv_path}' does not exist!.")
         self.check_columns(csv_path)
+        
+    def validate_dir(self, data_dir_path: PathLike):
+        if not path.isdir(data_dir_path):
+            raise DataValidationException(f"Directory '{data_dir_path}' does not exist!.")
         
     def check_columns(self, csv_path: PathLike):
         try:
@@ -402,6 +406,8 @@ class DataReader:
     def add_all_from_dir(self, dir_path: PathLike):
         CSV_EXT = ".csv"
         IS_CSV = lambda file: file.endswith(CSV_EXT)
+        
+        self._data_validator.validate_dir(dir_path)
         for file in filter(IS_CSV, listdir(dir_path)):
             self.add_data(path.join(dir_path, file))
 
