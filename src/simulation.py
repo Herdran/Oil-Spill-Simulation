@@ -1,7 +1,7 @@
 import csv
 import os
 from enum import Enum
-from math import exp, log, sqrt
+from math import exp, log, sqrt, isnan
 from random import random as rand
 
 import numpy as np
@@ -104,7 +104,6 @@ class Point:
 
         # to na końcu na pewno
         self.process_advection(delta_time)
-
 
     def process_emulsification(self, delta_time: float) -> float:
         K = 2.0e-6
