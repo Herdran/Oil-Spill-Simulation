@@ -134,7 +134,7 @@ class Point:
         self.oil_mass -= delta_mass
         to_share = []
         for cords in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
-            if not ((0 <= self.x + cords[0] < const.WORLD_SIDE_SIZE) and (0 <= self.y + cords[1] < const.WORLD_SIDE_SIZE)):
+            if not ((0 <= self.x + cords[0] < const.POINTS_SIDE_COUNT) and (0 <= self.y + cords[1] < const.POINTS_SIDE_COUNT)):
                 continue
             neighbor = self.world[self.x + cords[0]][self.y + cords[1]]
             if neighbor.topography == TopographyState.SEA:
