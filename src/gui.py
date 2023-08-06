@@ -404,7 +404,7 @@ def run():
         sym_data_reader = DataReader()
 
         try:
-            sym_data_reader.add_all_from_dir(os.path.join("data", "test_1"))
+            sym_data_reader.add_all_from_dir(os.path.join("data", "test_data"))
         except DataValidationException as ex:
             # TODO: some kind of error popup?
             print("Error with Data Validation: ", ex)
