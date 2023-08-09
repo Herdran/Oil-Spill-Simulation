@@ -221,17 +221,17 @@ class SimulationEngine:
     def update(self, delta_time):
         self.update_oil_points(delta_time)
 
-        for points in self.world:
-            for point in points:
-                point.pour_from_buffer()
-
-        self.spread_oil_points(delta_time)
-        
         self.total_mass = 0
         for points in self.world:
             for point in points:
                 point.pour_from_buffer()
                 self.total_mass += point.oil_mass
+
+        self.spread_oil_points(delta_time)
+        
+        for points in self.world:
+            for point in points:
+                point.pour_from_buffer()
 
         global total_time
         total_time += delta_time
