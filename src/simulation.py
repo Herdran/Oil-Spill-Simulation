@@ -209,8 +209,8 @@ class SimulationEngine:
 
         Point.world = self.world
         self.spreading_pairs = self.generate_spreading_pairs()
-        self.current_oil_volume = 100 # TODO: is that value ok??
         self.data_processor = data_processor
+        self.total_mass = 0
         
     def start(self):
         self.load_topography() # TODO: propably also should be done in __init__ for safety
@@ -226,10 +226,12 @@ class SimulationEngine:
                 point.pour_from_buffer()
 
         self.spread_oil_points(delta_time)
-
+        
+        self.total_mass = 0
         for points in self.world:
             for point in points:
                 point.pour_from_buffer()
+                self.total_mass += point.oil_mass
 
         global total_time
         total_time += delta_time
@@ -254,7 +256,7 @@ class SimulationEngine:
     def spread_oil_points(self, delta_time: float):
         for pair in self.spreading_pairs:
             first, second = pair
-            self.process_spread_between(delta_time, self.from_coords(first), self.from_coords(second))
+            self.process_spread_between(delta_time, self.from_coords(first), self.from_coords(second)) 
 
     def process_spread_between(self, delta_time: float, first: Point, second: Point) -> None:
         if not (first.contain_oil() or second.contain_oil()) or not (
@@ -262,7 +264,7 @@ class SimulationEngine:
             return
 
         length = const.POINT_SIDE_SIZE
-        V = self.current_oil_volume
+        V = self.total_mass / self.initial_values.density
         g = 9.8
         delta = (self.initial_values.water_density - self.initial_values.density) / self.initial_values.water_density
         viscosity = 10e-6
