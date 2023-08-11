@@ -1,6 +1,8 @@
 import os
 
 import tkinter as tk
+from pathlib import Path
+
 import numpy as np
 from PIL import Image, ImageTk
 
@@ -72,8 +74,11 @@ def run():
                 y = int((event.y - self.pan_y) / self.zoom_level)
                 oil_to_add_on_click = self.image_change_controller.oil_to_add_on_click
                 if 0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]:
-                    point_clicked = engine.world[x][y]
-                    if point_clicked.topography == simulation.TopographyState.SEA:
+                    coord = (x, y)
+                    if coord not in engine.lands:
+                        if coord not in engine.world:
+                            engine.world[coord] = simulation.Point(coord[0], coord[1], engine.initial_values, engine)
+                        point_clicked = engine.world[coord]
                         point_clicked.add_oil(oil_to_add_on_click)
 
                         var = blend_color(OIL_COLOR, SEA_COLOR,
@@ -104,7 +109,10 @@ def run():
             y = int((event.y - self.pan_y) / self.zoom_level)
 
             if 0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]:
-                oil_mass = engine.world[x][y].oil_mass
+                if (x, y) not in engine.world:
+                    oil_mass = 0
+                else:
+                    oil_mass = engine.world[(x, y)].oil_mass
                 self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {oil_mass: .2f}kg")
             else:
                 self.hide_tooltip()
@@ -361,20 +369,17 @@ def run():
                 engine.update(self.iter_as_sec)
             new_oil_mass_sea = 0
             new_oil_mass_land = 0
-            for i in range(len(engine.world)):
-                for j in range(len(engine.world)):
-                    curr_point = engine.world[j][i]
-                    if curr_point.change_occurred:
-                        if curr_point.topography == simulation.TopographyState.LAND:
-                            var = blend_color(LAND_WITH_OIL_COLOR, LAND_COLOR,
-                                              curr_point.oil_mass / self.minimal_oil_to_show,
-                                              True)
-                            new_oil_mass_land += curr_point.oil_mass
-                        else:
-                            var = blend_color(OIL_COLOR, SEA_COLOR, curr_point.oil_mass / self.minimal_oil_to_show,
-                                              True)
-                            new_oil_mass_sea += curr_point.oil_mass
-                        image_array[i][j] = var[:3]
+            for coords, point in engine.world.items():
+                if point.topography == simulation.TopographyState.LAND:
+                    var = blend_color(LAND_WITH_OIL_COLOR, LAND_COLOR,
+                                      point.oil_mass / self.minimal_oil_to_show,
+                                      True)
+                    new_oil_mass_land += point.oil_mass
+                else:
+                    var = blend_color(OIL_COLOR, SEA_COLOR, point.oil_mass / self.minimal_oil_to_show,
+                                      True)
+                    new_oil_mass_sea += point.oil_mass
+                image_array[coords[0]][coords[1]] = var[:3]
 
             self.global_oil_amount_sea = new_oil_mass_sea
             self.global_oil_amount_land = new_oil_mass_land
@@ -404,7 +409,10 @@ def run():
         sym_data_reader = DataReader()
 
         try:
-            sym_data_reader.add_all_from_dir(os.path.join("data", "test_data"))
+            path = Path("data/test_data")
+            if os.getcwd().endswith('src'):
+                path = os.path.join('..', path)
+            sym_data_reader.add_all_from_dir(path)
         except DataValidationException as ex:
             # TODO: some kind of error popup?
             print("Error with Data Validation: ", ex)
@@ -412,11 +420,9 @@ def run():
 
         return sym_data_reader.preprocess(SIMULATION_INITIAL_PARAMETERS)
 
-
-
-    image_array = np.random.randint(0, 256, (POINTS_SIDE_COUNT, POINTS_SIDE_COUNT, 3), dtype=np.uint8)
     engine = simulation.SimulationEngine(get_data_processor())
-    engine.start()
+    image_array = np.random.randint(0, 256, (POINTS_SIDE_COUNT, POINTS_SIDE_COUNT, 3), dtype=np.uint8)
+    image_array = np.array([(38, 166, 91) if (j, i) in engine.lands else (15, 10, 222) for i in range(POINTS_SIDE_COUNT) for j in range(POINTS_SIDE_COUNT)]).reshape((POINTS_SIDE_COUNT, POINTS_SIDE_COUNT, 3)).astype(np.uint8)
 
     WINDOW_WIDTH = 1280
     WINDOW_HEIGHT = 720

@@ -1,6 +1,6 @@
 from math import acos, cos, radians, sin
 from typing import Callable, Optional
-from data.measurment_data import Coordinates
+from src.data.measurment_data import Coordinates
 import pandas as pd
     
 def minutes(time_delta: pd.Timedelta) -> float:

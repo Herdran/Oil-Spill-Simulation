@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import pandas as pd
 from data.generic import Range
 from data.measurment_data import Coordinates
@@ -31,7 +34,7 @@ SIMULATION_INITIAL_PARAMETERS = SimulationRunParameters(
             longitude=RIGHT_COORD
         )
     ),
-    # we need to think aboud behavior of our application when sim time ends
+    # we need to think about behavior of our application when sim time ends
     time=Range(
         min=pd.Timestamp("2010-04-01 00:00:00"),
         max=pd.Timestamp("2010-04-01 06:00:00"),
@@ -46,5 +49,5 @@ SIMULATION_INITIAL_PARAMETERS = SimulationRunParameters(
         latitude=10,
         longitude=10
     ),
-    path_to_data="data/processed_data"
+    path_to_data=Path("../data/processed_data") if os.getcwd().endswith('src') else Path("data/processed_data")
 )

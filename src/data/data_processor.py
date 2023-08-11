@@ -6,10 +6,10 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import NearestNDInterpolator
 
-from data.generic import Range
-from data.utilities import dataframe_replace_applay, great_circle_distance, minutes, or_default
-from data.measurment_data import CertainMeasurment, Coordinates, SpeedMeasure, CoordinatesBase
-from data.simulation_run_parameters import SimulationRunParameters, CellSideCount
+from src.data.generic import Range
+from src.data.utilities import dataframe_replace_applay, great_circle_distance, minutes, or_default
+from src.data.measurment_data import CertainMeasurment, Coordinates, SpeedMeasure, CoordinatesBase
+from src.data.simulation_run_parameters import SimulationRunParameters, CellSideCount
 
 
 MINUTES_IN_HOUR = 60
