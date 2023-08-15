@@ -2,7 +2,7 @@ import math
 import re
 from dataclasses import dataclass
 from typing import Generic, Optional
-from src.data.generic import GenericT
+from data.generic import GenericT
 import numpy as np
 
 @dataclass

@@ -2,7 +2,7 @@ import csv
 import os
 from math import exp, sqrt
 from random import random as rand
-from typing import Dict, Tuple, Set
+from typing import Dict, Tuple, Set, List
 
 import constatnts as const
 from data.data_processor import DataProcessor
@@ -30,7 +30,7 @@ class SimulationEngine:
             self.world[coord] = Point(x, y, self.initial_values, self)
         self.world[coord].add_oil(mass)
 
-    def update(self, delta_time):
+    def update(self, delta_time) -> List[Tuple[int, int]]:
         self.update_oil_points(delta_time)
 
         self.total_mass = 0
@@ -41,9 +41,12 @@ class SimulationEngine:
         self.spread_oil_points(delta_time)
 
         empty_points = [coord for coord, point in self.world.items() if not point.contain_oil()]
+        deleted = []
         for point in empty_points:
             del self.world[point]
+            deleted.append(point)
         self.total_time += delta_time
+        return deleted
 
     def update_oil_points(self, delta_time):
         for coord in list(self.world.keys()):  # copy because dict changes size during iteration
@@ -64,7 +67,7 @@ class SimulationEngine:
     def spread_oil_points(self, delta_time: float):
         for pair in self.spreading_pairs:
             first, second = pair
-            if first not in self.world or second not in self.world:
+            if first not in self.world and second not in self.world:
                 continue
             if first not in self.world:
                 self.world[first] = Point(first[0], first[1], self.initial_values, self)

@@ -366,7 +366,13 @@ def run():
 
         def update_image_array(self):
             if self.is_running:
-                engine.update(self.iter_as_sec)
+                deleted = engine.update(self.iter_as_sec)
+                for coords in deleted:
+                    land_color = (38, 166, 91)
+                    ocean_color = (15, 10, 222)
+                    image_array[coords[1]][coords[0]] = land_color if coords in engine.lands else ocean_color
+
+
             new_oil_mass_sea = 0
             new_oil_mass_land = 0
             for coords, point in engine.world.items():
@@ -380,6 +386,7 @@ def run():
                                       True)
                     new_oil_mass_sea += point.oil_mass
                 image_array[coords[1]][coords[0]] = var[:3]
+
 
             self.global_oil_amount_sea = new_oil_mass_sea
             self.global_oil_amount_land = new_oil_mass_land
@@ -421,8 +428,10 @@ def run():
         return sym_data_reader.preprocess(SIMULATION_INITIAL_PARAMETERS)
 
     engine = simulation.SimulationEngine(get_data_processor())
+    land_color = (38, 166, 91)
+    ocean_color = (15, 10, 222)
     image_array = np.array(
-        [(38, 166, 91) if (j, i) in engine.lands else (15, 10, 222) for i in range(POINTS_SIDE_COUNT) for j in
+        [land_color if (j, i) in engine.lands else ocean_color for i in range(POINTS_SIDE_COUNT) for j in
          range(POINTS_SIDE_COUNT)]).reshape((POINTS_SIDE_COUNT, POINTS_SIDE_COUNT, 3)).astype(np.uint8)
 
     WINDOW_WIDTH = 1280
