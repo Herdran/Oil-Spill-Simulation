@@ -1,5 +1,4 @@
 import os
-
 import tkinter as tk
 from pathlib import Path
 
@@ -7,9 +6,10 @@ import numpy as np
 from PIL import Image, ImageTk
 
 import simulation
+from color import rgba, blend_color
 from constatnts import ITER_AS_SEC, POINTS_SIDE_COUNT, SIMULATION_INITIAL_PARAMETERS
 from data.data_processor import DataProcessor, DataReader, DataValidationException
-from color import rgba, blend_color
+
 
 def run():
     SEA_COLOR = rgba(15, 10, 222)
@@ -379,7 +379,7 @@ def run():
                     var = blend_color(OIL_COLOR, SEA_COLOR, point.oil_mass / self.minimal_oil_to_show,
                                       True)
                     new_oil_mass_sea += point.oil_mass
-                image_array[coords[0]][coords[1]] = var[:3]
+                image_array[coords[1]][coords[0]] = var[:3]
 
             self.global_oil_amount_sea = new_oil_mass_sea
             self.global_oil_amount_land = new_oil_mass_land
@@ -401,7 +401,7 @@ def run():
             self.infobox2_values_label.configure(text=val2)
             self.infobox3_values_label.configure(text=val3)
             self.infobox4_values_label.configure(text=val4)
-            
+
     # TODO: what if user already data has been processed?
     # maybe interface for choosing already processed data?
     # for time saving
@@ -421,8 +421,9 @@ def run():
         return sym_data_reader.preprocess(SIMULATION_INITIAL_PARAMETERS)
 
     engine = simulation.SimulationEngine(get_data_processor())
-    image_array = np.random.randint(0, 256, (POINTS_SIDE_COUNT, POINTS_SIDE_COUNT, 3), dtype=np.uint8)
-    image_array = np.array([(38, 166, 91) if (j, i) in engine.lands else (15, 10, 222) for i in range(POINTS_SIDE_COUNT) for j in range(POINTS_SIDE_COUNT)]).reshape((POINTS_SIDE_COUNT, POINTS_SIDE_COUNT, 3)).astype(np.uint8)
+    image_array = np.array(
+        [(38, 166, 91) if (j, i) in engine.lands else (15, 10, 222) for i in range(POINTS_SIDE_COUNT) for j in
+         range(POINTS_SIDE_COUNT)]).reshape((POINTS_SIDE_COUNT, POINTS_SIDE_COUNT, 3)).astype(np.uint8)
 
     WINDOW_WIDTH = 1280
     WINDOW_HEIGHT = 720
