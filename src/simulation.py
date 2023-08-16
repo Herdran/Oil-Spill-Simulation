@@ -8,6 +8,28 @@ import constatnts as const
 from data.data_processor import DataProcessor
 from point import Point, InitialValues, TopographyState
 
+Coord_t = Tuple[int, int]
+
+SPREADING_PAIRS_FILTERS = [
+    lambda coord: coord[0] % 2 == 0,
+    lambda coord: coord[0] % 2 == 1,
+    lambda coord: coord[1] % 2 == 0,
+    lambda coord: coord[1] % 2 == 1,
+]
+
+SPREADING_NEXT = [
+    (1, 0),
+    (1, 0),
+    (0, 1),
+    (0, 1),
+]
+
+def spreading_next(turn, coord):
+    return coord[0] + SPREADING_NEXT[turn][0], coord[1] + SPREADING_NEXT[turn][1]
+
+def spreading_prev(turn, coord):
+    return coord[0] - SPREADING_NEXT[turn][0], coord[1] - SPREADING_NEXT[turn][1] 
+
 
 class SimulationEngine:
     def __init__(self, data_processor: DataProcessor):
@@ -15,7 +37,6 @@ class SimulationEngine:
         self.world: Dict[Tuple[int, int], Point] = dict()
 
         Point.world = self.world
-        self.spreading_pairs = self.generate_spreading_pairs()
         self.data_processor = data_processor
         self.total_mass = 0
         self.lands = self.load_topography()
@@ -51,29 +72,29 @@ class SimulationEngine:
     def update_oil_points(self, delta_time):
         for coord in list(self.world.keys()):  # copy because dict changes size during iteration
             self.world[coord].update(delta_time)
-
-    def generate_spreading_pairs(self):
-        return (
-                [((x, y), (x + 1, y)) for x in range(0, const.POINTS_SIDE_COUNT - 1, 2) for y in
-                 range(const.POINTS_SIDE_COUNT)]
-                + [((x, y), (x + 1, y)) for x in range(1, const.POINTS_SIDE_COUNT - 1, 2) for y in
-                   range(const.POINTS_SIDE_COUNT)]
-                + [((x, y), (x, y + 1)) for y in range(0, const.POINTS_SIDE_COUNT - 1, 2) for x in
-                   range(const.POINTS_SIDE_COUNT)]
-                + [((x, y), (x, y + 1)) for y in range(1, const.POINTS_SIDE_COUNT - 1, 2) for x in
-                   range(const.POINTS_SIDE_COUNT)]
-        )
+        
+    def new_point(self, coord: Coord_t):
+        return Point(coord[0], coord[1], self.initial_values, self)
 
     def spread_oil_points(self, delta_time: float):
-        for pair in self.spreading_pairs:
-            first, second = pair
-            if first not in self.world and second not in self.world:
-                continue
-            if first not in self.world:
-                self.world[first] = Point(first[0], first[1], self.initial_values, self)
-            if second not in self.world:
-                self.world[second] = Point(second[0], second[1], self.initial_values, self)
-            self.process_spread_between(delta_time, self.from_coords(first), self.from_coords(second))
+        for spreading_turn in range(len(SPREADING_PAIRS_FILTERS)):
+            new_points = {}
+            for key in self.world.keys():
+                if SPREADING_PAIRS_FILTERS[spreading_turn](key):
+                    second = spreading_next(spreading_turn, key)
+                    if second not in self.world:
+                        second_point = self.new_point(second)
+                        new_points[second] = second_point
+                    else:
+                        second_point = self.from_coords(second)
+                    self.process_spread_between(delta_time, self.from_coords(key), second_point) 
+                    continue
+                prev = spreading_prev(spreading_turn, key)
+                if prev not in self.world:
+                    prev_point = self.new_point(prev)
+                    new_points[prev] = prev_point
+                    self.process_spread_between(delta_time, prev_point, self.from_coords(key))
+            self.world.update(new_points)
 
     def process_spread_between(self, delta_time: float, first: Point, second: Point) -> None:
         if not (first.topography == TopographyState.SEA and second.topography == TopographyState.SEA):
