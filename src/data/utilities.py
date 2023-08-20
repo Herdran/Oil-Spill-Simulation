@@ -1,6 +1,6 @@
 from math import acos, cos, radians, sin
 from typing import Callable, Optional
-from data.measurment_data import Coordinates
+from data.measurment_data import Coordinates, Temperature
 import pandas as pd
     
 def minutes(time_delta: pd.Timedelta) -> float:
@@ -38,3 +38,6 @@ def or_default(value: Optional[object], default: object) -> object:
     if value is None:
         return default
     return value
+
+def celcius_to_kelvins(celcius: float) -> Temperature:
+    return celcius + 274.15

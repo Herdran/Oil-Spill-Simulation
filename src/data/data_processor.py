@@ -29,6 +29,7 @@ class DataDescriptor(Enum):
     WIND_DIRECTION = "wind dir"
     CURRENT_SPEED = "current speed"
     CURRENT_DIRECTION = "current dir"
+    TEMPERATURE = "temp"
     
 
 class StationNeigbourType(Enum):
@@ -58,6 +59,7 @@ class DataAggregatesDecriptior(Enum):
     TIME_STAMP = "time"
     WIND = "wind"
     CURRENT = "current"
+    TEMPERATURE = "temp"
 
 
 class DataProcessorImpl:
@@ -83,6 +85,9 @@ class DataProcessorImpl:
         current_n_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_current_n, values_current_n)
         
         points_current_e, values_current_e = self._get_interpolation_area(data, DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_east)
+        current_e_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_current_e, values_current_e)
+        
+        points_temp, values_current_e = self._get_interpolation_area(data, DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_east)
         current_e_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_current_e, values_current_e)
         
         envirement_area = pd.DataFrame(

@@ -17,6 +17,11 @@ latitude range: -90.0 to 90.0
 longitude range: -180.0 to 180.0
 '''
 
+Temperature = float
+'''
+Value of temperature in kelvins
+'''
+
 @dataclass
 class SpeedMeasure():
     speed_north: float  # m/s
