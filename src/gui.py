@@ -7,7 +7,17 @@ from PIL import Image, ImageTk
 import simulation
 from constatnts import ITER_AS_SEC, POINTS_SIDE_COUNT, SIMULATION_INITIAL_PARAMETERS
 from data.data_processor import DataProcessor, DataReader, DataValidationException
+from data.utilities import kelvins_to_celsius
 from color import rgba, blend_color
+
+def get_tooltip_text(point: simulation.Point) -> str:
+    return f"""Oil mass: {point.oil_mass: .2f}kg
+--------------------
+Wind speed N: {point.wind_velocity[0]: .2f}m/s
+Wind speed E: {point.wind_velocity[1]: .2f}m/s
+Current speed N: {point.wave_velocity[0]: .2f}m/s
+Current speed E: {point.wave_velocity[1]: .2f}m/s
+Temperature: {kelvins_to_celsius(point.temperature): .2f}C"""
 
 def run():
     SEA_COLOR = rgba(15, 10, 222)
@@ -83,8 +93,7 @@ def run():
                         self.image_change_controller.update_infoboxes()
                         image_array[y][x] = var[:3]
                         self.update_image()
-                        oil_mass = point_clicked.oil_mass
-                        self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {oil_mass: .2f}kg")
+                        self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(point_clicked))
 
         def on_button_motion(self, event):
             if self.is_holding:
@@ -104,8 +113,7 @@ def run():
             y = int((event.y - self.pan_y) / self.zoom_level)
 
             if 0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]:
-                oil_mass = engine.world[x][y].oil_mass
-                self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {oil_mass: .2f}kg")
+                self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(engine.world[x][y]))
             else:
                 self.hide_tooltip()
 
