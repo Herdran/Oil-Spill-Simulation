@@ -7,9 +7,9 @@ import pandas as pd
 from scipy.interpolate import NearestNDInterpolator
 
 from data.generic import Range
-from data.utilities import dataframe_replace_applay, great_circle_distance, minutes, or_default
-from data.measurment_data import CertainMeasurment, Coordinates, SpeedMeasure, CoordinatesBase
-from data.simulation_run_parameters import SimulationRunParameters, CellSideCount
+from data.utilities import dataframe_replace_applay, great_circle_distance, minutes, or_default, celcius_to_kelvins
+from data.measurment_data import CertainMeasurment, Coordinates, SpeedMeasure, CoordinatesBase, avrage_measurment
+from data.simulation_run_parameters import SimulationRunParameters
 
 
 MINUTES_IN_HOUR = 60
@@ -87,15 +87,17 @@ class DataProcessorImpl:
         points_current_e, values_current_e = self._get_interpolation_area(data, DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_east)
         current_e_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_current_e, values_current_e)
         
-        points_temp, values_current_e = self._get_interpolation_area(data, DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_east)
-        current_e_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_current_e, values_current_e)
+        points_temp, values_temp = self._get_interpolation_area(data, DataAggregatesDecriptior.TEMPERATURE, lambda row: row[DataAggregatesDecriptior.TEMPERATURE.value])
+        values_temp = np.vectorize(celcius_to_kelvins)(values_temp)
+        temp_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_temp, values_temp)
         
         envirement_area = pd.DataFrame(
             {
                 DataAggregatesDecriptior.TIME_STAMP.value: time_points.flatten(),
                 DataAggregatesDecriptior.COORDINATE.value : [Coordinates(latitude, longitude) for latitude, longitude in zip(latitude_points.flatten(), longitude_points.flatten())],
                 DataAggregatesDecriptior.WIND.value: [SpeedMeasure(wind_n, wind_e) for wind_n, wind_e in zip(wind_n_interpolated.flatten(), wind_e_interpolated.flatten())],
-                DataAggregatesDecriptior.CURRENT.value: [SpeedMeasure(current_n, current_e) for current_n, current_e in zip(current_n_interpolated.flatten(), current_e_interpolated.flatten())]
+                DataAggregatesDecriptior.CURRENT.value: [SpeedMeasure(current_n, current_e) for current_n, current_e in zip(current_n_interpolated.flatten(), current_e_interpolated.flatten())],
+                DataAggregatesDecriptior.TEMPERATURE.value: temp_interpolated.flatten()
             }
         )
         
@@ -144,7 +146,8 @@ class DataProcessorImpl:
     
         return CertainMeasurment(
             wind = SpeedMeasure.from_average([measurment.wind for measurment in measurments], weights),
-            current= SpeedMeasure.from_average([measurment.current for measurment in measurments], weights)
+            current = SpeedMeasure.from_average([measurment.current for measurment in measurments], weights),
+            temperature = avrage_measurment([measurment.temperature for measurment in measurments], weights)
         )
             
         
@@ -198,15 +201,18 @@ class DataProcessorImpl:
         row = self._get_measurment_row_data(data, coordinates, time_stamp)
         wind = SpeedMeasure.try_from_repr(row[DataAggregatesDecriptior.WIND.value])
         current = SpeedMeasure.try_from_repr(row[DataAggregatesDecriptior.CURRENT.value])
+        temp = row[DataAggregatesDecriptior.TEMPERATURE.value]
 
-        if wind is None or current is None:
+        if wind is None or current is None or temp is None:
             print(f"WARNING: can't parse measurment for given coordinates {coordinates} and time stamp {time_stamp}")
 
         DEFAULT_SPEED = SpeedMeasure(0, 0)
+        DEFAULT_TEMP = 302.15
 
         return CertainMeasurment(
             wind=or_default(wind, DEFAULT_SPEED),
-            current=or_default(current, DEFAULT_SPEED)
+            current=or_default(current, DEFAULT_SPEED),
+            temperature=or_default(temp, DEFAULT_TEMP)
         )
 
     def _get_nearest_data_time(self, time_stamp: pd.Timestamp) -> pd.Timestamp:

@@ -39,5 +39,10 @@ def or_default(value: Optional[object], default: object) -> object:
         return default
     return value
 
+KELVIN_CONSTATNT = 273.15
+
 def celcius_to_kelvins(celcius: float) -> Temperature:
-    return celcius + 274.15
+    return celcius + KELVIN_CONSTATNT
+
+def kelvins_to_celsius(kelvins: Temperature) -> float:
+    return kelvins - KELVIN_CONSTATNT

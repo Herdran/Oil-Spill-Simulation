@@ -90,6 +90,7 @@ class Point:
             measurment = self.data_processor.get_measurment(self.coordinates, self.weather_station_coordinates, time_stamp)
             self.wave_velocity = measurment.current.to_numpy()
             self.wind_velocity = measurment.wind.to_numpy()
+            self.temperature = measurment.temperature
             self.last_weather_update_time = time_delta
 
     def update(self, delta_time: float) -> None:
