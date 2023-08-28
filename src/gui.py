@@ -17,7 +17,7 @@ Wind speed N: {point.wind_velocity[0]: .2f}m/s
 Wind speed E: {point.wind_velocity[1]: .2f}m/s
 Current speed N: {point.wave_velocity[0]: .2f}m/s
 Current speed E: {point.wave_velocity[1]: .2f}m/s
-Temperature: {kelvins_to_celsius(point.temperature): .2f}C"""
+Temperature: {kelvins_to_celsius(point.temperature): .2f}°C"""
 
 def run():
     SEA_COLOR = rgba(15, 10, 222)
