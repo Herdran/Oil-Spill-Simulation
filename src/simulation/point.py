@@ -1,3 +1,5 @@
+from ast import Dict
+from typing import Tuple
 from enum import Enum
 
 import numpy as np
@@ -11,11 +13,12 @@ DEFAULT_WAVE_VELOCITY = np.array([0.0, 0.0])  # [m/s]
 DEFAULT_WIND_VELOCITY = np.array([0.0, 0.0])  # [m/s]
 DEFAULT_TEMPERATUTRE = 302.15  # [K]
 
+Coord_t = Tuple[int, int]
+
 
 class TopographyState(Enum):
     LAND = 0
     SEA = 1
-
 
 class InitialValues:
     def __init__(self):
@@ -36,11 +39,11 @@ class InitialValues:
 class Point:
     world = dict()
 
-    def __init__(self, x, y, initial_values: InitialValues, engine):
-        self.topography = engine.get_topography(x, y)
+    def __init__(self, coord: Coord_t, initial_values: InitialValues, engine):
+        self.topography = engine.get_topography(coord)
         self.engine = engine
-        self.x = x
-        self.y = y
+        self.coord = coord
+        x, y = coord
         self.coordinates = Coordinates(latitude=const.POINT_LAT_CENTERS[x], longitude=const.POINT_LON_CENTERS[y])
         self.weather_station_coordinates = engine.data_processor.weather_station_coordinates(self.coordinates)
         self.wind_velocity = DEFAULT_WIND_VELOCITY
@@ -124,14 +127,14 @@ class Point:
         delta_mass = log(2) * self.oil_mass * delta_time / half_time
         self.oil_mass -= delta_mass
         to_share = []
-        for cords in [(self.x + 1, self.y + 0), (self.x - 1, self.y + 0), (self.x + 0, self.y + 1),
-                      (self.x + 0, self.y - 1)]:
+        (x, y) = self.coord
+        for cords in [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]:
             if not ((0 <= cords[0] < const.POINTS_SIDE_COUNT) and (0 <= cords[1] < const.POINTS_SIDE_COUNT)):
                 continue
             if cords in self.engine.lands:
                 continue
             if cords not in self.world:
-                self.world[cords] = Point(cords[0], cords[1], self.initial_values, self.engine)
+                self.world[cords] = Point(cords, self.initial_values, self.engine)
             to_share.append(self.world[cords])
         if len(to_share) == 0:  # in case of bug
             return
@@ -154,13 +157,14 @@ class Point:
 
         # buffering how far oil went in time step
         self.advection_buffer += delta_r
-        next_x = self.x + int(self.advection_buffer[0])
-        next_y = self.y + int(self.advection_buffer[1])
+        x, y = self.coord
+        next_x = x + int(self.advection_buffer[0])
+        next_y = y + int(self.advection_buffer[1])
         if 0 <= next_x < const.POINTS_SIDE_COUNT and 0 <= next_y < const.POINTS_SIDE_COUNT:
             if (next_x, next_y) not in self.world:
-                self.world[(next_x, next_y)] = Point(next_x, next_y, self.initial_values, self.engine)
+                self.world[(next_x, next_y)] = Point((next_x, next_y), self.initial_values, self.engine)
             self.world[(next_x, next_y)].oil_buffer.append((self.oil_mass, self.viscosity, self.emulsification_rate))
-            self.advection_buffer -= np.array([next_x - self.x, next_y - self.y])
+            self.advection_buffer -= np.array([next_x - x, next_y - y])
         self.oil_mass = 0
 
     def process_natural_dispersion(self, delta_time: float) -> None:
@@ -182,8 +186,6 @@ class Point:
             self.viscosity = self.initial_values.viscosity
 
     def pour_from_buffer(self):
-        prev_mas = self.oil_mass
-
         # nie uwzględniamy masy w punkcie, bo wszystko powinno być w buforze
         oil_mass = sum([tup[0] for tup in self.oil_buffer])
         if oil_mass < 1:
@@ -192,3 +194,5 @@ class Point:
         self.emulsification_rate = sum([tup[0] * tup[2] for tup in self.oil_buffer]) / oil_mass
         self.oil_buffer = []
         self.oil_mass = oil_mass
+
+

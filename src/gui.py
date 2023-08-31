@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageTk
 
-import simulation
+import simulation.simulation as simulation
 from color import rgba, blend_color
 from constatnts import ITER_AS_SEC, POINTS_SIDE_COUNT, SIMULATION_INITIAL_PARAMETERS
 from data.data_processor import DataProcessor, DataReader, DataValidationException
@@ -77,7 +77,7 @@ def run():
                     coord = (x, y)
                     if coord not in engine.lands:
                         if coord not in engine.world:
-                            engine.world[coord] = simulation.Point(coord[0], coord[1], engine.initial_values, engine)
+                            engine.world[coord] = simulation.Point(coord, engine.initial_values, engine)
                         point_clicked = engine.world[coord]
                         point_clicked.add_oil(oil_to_add_on_click)
 
