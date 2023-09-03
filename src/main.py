@@ -31,17 +31,25 @@ if __name__ == "__main__":
 
     engine = simulation.SimulationEngine(get_data_processor())
 
-    points_with_oil_num = 5
-    oil_per_click = 10000
+    # points_with_oil_num = 5
+    oil_per_click = 100000000
 
-    for i in range(1, points_with_oil_num + 1):
-        coord = None
-        while coord is None or coord in engine.lands or coord in engine.world:
-            coord = (randint(0, POINTS_SIDE_COUNT - 1), randint(0, POINTS_SIDE_COUNT - 1))
+    for i in range(0, POINTS_SIDE_COUNT):
+        for j in range(0, POINTS_SIDE_COUNT):
+            coord = (i, j)
+            if coord not in engine.lands:
+                engine.world[coord] = simulation.Point(coord, engine.initial_values, engine)
+                point_clicked = engine.world[coord]
+                point_clicked.add_oil(oil_per_click)
 
-        engine.world[coord] = simulation.Point(coord, engine.initial_values, engine)
-        point_clicked = engine.world[coord]
-        point_clicked.add_oil(oil_per_click)
+    # for i in range(1, points_with_oil_num + 1):
+    #     coord = None
+    #     while coord is None or coord in engine.lands or coord in engine.world:
+    #         coord = (randint(0, POINTS_SIDE_COUNT - 1), randint(0, POINTS_SIDE_COUNT - 1))
+    #
+    #     engine.world[coord] = simulation.Point(coord, engine.initial_values, engine)
+    #     point_clicked = engine.world[coord]
+    #     point_clicked.add_oil(oil_per_click)
 
     time_elapsed_sum = 0
     iteration_num = 1000
