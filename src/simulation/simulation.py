@@ -42,7 +42,7 @@ class SimulationEngine:
     def update_oil_points(self, delta_time):
         for coord in list(self.world.keys()):  # copy because dict changes size during iteration
             self.world[coord].update(delta_time)
-        
+
     def load_topography(self) -> Set[Coord_t]:
         # TODO!!!!! <- path need to be selected by GUI
         lands = set()
@@ -61,3 +61,7 @@ class SimulationEngine:
         if coord in self.lands:
             return TopographyState.LAND
         return TopographyState.SEA
+
+    def get_oil_amounts(self):
+        # TODO return values for oil on sea and land
+        return 0, 0

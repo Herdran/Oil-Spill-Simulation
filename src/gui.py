@@ -31,6 +31,7 @@ def run():
             self.is_holding = None
             self.is_panning = None
             self.tooltip = None
+            self.img = None
             self.image_change_controller = image_change_controller
 
             self.bind("<MouseWheel>", self.on_mousewheel)
@@ -40,25 +41,25 @@ def run():
             self.bind("<Motion>", self.on_motion)
             self.bind("<Leave>", self.on_leave)
 
-            self.update_image()
-
-        def update_image(self):
+        def update_image(self, change_occurred):
             self.delete(self.image_id)
 
             height, width, channels = self.image_array.shape
             zoomed_height = int(height * self.zoom_level)
             zoomed_width = int(width * self.zoom_level)
 
-            img = Image.fromarray(self.image_array)
-            img = img.resize((zoomed_width, zoomed_height), Image.NEAREST)
+            if change_occurred:
+                self.img = Image.fromarray(self.image_array)
+                self.img = self.img.resize((zoomed_width, zoomed_height), Image.NEAREST)
 
-            self.current_image = ImageTk.PhotoImage(img)
+            self.current_image = ImageTk.PhotoImage(self.img)
             self.image_id = self.create_image(self.pan_x, self.pan_y, anchor=tk.NW, image=self.current_image)
 
         def on_mousewheel(self, event):
             zoom_factor = 1.1 if event.delta > 0 else 0.9
             self.zoom_level *= zoom_factor
-            self.update_image()
+            # TODO multiplier for zoom value loses accuracy over time, maybe there should be another way to change this value
+            self.update_image(True)
 
         def on_button_press(self, event):
             self.prev_x = event.x
@@ -84,10 +85,9 @@ def run():
                         var = blend_color(OIL_COLOR, SEA_COLOR,
                                           point_clicked.oil_mass / self.image_change_controller.minimal_oil_to_show,
                                           True)
-                        self.image_change_controller.global_oil_amount_sea += oil_to_add_on_click
                         self.image_change_controller.update_infoboxes()
-                        image_array[y][x] = var[:3]
-                        self.update_image()
+                        self.image_array[y][x] = var[:3]
+                        self.update_image(True)
                         oil_mass = point_clicked.oil_mass
                         self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {oil_mass: .2f}kg")
 
@@ -100,7 +100,7 @@ def run():
                 self.pan_y += delta_y
                 self.prev_x = event.x
                 self.prev_y = event.y
-                self.update_image()
+                self.update_image(False)
                 if self.tooltip:
                     self.tooltip.update_position(event.x_root, event.y_root)
 
@@ -168,8 +168,6 @@ def run():
             self.is_updating = False
             self.curr_iter = 0
             self.sim_sec_passed = 0
-            self.global_oil_amount_sea = 0
-            self.global_oil_amount_land = 0
             self.oil_to_add_on_click = 10000
             self.minimal_oil_to_show = 100
             self.iter_as_sec = ITER_AS_SEC
@@ -343,7 +341,7 @@ def run():
                 if self.job_id is not None:
                     self.after_cancel(self.job_id)
                 self.update_image_array()
-                viewer.update_image()
+                viewer.update_image(True)
             except ValueError:
                 pass
 
@@ -370,8 +368,7 @@ def run():
                 for coords in deleted:
                     land_color = (38, 166, 91)
                     ocean_color = (15, 10, 222)
-                    image_array[coords[1]][coords[0]] = land_color if coords in engine.lands else ocean_color
-
+                    self.image_array[coords[1]][coords[0]] = land_color if coords in engine.lands else ocean_color
 
             new_oil_mass_sea = 0
             new_oil_mass_land = 0
@@ -385,14 +382,10 @@ def run():
                     var = blend_color(OIL_COLOR, SEA_COLOR, point.oil_mass / self.minimal_oil_to_show,
                                       True)
                     new_oil_mass_sea += point.oil_mass
-                image_array[coords[1]][coords[0]] = var[:3]
-
-
-            self.global_oil_amount_sea = new_oil_mass_sea
-            self.global_oil_amount_land = new_oil_mass_land
+                self.image_array[coords[1]][coords[0]] = var[:3]
 
             if self.is_running:
-                viewer.update_image()
+                viewer.update_image(True)
                 self.curr_iter += 1
                 self.sim_sec_passed += self.iter_as_sec
                 self.job_id = self.after(self.interval, self.update_image_array)
@@ -402,8 +395,11 @@ def run():
         def update_infoboxes(self):
             val1 = str(self.curr_iter)
             val2 = f"{str(self.sim_sec_passed // 3600)}h {str((self.sim_sec_passed // 60) % 60)}m {str(self.sim_sec_passed % 60)}s"
-            val3 = f"{str(int(self.global_oil_amount_sea // 10 ** 9))}Mt {str(int(self.global_oil_amount_sea // 10 ** 6) % 10 ** 3)}kt {str(int(self.global_oil_amount_sea // 10 ** 3) % 10 ** 3)}t"
-            val4 = f"{str(int(self.global_oil_amount_land // 10 ** 9))}Mt {str(int(self.global_oil_amount_land // 10 ** 6) % 10 ** 3)}kt {str(int(self.global_oil_amount_land // 10 ** 3) % 10 ** 3)}t"
+
+            global_oil_amount_sea, global_oil_amount_land = engine.get_oil_amounts()
+            val3 = f"{str(int(global_oil_amount_sea // 10 ** 9))}Mt {str(int(global_oil_amount_sea // 10 ** 6) % 10 ** 3)}kt {str(int(global_oil_amount_sea // 10 ** 3) % 10 ** 3)}t"
+            val4 = f"{str(int(global_oil_amount_land // 10 ** 9))}Mt {str(int(global_oil_amount_land // 10 ** 6) % 10 ** 3)}kt {str(int(global_oil_amount_land // 10 ** 3) % 10 ** 3)}t"
+
             self.infobox1_values_label.configure(text=val1)
             self.infobox2_values_label.configure(text=val2)
             self.infobox3_values_label.configure(text=val3)
@@ -434,11 +430,11 @@ def run():
         [land_color if (j, i) in engine.lands else ocean_color for i in range(POINTS_SIDE_COUNT) for j in
          range(POINTS_SIDE_COUNT)]).reshape((POINTS_SIDE_COUNT, POINTS_SIDE_COUNT, 3)).astype(np.uint8)
 
-    WINDOW_WIDTH = 1280
-    WINDOW_HEIGHT = 720
+    default_window_width = 1280
+    default_window_height = 720
 
     window = tk.Tk()
-    window.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
+    window.geometry(f"{default_window_width}x{default_window_height}")
     window.title('Oil Spill Simulation')
 
     frame_viewer = tk.Frame(window)
@@ -457,12 +453,15 @@ def run():
 
     image_width = viewer.image_array.shape[1]
     image_height = viewer.image_array.shape[0]
-    window_width_adjusted = 1280
-    window_height_adjusted = 615
-    initial_pan_x = (window_width_adjusted - image_width) // 2
-    initial_pan_y = (window_height_adjusted - image_height) // 2
+
+    frame_viewer.update()
+    window_width = frame_viewer.winfo_width()
+    window_height = frame_viewer.winfo_height()
+
+    initial_pan_x = (window_width - image_width) // 2
+    initial_pan_y = (window_height - image_height) // 2
     viewer.pan_x = initial_pan_x
     viewer.pan_y = initial_pan_y
-    viewer.update_image()
+    viewer.update_image(True)
 
     window.mainloop()
