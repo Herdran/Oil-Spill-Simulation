@@ -53,8 +53,8 @@ class SimulationEngine:
             path = '../' + path
         with open(path, 'r') as f:
             reader = csv.reader(f, delimiter=',')
-            for x, row in enumerate(reader):
-                for y, state in enumerate(row):
+            for y, row in enumerate(reader):
+                for x, state in enumerate(row):
                     if state == '1':
                         lands.add((x, y))
         return lands
