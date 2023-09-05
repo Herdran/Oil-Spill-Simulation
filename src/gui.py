@@ -3,6 +3,7 @@ import tkinter as tk
 from pathlib import Path
 
 import numpy as np
+import psutil
 from PIL import Image, ImageTk
 
 import simulation.simulation as simulation
@@ -58,18 +59,134 @@ def run():
             zoomed_height = int(height * self.zoom_level)
             zoomed_width = int(width * self.zoom_level)
 
-            if change_occurred:
-                self.img = Image.fromarray(self.image_array)
-                self.img = self.img.resize((zoomed_width, zoomed_height), Image.NEAREST)
+
+            window_width = frame_viewer.winfo_width()
+            window_height = frame_viewer.winfo_height()
+
+
+
+            # # image_array_after_rozwalka = self.image_array[0:]
+            # index_x = window_width
+            # index_y = window_height
+
+            if zoomed_width > window_width:
+                index_x = int(window_width // self.zoom_level)
+            else:
+                index_x = width
+            if zoomed_height > window_height:
+                index_y = int(window_height // self.zoom_level)
+            else:
+                index_y = height
+
+            # if change_occurred:
+            #     self.img = Image.fromarray(self.image_array)
+            #     self.img = self.img.resize((zoomed_width, zoomed_height), Image.NEAREST)
+
+            # print(self.zoom_level)
+            # print(zoomed_width, zoomed_height)
+            # print(window_width, window_height)
+            # print(width, height)
+            # print(index_x, index_y)
+            # print(self.pan_x, self.pan_y)
+            # print(self.prev_x, self.prev_y)
+            # print("=====================")
+
+
+            adjusted_mouse_x = max(self.pan_x, self.prev_x)
+            adjusted_mouse_y = max(self.pan_y, self.prev_y)
+
+            points_to_cut_x = width - index_x
+            points_to_cut_y = height - index_y
+
+
+            # image_array_after_rozwalka = np.array([self.image_array[i][0:index_x] for i in range(0, index_y)])
+            image_array_after_rozwalka = self.image_array[0:index_y, 0:index_x]
+
+
+
+            self.img = Image.fromarray(image_array_after_rozwalka)
+            self.img = self.img.resize((min(zoomed_width, window_width), min(zoomed_height, window_height)), Image.NEAREST)
 
             self.current_image = ImageTk.PhotoImage(self.img)
+            # self.image_id = self.create_image(self.pan_x, self.pan_y, anchor=tk.CENTER, image=self.current_image)
             self.image_id = self.create_image(self.pan_x, self.pan_y, anchor=tk.NW, image=self.current_image)
+
 
         def on_mousewheel(self, event):
             zoom_factor = 1.1 if event.delta > 0 else 0.9
             self.zoom_level *= zoom_factor
             # TODO multiplier for zoom value loses accuracy over time, maybe there should be another way to change this value
-            self.update_image(True)
+            # zoom_factor = 0.1 if event.delta > 0 else -0.1
+            # self.zoom_level += zoom_factor
+            # self.prev_x = event.x
+            # self.prev_y = event.y
+
+            # print(self.pan_x, self.pan_y)
+            # print(event.x, event.y)
+
+            height, width, channels = self.image_array.shape
+
+            part_of_image_that_mouse_hovered_over_x = max(min(((event.x - self.pan_x) / width), 1), 0)
+            part_of_image_that_mouse_hovered_over_y = max(min(((event.y - self.pan_y) / height), 1), 0)
+
+
+
+            height, width, channels = self.image_array.shape
+            zoomed_height = int(height * self.zoom_level)
+            zoomed_width = int(width * self.zoom_level)
+
+
+            window_width = frame_viewer.winfo_width()
+            window_height = frame_viewer.winfo_height()
+
+
+            if zoomed_width > window_width:
+                index_x = int(window_width // self.zoom_level)
+            else:
+                index_x = width
+            if zoomed_height > window_height:
+                index_y = int(window_height // self.zoom_level)
+            else:
+                index_y = height
+
+
+
+            points_to_cut_x = width - index_x
+            points_to_cut_y = height - index_y
+            # TODO te wartości muszą być proporcjonalne do wielkości obrazka, tzn 100x100 usuwa tyle samo wierszy co kolumn, 200x100 usuwa dwa razy więcej kolumn niż wierszy
+
+
+            # start = max()
+
+            image_array_after_rozwalka = self.image_array[
+                                         int(part_of_image_that_mouse_hovered_over_y * points_to_cut_y):
+                                         int(height - (1 - part_of_image_that_mouse_hovered_over_y) * points_to_cut_y),
+                                         int(part_of_image_that_mouse_hovered_over_x * points_to_cut_x):
+                                         int(width - (1 - part_of_image_that_mouse_hovered_over_x) * points_to_cut_x)
+                                         ]
+
+
+            # delta_x = event.x - self.prev_x
+            # delta_y = event.y - self.prev_y
+            # self.pan_x += delta_x
+            # self.pan_y += delta_y
+            # self.prev_x = event.x
+            # self.prev_y = event.y
+            # print(self.pan_x, self.pan_y)
+            #
+            # self.update_image(False)
+
+
+            self.img = Image.fromarray(image_array_after_rozwalka)
+            self.img = self.img.resize((min(zoomed_width, window_width), min(zoomed_height, window_height)), Image.NEAREST)
+
+            self.current_image = ImageTk.PhotoImage(self.img)
+            # self.image_id = self.create_image(self.pan_x, self.pan_y, anchor=tk.CENTER, image=self.current_image)
+            self.image_id = self.create_image(self.pan_x, self.pan_y, anchor=tk.NW, image=self.current_image)
+
+
+
+            # self.update_image(True)
 
         def on_button_press(self, event):
             self.prev_x = event.x
@@ -436,7 +553,7 @@ def run():
     land_color = (38, 166, 91)
     ocean_color = (15, 10, 222)
     image_array = np.array(
-        [land_color if (j, i) in engine.lands else ocean_color for i in range(POINTS_SIDE_COUNT) for j in
+        [land_color if (i, j) in engine.lands else ocean_color for i in range(POINTS_SIDE_COUNT) for j in
          range(POINTS_SIDE_COUNT)]).reshape((POINTS_SIDE_COUNT, POINTS_SIDE_COUNT, 3)).astype(np.uint8)
 
     default_window_width = 1280
@@ -450,7 +567,7 @@ def run():
     frame_viewer.grid(row=0, column=0, rowspan=10, padx=10, pady=10, sticky=tk.N + tk.S + tk.E + tk.W)
 
     frame_controller = ImageChangeController(window, image_array)
-    frame_controller.grid(row=1, column=0, padx=10, pady=10, sticky=tk.S + tk.E + tk.W)
+    frame_controller.grid(row=1, column=0, padx=10, pady=10, sticky=tk.N + tk.S + tk.E + tk.W)
 
     viewer = ImageViewer(frame_viewer, image_array, frame_controller)
     viewer.grid(row=0, column=0, rowspan=10, sticky=tk.N + tk.S + tk.E + tk.W)
@@ -472,5 +589,9 @@ def run():
     viewer.pan_x = initial_pan_x
     viewer.pan_y = initial_pan_y
     viewer.update_image(True)
+
+    process = psutil.Process()
+    memory_usage = process.memory_info()[0] / float(2 ** 20)
+    print(memory_usage)
 
     window.mainloop()
