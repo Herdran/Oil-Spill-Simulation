@@ -167,6 +167,14 @@ def run():
             if self.tooltip is not None:
                 self.tooltip.hide()
 
+        def resize(self):
+            window_width = frame_viewer.winfo_width()
+            window_height = frame_viewer.winfo_height()
+            self.zoom_level /= self.initial_zoom_level
+            self.initial_zoom_level = min(window_width / image_array.shape[1], window_height / image_array.shape[0])
+            self.zoom_level *= self.initial_zoom_level
+            self.update_image()
+
     class ToolTip:
         def __init__(self, parent, x, y, text):
             self.parent = parent
@@ -207,6 +215,7 @@ def run():
             self.oil_to_add_on_click = 10000
             self.minimal_oil_to_show = 100
             self.iter_as_sec = ITER_AS_SEC
+            self.viewer = None
 
             options_frame = tk.Frame(window)
             options_frame.grid(row=1, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S + tk.E)
@@ -301,6 +310,15 @@ def run():
             self.update_image_array()
             self.update_infoboxes()
 
+            self.bind("<Configure>", self.resize)
+
+        def set_viewer(self, viewer):
+            self.viewer = viewer
+
+        def resize(self, event):
+            if self.viewer:
+                self.viewer.resize()
+
         def on_key_press_interval(self, event):
             if event.keysym == "Return":
                 self.validate_interval()
@@ -377,7 +395,7 @@ def run():
                 if self.job_id is not None:
                     self.after_cancel(self.job_id)
                 self.update_image_array()
-                viewer.update_image()
+                self.viewer.update_image()
             except ValueError:
                 pass
 
@@ -421,7 +439,7 @@ def run():
                 self.image_array[coords[1]][coords[0]] = var[:3]
 
             if self.is_running:
-                viewer.update_image()
+                self.viewer.update_image()
                 self.curr_iter += 1
                 self.sim_sec_passed += self.iter_as_sec
                 self.job_id = self.after(self.interval, self.update_image_array)
@@ -491,6 +509,7 @@ def run():
     initial_zoom_level = min(window_width / image_array.shape[1], window_height / image_array.shape[0])
     viewer = ImageViewer(frame_viewer, image_array, frame_controller, initial_zoom_level)
     viewer.grid(row=0, column=0, rowspan=10, sticky=tk.N + tk.S + tk.E + tk.W)
+    frame_controller.set_viewer(viewer)
 
     viewer.update_image()
 
