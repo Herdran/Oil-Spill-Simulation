@@ -44,7 +44,7 @@ class Point:
         self.engine = engine
         self.coord = coord
         x, y = coord
-        self.coordinates = Coordinates(latitude=const.POINT_LAT_CENTERS[x], longitude=const.POINT_LON_CENTERS[y])
+        self.coordinates = Coordinates(latitude=const.POINT_LAT_CENTERS[y], longitude=const.POINT_LON_CENTERS[x])
         self.weather_station_coordinates = engine.data_processor.weather_station_coordinates(self.coordinates)
         self.wind_velocity = DEFAULT_WIND_VELOCITY
         self.wave_velocity = DEFAULT_WAVE_VELOCITY
