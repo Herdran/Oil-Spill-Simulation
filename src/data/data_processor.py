@@ -3,7 +3,6 @@ from math import floor
 from os import PathLike, path, listdir
 from dataclasses import dataclass
 from typing import Optional
-from collections import defaultdict
 import numpy as np
 import pandas as pd
 from scipy.interpolate import NearestNDInterpolator
@@ -74,12 +73,7 @@ class Loaded_data:
             current=SpeedMeasure(row.current_n, row.current_e)
         )
             
-        measurments_data = defaultdict(lambda: defaultdict(dict))
-       
-        for row in data.itertuples():
-            measurments_data[(row.time, row.lat, row.lon)] = get_measurment(row)
-       
-        return Loaded_data(measurments_data)
+        return Loaded_data({(row.time, row.lat, row.lon):get_measurment(row) for row in data.itertuples()})
     
     def try_get_measurment(self, time: float, latitude: float, longitude: float) -> SpeedMeasure:
         measure = self.measurments_data.get((time, latitude, longitude))
