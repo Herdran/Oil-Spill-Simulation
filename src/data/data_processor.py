@@ -1,16 +1,16 @@
 from enum import Enum
 from math import floor
 from os import PathLike, path, listdir
-from typing import Callable, Optional
+from dataclasses import dataclass
+from typing import Optional
 import numpy as np
 import pandas as pd
 from scipy.interpolate import NearestNDInterpolator
 
 from data.generic import Range
-from data.utilities import dataframe_replace_applay, great_circle_distance, minutes, or_default
+from data.utilities import dataframe_replace_applay, great_circle_distance, minutes, or_default, round_values
 from data.measurment_data import CertainMeasurment, Coordinates, SpeedMeasure, CoordinatesBase
-from data.simulation_run_parameters import SimulationRunParameters, CellSideCount
-
+from data.simulation_run_parameters import SimulationRunParameters
 
 MINUTES_IN_HOUR = 60
 SECONDS_IN_MINUTE = 60
@@ -54,10 +54,37 @@ INTERPOLATION_NEIGHBOURS = {
 }
     
 class DataAggregatesDecriptior(Enum):
-    COORDINATE = "coord"
+    LATITUDE = "lat"
+    LONGITUDE = "lon"
     TIME_STAMP = "time"
-    WIND = "wind"
-    CURRENT = "current"
+    WIND_N = "wind_n"
+    WIND_E = "wind_e"
+    CURRENT_N = "current_n"
+    CURRENT_E = "current_e"
+    
+@dataclass
+class Loaded_data:
+    measurments_data: dict
+    
+    @staticmethod
+    def from_dataframe(data: pd.DataFrame) -> 'Loaded_data':        
+        get_measurment = lambda row: CertainMeasurment(
+            wind=SpeedMeasure(row.wind_n, row.wind_e),
+            current=SpeedMeasure(row.current_n, row.current_e)
+        )
+            
+        return Loaded_data({(row.time, row.lat, row.lon):get_measurment(row) for row in data.itertuples()})
+    
+    def try_get_measurment(self, time: float, latitude: float, longitude: float) -> SpeedMeasure:
+        measure = self.measurments_data.get((time, latitude, longitude))
+        
+        if measure is None:
+            print(f"WARNING: can't parse measurment for given coordinates {(latitude, longitude)} and time stamp {time}")
+            DEFAULT_SPEED = SpeedMeasure(0, 0)
+            return CertainMeasurment(DEFAULT_SPEED,DEFAULT_SPEED)
+
+        return measure
+
 
 
 class DataProcessorImpl:
@@ -71,26 +98,42 @@ class DataProcessorImpl:
         self.latitude_points = self._create_envirement_latitude_range(simulation_run_parameters)
         self.longitude_points = self._create_envirement_longitude_range(simulation_run_parameters)
         
+        self.latitude_points = round_values(self.latitude_points)
+        self.longitude_points = round_values(self.longitude_points)
+        
+        self.min_coords = Coordinates(
+            latitude=min(self.latitude_points),
+            longitude=min(self.longitude_points)
+        )
+        
+        self.coord_range = CoordinatesBase(
+            latitude=(max(self.latitude_points) - min(self.latitude_points)) / simulation_run_parameters.cells_side_count.latitude,
+            longitude=(max(self.longitude_points) - min(self.longitude_points)) / simulation_run_parameters.cells_side_count.longitude
+        )
+        
         time_points, latitude_points, longitude_points = np.meshgrid(time_points, self.latitude_points, self.longitude_points)
 
-        points_wind_n, values_wind_n = self._get_interpolation_area(data, DataAggregatesDecriptior.WIND, lambda row: row[DataAggregatesDecriptior.WIND.value].speed_north)
+        points_wind_n, values_wind_n = self._get_interpolation_area(data, DataAggregatesDecriptior.WIND_N, DataAggregatesDecriptior.WIND_E)
         wind_n_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_wind_n, values_wind_n)
         
-        points_wind_e, values_wind_e = self._get_interpolation_area(data, DataAggregatesDecriptior.WIND, lambda row: row[DataAggregatesDecriptior.WIND.value].speed_east)
+        points_wind_e, values_wind_e = self._get_interpolation_area(data, DataAggregatesDecriptior.WIND_E, DataAggregatesDecriptior.WIND_N)
         wind_e_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_wind_e, values_wind_e)
         
-        points_current_n, values_current_n = self._get_interpolation_area(data, DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_north)
+        points_current_n, values_current_n = self._get_interpolation_area(data, DataAggregatesDecriptior.CURRENT_N, DataAggregatesDecriptior.CURRENT_E)
         current_n_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_current_n, values_current_n)
         
-        points_current_e, values_current_e = self._get_interpolation_area(data, DataAggregatesDecriptior.CURRENT, lambda row: row[DataAggregatesDecriptior.CURRENT.value].speed_east)
+        points_current_e, values_current_e = self._get_interpolation_area(data, DataAggregatesDecriptior.CURRENT_E, DataAggregatesDecriptior.CURRENT_N)
         current_e_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_current_e, values_current_e)
         
         envirement_area = pd.DataFrame(
             {
                 DataAggregatesDecriptior.TIME_STAMP.value: time_points.flatten(),
-                DataAggregatesDecriptior.COORDINATE.value : [Coordinates(latitude, longitude) for latitude, longitude in zip(latitude_points.flatten(), longitude_points.flatten())],
-                DataAggregatesDecriptior.WIND.value: [SpeedMeasure(wind_n, wind_e) for wind_n, wind_e in zip(wind_n_interpolated.flatten(), wind_e_interpolated.flatten())],
-                DataAggregatesDecriptior.CURRENT.value: [SpeedMeasure(current_n, current_e) for current_n, current_e in zip(current_n_interpolated.flatten(), current_e_interpolated.flatten())]
+                DataAggregatesDecriptior.LATITUDE.value : latitude_points.flatten(),
+                DataAggregatesDecriptior.LONGITUDE.value: longitude_points.flatten(),
+                DataAggregatesDecriptior.WIND_N.value: wind_n_interpolated.flatten(),
+                DataAggregatesDecriptior.WIND_E.value: wind_e_interpolated.flatten(),
+                DataAggregatesDecriptior.CURRENT_N.value: current_n_interpolated.flatten(),
+                DataAggregatesDecriptior.CURRENT_E.value: current_e_interpolated.flatten()
             }
         )
         
@@ -123,19 +166,21 @@ class DataProcessorImpl:
         return time_from_last_update > self.run_parameters.data_time_step
     
     def get_measurment(self, coordinates: Coordinates, nearest_station_info: DataStationInfo,  time_stamp: pd.Timestamp) -> CertainMeasurment:
-        data = self._get_data_for_time(time_stamp)
+        SHOULD_INTERPOLATE = False
+        
+        loaded_data = self._get_data_for_time(time_stamp)
         time_stamp = self._get_nearest_data_time(time_stamp)
         
         station_coordinates = self._get_coord_for_station(nearest_station_info)
         
-        if coordinates == station_coordinates:
-            return self._get_certain_measurment(data, station_coordinates, time_stamp)
+        if not SHOULD_INTERPOLATE or coordinates == station_coordinates:
+            return self._get_certain_measurment(loaded_data, station_coordinates, time_stamp)
         
         interpolation_neigbours = self._get_direction_of_stataion(coordinates, station_coordinates).get_interpolation_neigbours()
         neigbours_stations_info = self._get_neigbours_station_info(interpolation_neigbours, nearest_station_info)
         neigbours_stations_coords = [self._get_coord_for_station(station_info) for station_info in neigbours_stations_info]
         weights = [great_circle_distance(coordinates, coord) for coord in neigbours_stations_coords]
-        measurments = [self._get_certain_measurment(data, coord, time_stamp) for coord in neigbours_stations_coords]    
+        measurments = [self._get_certain_measurment(loaded_data, coord, time_stamp) for coord in neigbours_stations_coords]    
     
         return CertainMeasurment(
             wind = SpeedMeasure.from_average([measurment.wind for measurment in measurments], weights),
@@ -172,49 +217,22 @@ class DataProcessorImpl:
             not (MIN_COORD <= lon_candidate < self.run_parameters.cells_side_count.longitude)):
             return None
         
-        return DataStationInfo(lat_candidate, lon_candidate) 
-        
-    
-    def _get_measurment_row_data(self, data: pd.DataFrame, coordinates: Coordinates, time_stamp: pd.Timestamp) -> pd.Series:
-        FIRST_MATCHED_ROW_IDX = 0
-        
-        duration_till_start = (time_stamp - self.run_parameters.time.min).seconds // SECONDS_IN_MINUTE
-        
-        row =  data[
-            (data[DataAggregatesDecriptior.TIME_STAMP.value] == duration_till_start) & 
-            (data[DataAggregatesDecriptior.COORDINATE.value] == str(coordinates))
-        ]
-        
-        return row.iloc[FIRST_MATCHED_ROW_IDX]
-        
-        
+        return DataStationInfo(lat_candidate, lon_candidate)     
 
-    def _get_certain_measurment(self, data: pd.DataFrame, coordinates: Coordinates, time_stamp: pd.Timestamp) -> CertainMeasurment:
-        row = self._get_measurment_row_data(data, coordinates, time_stamp)
-        wind = SpeedMeasure.try_from_repr(row[DataAggregatesDecriptior.WIND.value])
-        current = SpeedMeasure.try_from_repr(row[DataAggregatesDecriptior.CURRENT.value])
-
-        if wind is None or current is None:
-            print(f"WARNING: can't parse measurment for given coordinates {coordinates} and time stamp {time_stamp}")
-
-        DEFAULT_SPEED = SpeedMeasure(0, 0)
-
-        return CertainMeasurment(
-            wind=or_default(wind, DEFAULT_SPEED),
-            current=or_default(current, DEFAULT_SPEED)
-        )
+    def _get_certain_measurment(self, data: Loaded_data, coordinates: Coordinates, time_stamp: pd.Timestamp) -> CertainMeasurment:
+        delta = minutes(time_stamp - self.run_parameters.time.min)
+        return data.try_get_measurment(delta, coordinates.latitude, coordinates.longitude)
 
     def _get_nearest_data_time(self, time_stamp: pd.Timestamp) -> pd.Timestamp:
         duration_till_start = time_stamp - self.run_parameters.time.min
         time_stamps_passed = duration_till_start / self.run_parameters.data_time_step
         return self.run_parameters.time.min + (floor(time_stamps_passed) * self.run_parameters.data_time_step)
     
-    def _get_data_for_time(self, time_stamp: pd.Timestamp) -> Optional[pd.DataFrame]:
+    def _get_data_for_time(self, time_stamp: pd.Timestamp) -> Loaded_data:
         needed_hour = self._get_run_hour_for_time_stamp(time_stamp)
         
         if len(self.loaded_data) == 0:
             self._load_data_for_time(needed_hour)
-        
         
         first_loaded_hour = next(iter(self.loaded_data.keys()))
         if needed_hour > first_loaded_hour:
@@ -236,7 +254,7 @@ class DataProcessorImpl:
     def _load_data_for_time(self, simulation_hour: int) -> None:
         readed_data = self._read_data_for_time(simulation_hour)
         if readed_data is not None:
-            self.loaded_data[simulation_hour] = readed_data
+            self.loaded_data[simulation_hour] = Loaded_data.from_dataframe(readed_data)
         
     def _read_data_for_time(self, simulation_hour: int) -> Optional[pd.DataFrame]:
         print(f"Reading data for hour {simulation_hour}")
@@ -247,18 +265,19 @@ class DataProcessorImpl:
         interpolator = NearestNDInterpolator(points, values)
         return interpolator(time_points, latitude_points, longitude_points)
         
-    def _get_interpolation_area(self, data: pd.DataFrame, column_filter: DataAggregatesDecriptior, value_getter: Callable[[pd.Series], float]) -> tuple[np.ndarray, np.ndarray]:
+    def _get_interpolation_area(self, data: pd.DataFrame, column_filter: DataAggregatesDecriptior, additional_filter: DataAggregatesDecriptior) -> tuple[np.ndarray, np.ndarray]:
         points: list[list] = []
         values: list[float] = []
         
-        data_with_column = data[data[column_filter.value].notna()]
+        data_with_column = data[data[column_filter.value].notna() & data[additional_filter.value].notna()]
         
         for _, row in data_with_column.iterrows():
-            coord = row[DataAggregatesDecriptior.COORDINATE.value]
+            lat = row[DataAggregatesDecriptior.LATITUDE.value]
+            lon = row[DataAggregatesDecriptior.LONGITUDE.value]
             time = row[DataAggregatesDecriptior.TIME_STAMP.value]
             time_from_start = minutes(time - self.run_parameters.time.min)
-            points.append((time_from_start, coord.latitude, coord.longitude))
-            values.append(value_getter(row))
+            points.append((time_from_start, lat, lon))
+            values.append(row[column_filter.value])
         
         return np.array(points), np.array(values)
         
@@ -285,28 +304,16 @@ class DataProcessorImpl:
     def _load_all_data(self, csv_paths: list[PathLike]) -> pd.DataFrame:
         concated_data = pd.concat([self._load_single_dataset(csv_path)
                                    for csv_path in csv_paths])
-        self._data_agg_coordinates(concated_data)
-        self._data_agg_time(concated_data)
         self._data_agg_wind(concated_data)
         self._data_agg_current(concated_data)
+        self._data_agg_time(concated_data)
 
         return concated_data
-
-    def _data_agg_coordinates(self, data: pd.DataFrame):
-        dataframe_replace_applay(
-            dataframe=data,
-            result_column=DataAggregatesDecriptior.COORDINATE.value,
-            function=Coordinates,
-            columns=[
-                DataDescriptor.LATITUDE.value,
-                DataDescriptor.LONGITUDE.value
-            ]
-        )
 
     def _data_agg_time(self, data: pd.DataFrame):
         dataframe_replace_applay(
             dataframe=data,
-            result_column=DataAggregatesDecriptior.TIME_STAMP.value,
+            result_columns=[DataAggregatesDecriptior.TIME_STAMP.value],
             function=pd.Timestamp,
             columns=[
                 DataDescriptor.YEAR.value,
@@ -320,7 +327,7 @@ class DataProcessorImpl:
     def _data_agg_wind(self, data: pd.DataFrame):
         dataframe_replace_applay(
             dataframe=data,
-            result_column=DataAggregatesDecriptior.WIND.value,
+            result_columns=[DataAggregatesDecriptior.WIND_N.value, DataAggregatesDecriptior.WIND_E.value],
             function=SpeedMeasure.from_direction,
             columns=[
                 DataDescriptor.WIND_SPEED.value,
@@ -331,7 +338,7 @@ class DataProcessorImpl:
     def _data_agg_current(self, data: pd.DataFrame):
         dataframe_replace_applay(
             dataframe=data,
-            result_column=DataAggregatesDecriptior.CURRENT.value,
+            result_columns=[DataAggregatesDecriptior.CURRENT_N.value, DataAggregatesDecriptior.CURRENT_E.value],
             function=SpeedMeasure.from_direction,
             columns=[
                 DataDescriptor.CURRENT_SPEED.value,
@@ -340,18 +347,15 @@ class DataProcessorImpl:
         )
 
     def weather_station_coordinates(self, coordinates: Coordinates) -> DataStationInfo:
-        min_value = float("inf")
-        result = None
+        coords = CoordinatesBase(
+            latitude=max(0, coordinates.latitude - self.min_coords.latitude),
+            longitude=max(0, coordinates.longitude - self.min_coords.longitude)
+        )
         
-        for lat_idx, lat in enumerate(self.latitude_points.flatten()):
-            for lon_idx, lon in enumerate(self.longitude_points.flatten()):
-                coord = Coordinates(lat, lon)
-                dist = great_circle_distance(coordinates, coord)
-                if dist < min_value:
-                    min_value = dist
-                    result = DataStationInfo(lat_idx, lon_idx)
-                
-        return result
+        return DataStationInfo(
+            latitude=min(self.run_parameters.cells_side_count.latitude - 1, floor(coords.latitude / self.coord_range.latitude)),
+            longitude=min(self.run_parameters.cells_side_count.longitude - 1, floor(coords.longitude / self.coord_range.longitude))
+        )
 
 class DataProcessor:
     def __init__(self, *args):
