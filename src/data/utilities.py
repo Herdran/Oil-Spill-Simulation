@@ -1,6 +1,6 @@
 from math import acos, cos, radians, sin
 from typing import Callable, Optional
-
+from data.measurment_data import Coordinates, Temperature
 import pandas as pd
 import numpy as np
 
@@ -49,6 +49,14 @@ def or_default(value: Optional[object], default: object) -> object:
     if value is None:
         return default
     return value
+
+KELVIN_CONSTATNT = 273.15
+
+def celcius_to_kelvins(celcius: float) -> Temperature:
+    return celcius + KELVIN_CONSTATNT
+
+def kelvins_to_celsius(kelvins: Temperature) -> float:
+    return kelvins - KELVIN_CONSTATNT
 
 def round_values(arr: np.array):
     DATA_FLOAT_PRECISSION = 5

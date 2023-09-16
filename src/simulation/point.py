@@ -83,6 +83,7 @@ class Point:
                                                             time_stamp)
             self.wave_velocity = measurment.current.to_numpy()
             self.wind_velocity = measurment.wind.to_numpy()
+            self.temperature = measurment.temperature
             self.last_weather_update_time = time_delta
 
     def update(self, delta_time: float) -> None:
@@ -156,7 +157,7 @@ class Point:
         delta_r /= const.POINT_SIDE_SIZE
 
         # buffering how far oil went in time step
-        self.advection_buffer += delta_r
+        self.advection_buffer += [delta_r[1], -delta_r[0]]
         x, y = self.coord
         next_x = x + int(self.advection_buffer[0])
         next_y = y + int(self.advection_buffer[1])

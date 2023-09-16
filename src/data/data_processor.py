@@ -8,8 +8,8 @@ import pandas as pd
 from scipy.interpolate import NearestNDInterpolator
 
 from data.generic import Range
-from data.utilities import dataframe_replace_applay, great_circle_distance, minutes, or_default, round_values
-from data.measurment_data import CertainMeasurment, Coordinates, SpeedMeasure, CoordinatesBase
+from data.utilities import dataframe_replace_applay, great_circle_distance, minutes, or_default, round_values, celcius_to_kelvins    
+from data.measurment_data import CertainMeasurment, Coordinates, SpeedMeasure, CoordinatesBase, avrage_measurment
 from data.simulation_run_parameters import SimulationRunParameters
 
 MINUTES_IN_HOUR = 60
@@ -29,6 +29,7 @@ class DataDescriptor(Enum):
     WIND_DIRECTION = "wind dir"
     CURRENT_SPEED = "current speed"
     CURRENT_DIRECTION = "current dir"
+    TEMPERATURE = "temp"
     
 
 class StationNeigbourType(Enum):
@@ -61,6 +62,7 @@ class DataAggregatesDecriptior(Enum):
     WIND_E = "wind_e"
     CURRENT_N = "current_n"
     CURRENT_E = "current_e"
+    TEMPERATURE = "temp"
     
 @dataclass
 class Loaded_data:
@@ -70,7 +72,8 @@ class Loaded_data:
     def from_dataframe(data: pd.DataFrame) -> 'Loaded_data':        
         get_measurment = lambda row: CertainMeasurment(
             wind=SpeedMeasure(row.wind_n, row.wind_e),
-            current=SpeedMeasure(row.current_n, row.current_e)
+            current=SpeedMeasure(row.current_n, row.current_e),
+            temperature=row.temp
         )
             
         return Loaded_data({(row.time, row.lat, row.lon):get_measurment(row) for row in data.itertuples()})
@@ -81,7 +84,8 @@ class Loaded_data:
         if measure is None:
             print(f"WARNING: can't parse measurment for given coordinates {(latitude, longitude)} and time stamp {time}")
             DEFAULT_SPEED = SpeedMeasure(0, 0)
-            return CertainMeasurment(DEFAULT_SPEED,DEFAULT_SPEED)
+            DEFAULT_TEMPERATURE = 302.15
+            return CertainMeasurment(DEFAULT_SPEED,DEFAULT_SPEED, DEFAULT_TEMPERATURE)
 
         return measure
 
@@ -125,6 +129,10 @@ class DataProcessorImpl:
         points_current_e, values_current_e = self._get_interpolation_area(data, DataAggregatesDecriptior.CURRENT_E, DataAggregatesDecriptior.CURRENT_N)
         current_e_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_current_e, values_current_e)
         
+        points_temp, values_temp = self._get_interpolation_area(data, DataAggregatesDecriptior.TEMPERATURE)
+        values_temp = np.vectorize(celcius_to_kelvins)(values_temp)
+        temp_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_temp, values_temp)
+        
         envirement_area = pd.DataFrame(
             {
                 DataAggregatesDecriptior.TIME_STAMP.value: time_points.flatten(),
@@ -133,7 +141,8 @@ class DataProcessorImpl:
                 DataAggregatesDecriptior.WIND_N.value: wind_n_interpolated.flatten(),
                 DataAggregatesDecriptior.WIND_E.value: wind_e_interpolated.flatten(),
                 DataAggregatesDecriptior.CURRENT_N.value: current_n_interpolated.flatten(),
-                DataAggregatesDecriptior.CURRENT_E.value: current_e_interpolated.flatten()
+                DataAggregatesDecriptior.CURRENT_E.value: current_e_interpolated.flatten(),
+                DataAggregatesDecriptior.TEMPERATURE.value: temp_interpolated.flatten()
             }
         )
         
@@ -184,7 +193,8 @@ class DataProcessorImpl:
     
         return CertainMeasurment(
             wind = SpeedMeasure.from_average([measurment.wind for measurment in measurments], weights),
-            current= SpeedMeasure.from_average([measurment.current for measurment in measurments], weights)
+            current = SpeedMeasure.from_average([measurment.current for measurment in measurments], weights),
+            temperature = avrage_measurment([measurment.temperature for measurment in measurments], weights)
         )
             
         
@@ -265,11 +275,14 @@ class DataProcessorImpl:
         interpolator = NearestNDInterpolator(points, values)
         return interpolator(time_points, latitude_points, longitude_points)
         
-    def _get_interpolation_area(self, data: pd.DataFrame, column_filter: DataAggregatesDecriptior, additional_filter: DataAggregatesDecriptior) -> tuple[np.ndarray, np.ndarray]:
+    def _get_interpolation_area(self, data: pd.DataFrame, column_filter: DataAggregatesDecriptior, additional_filter: DataAggregatesDecriptior = None) -> tuple[np.ndarray, np.ndarray]:
         points: list[list] = []
         values: list[float] = []
         
-        data_with_column = data[data[column_filter.value].notna() & data[additional_filter.value].notna()]
+        if additional_filter is not None:  
+            data_with_column = data[data[column_filter.value].notna() & data[additional_filter.value].notna()]
+        else:
+            data_with_column = data[data[column_filter.value].notna()]
         
         for _, row in data_with_column.iterrows():
             lat = row[DataAggregatesDecriptior.LATITUDE.value]
@@ -311,10 +324,13 @@ class DataProcessorImpl:
         return concated_data
 
     def _data_agg_time(self, data: pd.DataFrame):
+        def get_time_stamp(*args):
+            return pd.Timestamp(*[int(arg) for arg in args])
+        
         dataframe_replace_applay(
             dataframe=data,
             result_columns=[DataAggregatesDecriptior.TIME_STAMP.value],
-            function=pd.Timestamp,
+            function=get_time_stamp,
             columns=[
                 DataDescriptor.YEAR.value,
                 DataDescriptor.MONTH.value,

@@ -17,6 +17,14 @@ latitude range: -90.0 to 90.0
 longitude range: -180.0 to 180.0
 '''
 
+Temperature = float
+'''
+Value of temperature in kelvins
+'''
+
+def avrage_measurment(measurments: list[float], weights: float) -> list[float]:
+    return np.average(measurments, weights=weights)
+
 @dataclass
 class SpeedMeasure():
     speed_north: float  # m/s
@@ -32,8 +40,8 @@ class SpeedMeasure():
     @staticmethod
     def from_average(measurments: 'SpeedMeasure', weights: float) -> 'SpeedMeasure':
         return SpeedMeasure(
-            speed_north = np.average([measurment.speed_north for measurment in measurments], weights=weights),
-            speed_east = np.average([measurment.speed_east for measurment in measurments], weights=weights)
+            speed_north = avrage_measurment([measurment.speed_north for measurment in measurments], weights),
+            speed_east = avrage_measurment([measurment.speed_east for measurment in measurments], weights)
         )
         
     def __getitem__(self, index: int) -> float:
@@ -56,9 +64,11 @@ class SpeedMeasure():
 class Measurment:
     wind: Optional[SpeedMeasure]
     current: Optional[SpeedMeasure]
+    temperature: Optional[Temperature]
 
 
 @dataclass
 class CertainMeasurment:
     wind: SpeedMeasure
     current: SpeedMeasure
+    temperature: Temperature
