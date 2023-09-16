@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import pandas as pd
 from data.generic import Range
 from data.measurment_data import Coordinates
@@ -8,14 +11,14 @@ POINTS_SIDE_COUNT = 100
 ITER_AS_SEC = 20
 
 TOP_COORD = 30.24268
-LEFT_COORD = -88.77964
 DOWN_COORD = 30.19767
+LEFT_COORD = -88.77964
 RIGHT_COORD = -88.72648
 
 POINT_LAT_SIZE = (TOP_COORD - DOWN_COORD)/POINTS_SIDE_COUNT
 POINT_LON_SIZE = (RIGHT_COORD - LEFT_COORD)/POINTS_SIDE_COUNT
 
-POINT_LAT_CENTERS = [DOWN_COORD + POINT_LAT_SIZE/2 + (POINT_LAT_SIZE * i) for i in range(POINTS_SIDE_COUNT)]
+POINT_LAT_CENTERS = [TOP_COORD - POINT_LAT_SIZE/2 - (POINT_LAT_SIZE * i) for i in range(POINTS_SIDE_COUNT)]
 POINT_LON_CENTERS = [LEFT_COORD + POINT_LON_SIZE/2 + (POINT_LON_SIZE * i) for i in range(POINTS_SIDE_COUNT)]
 
 
@@ -31,7 +34,7 @@ SIMULATION_INITIAL_PARAMETERS = SimulationRunParameters(
             longitude=RIGHT_COORD
         )
     ),
-    # we need to think aboud behavior of our application when sim time ends
+    # we need to think about behavior of our application when sim time ends
     time=Range(
         min=pd.Timestamp("2010-04-01 00:00:00"),
         max=pd.Timestamp("2010-04-01 06:00:00"),
@@ -46,5 +49,5 @@ SIMULATION_INITIAL_PARAMETERS = SimulationRunParameters(
         latitude=10,
         longitude=10
     ),
-    path_to_data="data/processed_data"
+    path_to_data=Path("../data/processed_data") if os.getcwd().endswith('src') else Path("data/processed_data")
 )
