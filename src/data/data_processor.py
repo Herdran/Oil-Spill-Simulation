@@ -324,10 +324,13 @@ class DataProcessorImpl:
         return concated_data
 
     def _data_agg_time(self, data: pd.DataFrame):
+        def get_time_stamp(*args):
+            return pd.Timestamp(*[int(arg) for arg in args])
+        
         dataframe_replace_applay(
             dataframe=data,
             result_columns=[DataAggregatesDecriptior.TIME_STAMP.value],
-            function=pd.Timestamp,
+            function=get_time_stamp,
             columns=[
                 DataDescriptor.YEAR.value,
                 DataDescriptor.MONTH.value,

@@ -157,7 +157,7 @@ class Point:
         delta_r /= const.POINT_SIDE_SIZE
 
         # buffering how far oil went in time step
-        self.advection_buffer += delta_r # TODO
+        self.advection_buffer += [delta_r[1], -delta_r[0]]
         x, y = self.coord
         next_x = x + int(self.advection_buffer[0])
         next_y = y + int(self.advection_buffer[1])
