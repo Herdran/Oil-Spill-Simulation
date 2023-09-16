@@ -73,7 +73,7 @@ class SpeedMeasure():
 class Measurment:
     wind: Optional[SpeedMeasure]
     current: Optional[SpeedMeasure]
-    current: Optional[Temperature]
+    temperature: Optional[Temperature]
 
 
 @dataclass
