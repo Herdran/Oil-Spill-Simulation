@@ -47,6 +47,7 @@ def run():
             self.tooltip = None
             self.img = None
             self.image_change_controller = image_change_controller
+            self.preview_mode = True
 
             self.bind("<MouseWheel>", self.on_mousewheel)
             self.bind("<ButtonPress-1>", self.on_button_press)
@@ -88,15 +89,10 @@ def run():
                                               image=self.current_image)
 
         def on_mousewheel(self, event):
-            # self.pan_x /= self.zoom_level
-            # self.pan_y /= self.zoom_level
-            # TODO I don't know if these operations are necessary
             zoom_factor = 1.1 if event.delta > 0 else 0.9
             # TODO multiplier for zoom value loses accuracy over time, maybe there should be another way to change this value
             self.zoom_level *= zoom_factor
             self.zoom_level = min(max(self.zoom_level, self.initial_zoom_level), 100)
-            # self.pan_x *= self.zoom_level
-            # self.pan_y *= self.zoom_level
             self.update_image()
 
         def on_button_press(self, event):
@@ -176,6 +172,33 @@ def run():
             self.zoom_level *= self.initial_zoom_level
             self.update_image()
 
+        def define_simulation_area(self):
+            print(self.pan_x, self.pan_y)
+            print(self.zoom_level)
+
+            self.preview_mode = False
+            height, width, channels = self.image_array.shape
+            self.zoomed_width = int(width * self.zoom_level)
+            self.zoomed_height = int(height * self.zoom_level)
+
+            window_width = frame_viewer.winfo_width()
+            window_height = frame_viewer.winfo_height()
+
+            self.pan_x = max(min(self.pan_x, 0), min(window_width - self.zoomed_width, 0))
+            self.pan_y = max(min(self.pan_y, 0), min(window_height - self.zoomed_height, 0))
+
+            self.image_array = self.image_array[
+                               int(-self.pan_y / self.zoom_level):
+                               int(window_height / self.zoom_level - (self.pan_y / self.zoom_level)),
+                               int(-self.pan_x / self.zoom_level):
+                               int(window_width / self.zoom_level - (self.pan_x / self.zoom_level))
+                               ]
+            self.prev_x = 0
+            self.prev_y = 0
+            self.pan_x = 0
+            self.pan_y = 0
+            self.initial_zoom_level = self.zoom_level
+
     class ToolTip:
         def __init__(self, parent, x, y, text):
             self.parent = parent
@@ -218,13 +241,13 @@ def run():
             self.iter_as_sec = ITER_AS_SEC
             self.viewer = None
 
-            options_frame = tk.Frame(window)
-            options_frame.grid(row=1, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S + tk.E)
-            start_stop_frame = tk.Frame(options_frame)
-            interval_frame = tk.Frame(options_frame)
-            iter_as_sec_frame = tk.Frame(options_frame)
-            oil_added_frame = tk.Frame(options_frame)
-            minimal_oil_value_to_show_frame = tk.Frame(options_frame)
+            self.options_frame = tk.Frame(window)
+            self.options_frame.grid(row=1, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S + tk.E)
+            start_stop_frame = tk.Frame(self.options_frame)
+            interval_frame = tk.Frame(self.options_frame)
+            iter_as_sec_frame = tk.Frame(self.options_frame)
+            oil_added_frame = tk.Frame(self.options_frame)
+            minimal_oil_value_to_show_frame = tk.Frame(self.options_frame)
 
             start_stop_frame.grid(row=1, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
             interval_frame.grid(row=1, column=1, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
@@ -276,9 +299,18 @@ def run():
             self.text_minimal_oil_show.bind("<KeyPress>", self.on_key_press_oil_to_show)
             self.text_minimal_oil_show.bind("<FocusOut>", self.on_focus_out_oil_to_show)
 
-            infoboxes_frame = tk.Frame(window)
-            infoboxes_frame.grid(row=0, column=1, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S + tk.E)
-            frame_infoboxes_labels = tk.Frame(infoboxes_frame)
+            self.confirm_size = tk.Frame(window)
+            self.confirm_size.grid(row=1, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S + tk.E)
+            confirm_frame = tk.Frame(self.confirm_size)
+
+            confirm_frame.grid(row=1, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+
+            self.confirm_btn = tk.Button(confirm_frame, text="Confirm", width=10, command=self.confirm_func)
+            self.confirm_btn.pack(side=tk.TOP, padx=5, pady=5)
+
+            self.infoboxes_frame = tk.Frame(window)
+            self.infoboxes_frame.grid(row=0, column=1, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S + tk.E)
+            frame_infoboxes_labels = tk.Frame(self.infoboxes_frame)
             frame_infoboxes_labels.grid(row=0, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S + tk.E)
             self.infobox1_labels_label = tk.Label(frame_infoboxes_labels, text="Current iteration",
                                                   font=("Arial", 14, "bold"), padx=10, pady=5)
@@ -293,7 +325,7 @@ def run():
                                                   font=("Arial", 14, "bold"), padx=10, pady=5)
             self.infobox4_labels_label.pack(side=tk.TOP)
 
-            frame_infoboxes_values = tk.Frame(infoboxes_frame)
+            frame_infoboxes_values = tk.Frame(self.infoboxes_frame)
             frame_infoboxes_values.grid(row=0, column=1, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S + tk.E)
             self.infobox1_values_label = tk.Label(frame_infoboxes_values, text="", font=("Arial", 14, "bold"), padx=10,
                                                   pady=5)
@@ -312,6 +344,8 @@ def run():
             self.update_infoboxes()
 
             self.bind("<Configure>", self.resize)
+            self.options_frame.grid_remove()
+            self.infoboxes_frame.grid_remove()
 
         def set_viewer(self, viewer):
             self.viewer = viewer
@@ -416,6 +450,13 @@ def run():
             self.btn_start_stop.configure(text="Start")
             if self.job_id is not None:
                 self.after_cancel(self.job_id)
+
+        def confirm_func(self):
+            self.confirm_size.grid_remove()
+            self.options_frame.grid()
+            self.infoboxes_frame.grid()
+            frame_viewer.update()
+            self.viewer.define_simulation_area()
 
         def update_image_array(self):
             if self.is_running:
