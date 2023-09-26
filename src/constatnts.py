@@ -7,7 +7,7 @@ from data.measurment_data import Coordinates
 from data.simulation_run_parameters import CellSideCount, SimulationRunParameters
 
 POINT_SIDE_SIZE = 50  # [m] #TODO: right now that could be different from what we have from coordinates :v - need to be calculated
-POINTS_SIDE_COUNT = 100
+POINTS_SIDE_COUNT = 6000
 ITER_AS_SEC = 20
 
 TOP_COORD = 30.24268
