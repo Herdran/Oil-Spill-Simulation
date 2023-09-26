@@ -3,6 +3,7 @@ import tkinter as tk
 from pathlib import Path
 
 import numpy as np
+import threading
 from PIL import Image, ImageTk
 
 import simulation.simulation as simulation
@@ -10,7 +11,7 @@ from color import rgba, blend_color
 from constatnts import ITER_AS_SEC, POINTS_SIDE_COUNT, SIMULATION_INITIAL_PARAMETERS
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from data.utilities import kelvins_to_celsius
-from color import rgba, blend_color
+
 
 def get_tooltip_text(point: simulation.Point) -> str:
     return f"""Oil mass: {point.oil_mass: .2f}kg
@@ -20,6 +21,7 @@ Wind speed E: {point.wind_velocity[1]: .2f}m/s
 Current speed N: {point.wave_velocity[0]: .2f}m/s
 Current speed E: {point.wave_velocity[1]: .2f}m/s
 Temperature: {kelvins_to_celsius(point.temperature): .2f}°C"""
+
 
 def run():
     SEA_COLOR = rgba(15, 10, 222)
@@ -55,8 +57,6 @@ def run():
             self.bind("<Leave>", self.on_leave)
 
         def update_image(self):
-            self.delete(self.image_id)
-
             height, width, channels = self.image_array.shape
             self.zoomed_width = int(width * self.zoom_level)
             self.zoomed_height = int(height * self.zoom_level)
@@ -87,15 +87,10 @@ def run():
                                               image=self.current_image)
 
         def on_mousewheel(self, event):
-            # self.pan_x /= self.zoom_level
-            # self.pan_y /= self.zoom_level
-            # TODO I don't know if these operations are necessary
             zoom_factor = 1.1 if event.delta > 0 else 0.9
             # TODO multiplier for zoom value loses accuracy over time, maybe there should be another way to change this value
             self.zoom_level *= zoom_factor
             self.zoom_level = min(max(self.zoom_level, self.initial_zoom_level), 100)
-            # self.pan_x *= self.zoom_level
-            # self.pan_y *= self.zoom_level
             self.update_image()
 
         def on_button_press(self, event):
@@ -307,7 +302,7 @@ def run():
                                                   pady=5)
             self.infobox4_values_label.pack(side=tk.TOP)
 
-            self.update_image_array()
+            threading.Thread(target=self.update_image_array).start()
             self.update_infoboxes()
 
             self.bind("<Configure>", self.resize)
@@ -357,7 +352,7 @@ def run():
                 self.text_interval.insert(tk.END, str(interval))
                 if self.is_running:
                     self.after_cancel(self.job_id)
-                    self.job_id = self.after(self.interval, self.update_image_array)
+                    self.job_id = self.after(self.interval, threading.Thread(target=self.update_image_array).start())
             except ValueError:
                 pass
 
@@ -371,7 +366,7 @@ def run():
                 self.text_iter_as_sec.insert(tk.END, str(iter_as_sec))
                 if self.is_running:
                     self.after_cancel(self.job_id)
-                    self.job_id = self.after(self.interval, self.update_image_array)
+                    self.job_id = self.after(self.interval, threading.Thread(target=self.update_image_array).start())
             except ValueError:
                 pass
 
@@ -394,7 +389,7 @@ def run():
                 self.text_minimal_oil_show.insert(tk.END, str(oil_to_show))
                 if self.job_id is not None:
                     self.after_cancel(self.job_id)
-                self.update_image_array()
+                threading.Thread(target=self.update_image_array).start()
                 self.viewer.update_image()
             except ValueError:
                 pass
@@ -408,7 +403,7 @@ def run():
         def start_image_changes(self):
             self.is_running = True
             self.btn_start_stop.configure(text="Stop")
-            self.update_image_array()
+            threading.Thread(target=self.update_image_array).start()
 
         def stop_image_changes(self):
             self.is_running = False
@@ -442,7 +437,7 @@ def run():
                 self.viewer.update_image()
                 self.curr_iter += 1
                 self.sim_sec_passed += self.iter_as_sec
-                self.job_id = self.after(self.interval, self.update_image_array)
+                self.job_id = self.after(self.interval, threading.Thread(target=self.update_image_array).start())
 
             self.update_infoboxes()
 
