@@ -462,7 +462,7 @@ def run():
         sym_data_reader = DataReader()
 
         try:
-            path = Path("data/test_data")
+            path = Path("data/processed")
             if os.getcwd().endswith('src'):
                 path = os.path.join('..', path)
             sym_data_reader.add_all_from_dir(path)
@@ -506,20 +506,6 @@ def run():
     viewer = ImageViewer(frame_viewer, image_array, frame_controller, initial_zoom_level)
     viewer.grid(row=0, column=0, rowspan=10, sticky=tk.N + tk.S + tk.E + tk.W)
     frame_controller.set_viewer(viewer)
-
-    points_with_oil_num = 600
-    oil_per_click = 1000
-
-    for i in range(1, points_with_oil_num + 1):
-        coord = None
-        while coord is None or coord in engine.lands or coord in engine.world:
-            coord = (randint(0, POINTS_SIDE_COUNT - 1), randint(0, POINTS_SIDE_COUNT - 1))
-
-        engine.world[coord] = simulation.Point(coord, engine.initial_values, engine)
-        point_clicked = engine.world[coord]
-        point_clicked.add_oil(oil_per_click)
-
-    print("added points")
 
     frame_controller.update_image_array()
     viewer.update_image()
