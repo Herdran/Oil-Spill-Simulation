@@ -79,6 +79,7 @@ class Spreading_engine:
 
     def new_point(self, coord: Coord_t, new_points: Dict[Coord_t, Point]) -> Point:
         point = Point(coord, self.initial_values, self.engine)
+        self.engine.points_changed.append(coord)
         new_points[coord] = point
         return point
 

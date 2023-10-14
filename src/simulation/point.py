@@ -136,6 +136,7 @@ class Point:
                 continue
             if cords not in self.world:
                 self.world[cords] = Point(cords, self.initial_values, self.engine)
+                self.engine.points_changed.append(cords)
             to_share.append(self.world[cords])
         if len(to_share) == 0:  # in case of bug
             return
@@ -164,6 +165,7 @@ class Point:
         if 0 <= next_x < const.POINTS_SIDE_COUNT and 0 <= next_y < const.POINTS_SIDE_COUNT:
             if (next_x, next_y) not in self.world:
                 self.world[(next_x, next_y)] = Point((next_x, next_y), self.initial_values, self.engine)
+                self.engine.points_changed.append((next_x, next_y))
             self.world[(next_x, next_y)].oil_buffer.append((self.oil_mass, self.viscosity, self.emulsification_rate))
             self.advection_buffer -= np.array([next_x - x, next_y - y])
         self.oil_mass = 0
