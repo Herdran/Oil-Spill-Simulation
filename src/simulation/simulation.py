@@ -20,11 +20,13 @@ class SimulationEngine:
         self.total_land_mass = 0
         self.lands = self.load_topography()
         self.total_time = 0
+        self.points_changed = []
 
     def is_finished(self) -> bool:
         return self.total_time >= self.initial_values.time_limit
 
     def update(self, delta_time) -> List[Coord_t]:
+        self.points_changed = []
         self.update_oil_points(delta_time)
 
         self.total_mass = 0
@@ -42,6 +44,7 @@ class SimulationEngine:
         for point in empty_points:
             del self.world[point]
             deleted.append(point)
+            self.points_changed.append(point)
         self.total_time += delta_time
         return deleted
 
