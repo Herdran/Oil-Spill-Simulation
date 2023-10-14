@@ -15,6 +15,7 @@ class SimulationEngine:
         Point.world = self.world
         self.data_processor = data_processor
         self.total_mass = 0
+        self.total_land_mass = 0
         self.lands = self.load_topography()
         self.total_time = 0
 
@@ -25,9 +26,12 @@ class SimulationEngine:
         self.update_oil_points(delta_time)
 
         self.total_mass = 0
+        self.total_land_mass = 0
         for point in self.world.values():
             point.pour_from_buffer()
             self.total_mass += point.oil_mass
+            if(point.topography == TopographyState.LAND):
+                self.total_land_mass += point.oil_mass
 
         self.spreading_engine.spread_oil_points(self.total_mass, delta_time)
 
@@ -64,4 +68,4 @@ class SimulationEngine:
 
     def get_oil_amounts(self):
         # TODO return values for oil on sea and land
-        return 0, 0
+        return self.total_mass - self.total_land_mass, self.total_land_mass
