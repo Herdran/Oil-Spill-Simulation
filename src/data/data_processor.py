@@ -93,6 +93,8 @@ class Loaded_data:
 
 class DataProcessorImpl:
     def __init__(self, csv_paths: list[PathLike], simulation_run_parameters: SimulationRunParameters):
+        print("STARTED: Preprocessing data...")
+       
         self.loaded_data: dict[int, pd.DataFrame] = {}
         
         self.run_parameters = simulation_run_parameters
@@ -148,7 +150,9 @@ class DataProcessorImpl:
         
         envirement_area.sort_values(inplace=True, by=[DataAggregatesDecriptior.TIME_STAMP.value])
 
+        print("FINISHED: Preprocessing data...")
         path_to_save = self.run_parameters.path_to_data
+        print(f"STARTED: Saving preprocessed data to {path_to_save}...")
 
 
         # TODO: code below is a mess propably need to be refactored in the future
@@ -170,6 +174,8 @@ class DataProcessorImpl:
             to_save = pd.concat([to_save, pd.DataFrame([row])], ignore_index=True)
         to_save.to_csv(get_data_path(), index=False)
         print(f"saved: {hour} hour")
+        
+        print("FINISHED: Saving preprocessed data...")
         
     def should_update_data(self, time_from_last_update: pd.Timedelta) -> bool:
         return time_from_last_update > self.run_parameters.data_time_step
@@ -422,6 +428,7 @@ class DataReader:
     def add_data(self, csv_path: PathLike):
         self._data_validator.validate(csv_path)
         self._dataset_paths.append(csv_path)
+        print(f"Added data from file: {csv_path}")
 
     def add_all_from_dir(self, dir_path: PathLike):
         CSV_EXT = ".csv"
