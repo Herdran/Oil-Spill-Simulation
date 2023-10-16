@@ -1,6 +1,7 @@
 import os
 import tkinter as tk
 from pathlib import Path
+from tkinter import DISABLED, NORMAL
 
 import numpy as np
 import threading
@@ -127,7 +128,7 @@ def run():
             self.is_holding = False
             if self.is_panning:
                 self.is_panning = False
-            else:
+            elif self.image_change_controller.oil_spill_on_bool:
                 x = int((event.x - self.pan_x - max((window_width - self.zoomed_width) // 2, 0)) / self.zoom_level)
                 y = int((event.y - self.pan_y - max((window_height - self.zoomed_height) // 2, 0)) / self.zoom_level)
                 if 0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]:
@@ -265,6 +266,7 @@ def run():
             self.iter_as_sec = ITER_AS_SEC
             self.viewer = None
             self.value_not_yet_processed = 0
+            self.oil_spill_on_bool = True
 
             self.options_frame = tk.Frame(window)
             self.options_frame.grid(row=1, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S + tk.E)
@@ -292,6 +294,16 @@ def run():
                                                 text="Oil added on click [kg]",
                                                 font=("Arial", 14, "bold"), padx=10, pady=5)
             self.set_oil_added_label.pack(side=tk.TOP)
+            self.oil_spill_on_var = tk.IntVar()
+            self.set_oil_spill_on_off = tk.Checkbutton(oil_added_frame,
+                                                       text="ON/OFF",
+                                                       variable=self.oil_spill_on_var,
+                                                       onvalue=1,
+                                                       offvalue=0,
+                                                       command=self.oil_spill_on_off)
+            self.set_oil_spill_on_off.pack(side=tk.TOP)
+            self.set_oil_spill_on_off.select()
+
             self.set_minimal_oil_value_to_show = tk.Label(minimal_oil_value_to_show_frame,
                                                           text="Minimal oil value to show [kg]",
                                                           font=("Arial", 14, "bold"), padx=10, pady=5)
@@ -469,8 +481,12 @@ def run():
         def toggle_start_stop(self):
             if self.is_running:
                 self.stop_image_changes()
+                self.set_oil_spill_on_off.config(state=NORMAL)
             else:
                 self.start_image_changes()
+                self.set_oil_spill_on_off.deselect()
+                self.set_oil_spill_on_off.config(state=DISABLED)
+                self.oil_spill_on_bool = False
 
         def start_image_changes(self):
             self.is_running = True
@@ -541,6 +557,9 @@ def run():
         def update_zoom_infobox_value(self):
             val5 = f"{round(self.viewer.zoom_level / self.viewer.initial_zoom_level, 2)} times"
             self.infobox5_values_label.configure(text=val5)
+
+        def oil_spill_on_off(self):
+            self.oil_spill_on_bool = not self.oil_spill_on_bool
 
     # TODO: what if user already data has been processed?
     #  maybe interface for choosing already processed data?
