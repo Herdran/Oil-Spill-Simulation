@@ -7,7 +7,7 @@ from data.measurment_data import Coordinates
 from data.simulation_run_parameters import CellSideCount, SimulationRunParameters
 
 POINT_SIDE_SIZE = 50  # [m] #TODO: right now that could be different from what we have from coordinates :v - need to be calculated
-POINTS_SIDE_COUNT = 500
+POINTS_SIDE_COUNT = 100
 ITER_AS_SEC = 20
 
 TOP_COORD = 30.24268
@@ -22,7 +22,7 @@ POINT_LAT_CENTERS = [TOP_COORD - POINT_LAT_SIZE/2 - (POINT_LAT_SIZE * i) for i i
 POINT_LON_CENTERS = [LEFT_COORD + POINT_LON_SIZE/2 + (POINT_LON_SIZE * i) for i in range(POINTS_SIDE_COUNT)]
 
 
-# need to be seted from GUI initial window
+# need to be set from GUI initial window
 SIMULATION_INITIAL_PARAMETERS = SimulationRunParameters(
     area=Range(
         min=Coordinates(

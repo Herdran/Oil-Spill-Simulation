@@ -3,6 +3,7 @@ import tkinter as tk
 from pathlib import Path
 
 import numpy as np
+import threading
 from PIL import Image, ImageTk
 
 import simulation.simulation as simulation
@@ -22,6 +23,7 @@ Current speed N: {point.wave_velocity[0]: .2f}m/s
 Current speed E: {point.wave_velocity[1]: .2f}m/s
 Temperature: {kelvins_to_celsius(point.temperature): .2f}°C"""
 
+
 def run():
     SEA_COLOR = rgba(15, 10, 222)
     LAND_COLOR = rgba(38, 166, 91)
@@ -32,6 +34,7 @@ def run():
         def __init__(self, parent, image_array, image_change_controller, initial_zoom_level):
             super().__init__(parent)
             self.image_array = image_array
+            self.image_array_height, self.image_array_width, _ = self.image_array.shape
             self.current_image = None
             self.initial_zoom_level = initial_zoom_level
             self.zoom_level = initial_zoom_level
@@ -47,7 +50,8 @@ def run():
             self.tooltip = None
             self.img = None
             self.image_change_controller = image_change_controller
-            self.preview_mode = True
+            # self.preview_mode = True
+            self.preview_mode = False
 
             self.bind("<MouseWheel>", self.on_mousewheel)
             self.bind("<ButtonPress-1>", self.on_button_press)
@@ -57,11 +61,8 @@ def run():
             self.bind("<Leave>", self.on_leave)
 
         def update_image(self):
-            self.delete(self.image_id)
-
-            height, width, channels = self.image_array.shape
-            self.zoomed_width = int(width * self.zoom_level)
-            self.zoomed_height = int(height * self.zoom_level)
+            self.zoomed_width = int(self.image_array_width * self.zoom_level)
+            self.zoomed_height = int(self.image_array_height * self.zoom_level)
 
             window_width = frame_viewer.winfo_width()
             window_height = frame_viewer.winfo_height()
@@ -76,6 +77,7 @@ def run():
                           int(window_width / self.zoom_level - (self.pan_x / self.zoom_level))
                           ]
             # TODO slicing image array has to be proportional to the original proportions of the image to retain readability
+            #  and allow for rectangle images
 
             self.img = Image.fromarray(image_array)
             self.img = self.img.resize((min(window_width, self.zoomed_width),
@@ -89,11 +91,32 @@ def run():
                                               image=self.current_image)
 
         def on_mousewheel(self, event):
-            zoom_factor = 1.1 if event.delta > 0 else 0.9
-            # TODO multiplier for zoom value loses accuracy over time, maybe there should be another way to change this value
+            zoom_factor = 1.1 if event.delta > 0 else 10 / 11
+
+            window_width = frame_viewer.winfo_width()
+            window_height = frame_viewer.winfo_height()
+
+            before_x = (self.image_array_width - (window_width / self.zoom_level))
+            before_y = (self.image_array_height - (window_height / self.zoom_level))
+
             self.zoom_level *= zoom_factor
             self.zoom_level = min(max(self.zoom_level, self.initial_zoom_level), 100)
+
+            if event.delta > 0:
+                self.pan_x -= max((((self.image_array_width - (window_width / self.zoom_level)) - before_x) / 2) * self.zoom_level, 0)
+                self.pan_y -= max((((self.image_array_height - (window_height / self.zoom_level)) - before_y) / 2) * self.zoom_level, 0)
+            else:
+                self.pan_x += max(((before_x - (self.image_array_width - (window_width / self.zoom_level))) / 2) * self.zoom_level, 0)
+                self.pan_y += max(((before_y - (self.image_array_height - (window_height / self.zoom_level))) / 2) * self.zoom_level, 0)
+
+            shift_x = event.x / window_width - 0.5
+            shift_y = event.y / window_height - 0.5
+
+            self.pan_x -= shift_x * window_width
+            self.pan_y -= shift_y * window_height
+
             self.update_image()
+            self.image_change_controller.update_zoom_infobox_value()
 
         def on_button_press(self, event):
             self.prev_x = event.x
@@ -107,22 +130,23 @@ def run():
             else:
                 x = int((event.x - self.pan_x - max((window_width - self.zoomed_width) // 2, 0)) / self.zoom_level)
                 y = int((event.y - self.pan_y - max((window_height - self.zoomed_height) // 2, 0)) / self.zoom_level)
-                oil_to_add_on_click = self.image_change_controller.oil_to_add_on_click
                 if 0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]:
                     coord = (x, y)
                     if coord not in engine.lands:
                         if coord not in engine.world:
                             engine.world[coord] = simulation.Point(coord, engine.initial_values, engine)
                         point_clicked = engine.world[coord]
-                        point_clicked.add_oil(oil_to_add_on_click)
+                        point_clicked.add_oil(self.image_change_controller.oil_to_add_on_click)
 
                         var = blend_color(OIL_COLOR, SEA_COLOR,
                                           point_clicked.oil_mass / self.image_change_controller.minimal_oil_to_show,
                                           True)
-                        self.image_change_controller.update_infoboxes()
+                        self.image_change_controller.update_infobox()
                         image_array[y][x] = var[:3]
                         self.update_image()
                         self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(point_clicked))
+                        self.image_change_controller.value_not_yet_processed += self.image_change_controller.oil_to_add_on_click
+                self.image_change_controller.update_oil_amount_infobox()
 
         def on_button_motion(self, event):
             if self.is_holding:
@@ -140,13 +164,13 @@ def run():
         def on_motion(self, event):
             x = int((event.x - self.pan_x) / self.zoom_level)
             y = int((event.y - self.pan_y) / self.zoom_level)
-
+            coord = (x, y)
             if 0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]:
-                if (x, y) not in engine.world:
-                    oil_mass = 0
+                if coord not in engine.world:
+                    self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {0: .2f}kg")
                 else:
-                    oil_mass = engine.world[(x, y)].oil_mass
-                self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {oil_mass: .2f}kg")
+                    point = engine.world[(x, y)]
+                    self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(point))
             else:
                 self.hide_tooltip()
 
@@ -240,6 +264,7 @@ def run():
             self.minimal_oil_to_show = 100
             self.iter_as_sec = ITER_AS_SEC
             self.viewer = None
+            self.value_not_yet_processed = 0
 
             self.options_frame = tk.Frame(window)
             self.options_frame.grid(row=1, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S + tk.E)
@@ -324,6 +349,9 @@ def run():
             self.infobox4_labels_label = tk.Label(frame_infoboxes_labels, text="Global oil amount [land]",
                                                   font=("Arial", 14, "bold"), padx=10, pady=5)
             self.infobox4_labels_label.pack(side=tk.TOP)
+            self.infobox5_labels_label = tk.Label(frame_infoboxes_labels, text="Current zoom",
+                                                  font=("Arial", 14, "bold"), padx=10, pady=5)
+            self.infobox5_labels_label.pack(side=tk.TOP)
 
             frame_infoboxes_values = tk.Frame(self.infoboxes_frame)
             frame_infoboxes_values.grid(row=0, column=1, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S + tk.E)
@@ -339,13 +367,17 @@ def run():
             self.infobox4_values_label = tk.Label(frame_infoboxes_values, text="", font=("Arial", 14, "bold"), padx=10,
                                                   pady=5)
             self.infobox4_values_label.pack(side=tk.TOP)
+            self.infobox5_values_label = tk.Label(frame_infoboxes_values, text="1.0", font=("Arial", 14, "bold"), padx=10,
+                                                  pady=5)
+            self.infobox5_values_label.pack(side=tk.TOP)
 
             self.update_image_array()
-            self.update_infoboxes()
+            self.update_infobox()
 
             self.bind("<Configure>", self.resize)
-            self.options_frame.grid_remove()
-            self.infoboxes_frame.grid_remove()
+            # self.options_frame.grid_remove()
+            # self.infoboxes_frame.grid_remove()
+            self.confirm_size.grid_remove()
 
         def set_viewer(self, viewer):
             self.viewer = viewer
@@ -392,7 +424,7 @@ def run():
                 self.text_interval.insert(tk.END, str(interval))
                 if self.is_running:
                     self.after_cancel(self.job_id)
-                    self.job_id = self.after(self.interval, self.update_image_array)
+                    self.job_id = self.after(self.interval, threading.Thread(target=self.update_image_array).start())
             except ValueError:
                 pass
 
@@ -406,7 +438,7 @@ def run():
                 self.text_iter_as_sec.insert(tk.END, str(iter_as_sec))
                 if self.is_running:
                     self.after_cancel(self.job_id)
-                    self.job_id = self.after(self.interval, self.update_image_array)
+                    self.job_id = self.after(self.interval, threading.Thread(target=self.update_image_array).start())
             except ValueError:
                 pass
 
@@ -429,7 +461,7 @@ def run():
                 self.text_minimal_oil_show.insert(tk.END, str(oil_to_show))
                 if self.job_id is not None:
                     self.after_cancel(self.job_id)
-                self.update_image_array()
+                threading.Thread(target=self.update_image_array).start()
                 self.viewer.update_image()
             except ValueError:
                 pass
@@ -443,7 +475,7 @@ def run():
         def start_image_changes(self):
             self.is_running = True
             self.btn_start_stop.configure(text="Stop")
-            self.update_image_array()
+            threading.Thread(target=self.update_image_array).start()
 
         def stop_image_changes(self):
             self.is_running = False
@@ -465,6 +497,7 @@ def run():
                     land_color = (38, 166, 91)
                     ocean_color = (15, 10, 222)
                     self.image_array[coords[1]][coords[0]] = land_color if coords in engine.lands else ocean_color
+                self.value_not_yet_processed = 0
 
             new_oil_mass_sea = 0
             new_oil_mass_land = 0
@@ -484,26 +517,34 @@ def run():
                 self.viewer.update_image()
                 self.curr_iter += 1
                 self.sim_sec_passed += self.iter_as_sec
-                self.job_id = self.after(self.interval, self.update_image_array)
+                self.job_id = self.after(self.interval, threading.Thread(target=self.update_image_array).start())
 
-            self.update_infoboxes()
+            self.update_infobox()
 
-        def update_infoboxes(self):
+        def update_infobox(self):
             val1 = str(self.curr_iter)
             val2 = f"{str(self.sim_sec_passed // 3600)}h {str((self.sim_sec_passed // 60) % 60)}m {str(self.sim_sec_passed % 60)}s"
-
-            global_oil_amount_sea, global_oil_amount_land = engine.get_oil_amounts()
-            val3 = f"{str(int(global_oil_amount_sea // 10 ** 9))}Mt {str(int(global_oil_amount_sea // 10 ** 6) % 10 ** 3)}kt {str(int(global_oil_amount_sea // 10 ** 3) % 10 ** 3)}t"
-            val4 = f"{str(int(global_oil_amount_land // 10 ** 9))}Mt {str(int(global_oil_amount_land // 10 ** 6) % 10 ** 3)}kt {str(int(global_oil_amount_land // 10 ** 3) % 10 ** 3)}t"
-
             self.infobox1_values_label.configure(text=val1)
             self.infobox2_values_label.configure(text=val2)
+
+            self.update_oil_amount_infobox()
+
+        def update_oil_amount_infobox(self):
+            global_oil_amount_sea, global_oil_amount_land = engine.get_oil_amounts()
+            global_oil_amount_sea += self.value_not_yet_processed
+
+            val3 = f"{str(int(global_oil_amount_sea // 10 ** 9))}Mt {str(int(global_oil_amount_sea // 10 ** 6) % 10 ** 3)}kt {str(int(global_oil_amount_sea // 10 ** 3) % 10 ** 3)}t"
+            val4 = f"{str(int(global_oil_amount_land // 10 ** 9))}Mt {str(int(global_oil_amount_land // 10 ** 6) % 10 ** 3)}kt {str(int(global_oil_amount_land // 10 ** 3) % 10 ** 3)}t"
             self.infobox3_values_label.configure(text=val3)
             self.infobox4_values_label.configure(text=val4)
 
+        def update_zoom_infobox_value(self):
+            val5 = f"{round(self.viewer.zoom_level / self.viewer.initial_zoom_level, 2)} times"
+            self.infobox5_values_label.configure(text=val5)
+
     # TODO: what if user already data has been processed?
-    # maybe interface for choosing already processed data?
-    # for time saving
+    #  maybe interface for choosing already processed data?
+    #  for time saving
     def get_data_processor() -> DataProcessor:
         sym_data_reader = DataReader()
 
@@ -555,6 +596,8 @@ def run():
     viewer.grid(row=0, column=0, rowspan=10, sticky=tk.N + tk.S + tk.E + tk.W)
     frame_controller.set_viewer(viewer)
 
+    frame_controller.update_image_array()
+    viewer.update()
     viewer.update_image()
 
     window.mainloop()
