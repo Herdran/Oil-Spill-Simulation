@@ -72,5 +72,4 @@ class SimulationEngine:
         return TopographyState.SEA
 
     def get_oil_amounts(self):
-        # TODO return values for oil on sea and land
         return self.total_mass - self.total_land_mass, self.total_land_mass
