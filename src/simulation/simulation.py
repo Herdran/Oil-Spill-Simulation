@@ -4,13 +4,15 @@ from typing import Dict, Set, List
 
 from data.data_processor import DataProcessor
 from simulation.point import Point, Coord_t, InitialValues, TopographyState
-from simulation.spreading import Spreading_engine
+from simulation.spreading import SpreadingEngine
+from simulation.utilities import Neighbourhood
+
 
 class SimulationEngine:
-    def __init__(self, data_processor: DataProcessor):
-        self.initial_values = InitialValues()
+    def __init__(self, data_processor: DataProcessor, neighbourhood: Neighbourhood = Neighbourhood.MOORE):
+        self.initial_values = InitialValues(neighbourhood)
         self.world: Dict[Coord_t, Point] = dict()
-        self.spreading_engine = Spreading_engine(self)
+        self.spreading_engine = SpreadingEngine(self)
 
         Point.world = self.world
         self.data_processor = data_processor

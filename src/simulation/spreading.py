@@ -5,25 +5,20 @@ from typing import Dict
 
 import constatnts as const
 from simulation.point import Point, Coord_t, TopographyState
+from simulation.utilities import get_neighbour_coordinates
 
 
-class Spreading_engine:
+class SpreadingEngine:
     def __init__(self, engine):
         self.initial_values = engine.initial_values
         self.world = engine.world
         self.engine = engine
 
-    def spread_oil_points(self, total_mass: float, delta_time: float, neighbourhood: str = 'neumann'):
+    def spread_oil_points(self, total_mass: float, delta_time: float):
         new_points = {}
         for coord, point in self.world.items():
             x, y = coord
-            if neighbourhood == "neumann":
-                neighbours = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
-            elif neighbourhood == "moore":
-                neighbours = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1),
-                              (x + 1, y + 1), (x + 1, y - 1), (x - 1, y + 1), (x - 1, y - 1)]
-            else:
-                raise ValueError("Wrong neighbourhood type")
+            neighbours = get_neighbour_coordinates(x, y, self.initial_values.neighbourhood)
             shuffle(neighbours)
             for neighbour in neighbours:
                 if not (0 <= neighbour[0] < const.POINTS_SIDE_COUNT and 0 <= neighbour[1] < const.POINTS_SIDE_COUNT):

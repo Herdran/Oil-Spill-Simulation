@@ -7,6 +7,7 @@ from numpy import exp, log, sqrt
 
 import constatnts as const
 from data.measurment_data import Coordinates
+from simulation.utilities import get_neighbour_coordinates, Neighbourhood
 
 DEFAULT_WAVE_VELOCITY = np.array([0.0, 0.0])  # [m/s]
 DEFAULT_WIND_VELOCITY = np.array([0.0, 0.0])  # [m/s]
@@ -21,7 +22,7 @@ class TopographyState(Enum):
 
 
 class InitialValues:
-    def __init__(self):
+    def __init__(self, neighbourhood: Neighbourhood = Neighbourhood.MOORE):
         self.water_density = 997  # [kg/m^3]
         self.density = 835  # [kg/m^3]
         self.surface_tension = 30  # [dyne/s]
@@ -34,6 +35,7 @@ class InitialValues:
         self.c = 0.7  # constant from paper
         self.viscosity = 10  # TODO: what is that value?
         self.emulsification_rate = 0.01
+        self.neighbourhood = neighbourhood
 
 
 class Point:
@@ -122,20 +124,14 @@ class Point:
         self.oil_mass += delta_mass
         return delta_f
 
-    def process_seashore_interaction(self, delta_time: float, neighbourhood: str = "neumann") -> None:
+    def process_seashore_interaction(self, delta_time: float) -> None:
         half_time = 3600 * 24  # 24h for sand beach / sand and gravel beach
         delta_mass = log(2) * self.oil_mass * delta_time / half_time
         self.oil_mass -= delta_mass
         to_share = []
         (x, y) = self.coord
 
-        if neighbourhood == "neumann":
-            neighbours = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
-        elif neighbourhood == "moore":
-            neighbours = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1),
-                          (x + 1, y + 1), (x + 1, y - 1), (x - 1, y + 1), (x - 1, y - 1)]
-        else:
-            raise ValueError("Wrong neighbourhood type")
+        neighbours = get_neighbour_coordinates(x, y, self.initial_values.neighbourhood)
         for cords in neighbours:
             if not ((0 <= cords[0] < const.POINTS_SIDE_COUNT) and (0 <= cords[1] < const.POINTS_SIDE_COUNT)):
                 continue
