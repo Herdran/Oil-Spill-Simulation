@@ -17,19 +17,25 @@ class SimulationEngine:
         Point.world = self.world
         self.data_processor = data_processor
         self.total_mass = 0
+        self.total_land_mass = 0
         self.lands = self.load_topography()
         self.total_time = 0
+        self.points_changed = []
 
     def is_finished(self) -> bool:
         return self.total_time >= self.initial_values.time_limit
 
     def update(self, delta_time) -> List[Coord_t]:
+        self.points_changed = []
         self.update_oil_points(delta_time)
 
         self.total_mass = 0
+        self.total_land_mass = 0
         for point in self.world.values():
             point.pour_from_buffer()
             self.total_mass += point.oil_mass
+            if(point.topography == TopographyState.LAND):
+                self.total_land_mass += point.oil_mass
 
         self.spreading_engine.spread_oil_points(self.total_mass, delta_time)
 
@@ -38,13 +44,14 @@ class SimulationEngine:
         for point in empty_points:
             del self.world[point]
             deleted.append(point)
+            self.points_changed.append(point)
         self.total_time += delta_time
         return deleted
 
     def update_oil_points(self, delta_time):
         for coord in list(self.world.keys()):  # copy because dict changes size during iteration
             self.world[coord].update(delta_time)
-        
+
     def load_topography(self) -> Set[Coord_t]:
         # TODO!!!!! <- path need to be selected by GUI
         lands = set()
@@ -63,3 +70,6 @@ class SimulationEngine:
         if coord in self.lands:
             return TopographyState.LAND
         return TopographyState.SEA
+
+    def get_oil_amounts(self):
+        return self.total_mass - self.total_land_mass, self.total_land_mass

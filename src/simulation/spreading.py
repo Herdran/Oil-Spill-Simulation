@@ -37,6 +37,7 @@ class SpreadingEngine:
         if coord in new_points:
             return new_points[coord]
         point = Point(coord, self.initial_values, self.engine)
+        self.engine.points_changed.append(coord)
         new_points[coord] = point
         return point
 
