@@ -9,11 +9,10 @@ from PIL import Image, ImageTk
 
 import simulation.simulation as simulation
 from simulation.utilities import Neighbourhood
-from color import rgba, blend_color
-from constatnts import ITER_AS_SEC, POINTS_SIDE_COUNT, SIMULATION_INITIAL_PARAMETERS
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from data.utilities import kelvins_to_celsius
-from color import rgba, blend_color
+from color import rgba, blend_color, rgba_to_rgb
+
 
 def get_tooltip_text(point: simulation.Point) -> str:
     return f"""Oil mass: {point.oil_mass: .2f}kg
@@ -399,14 +398,10 @@ def run():
                 self.update_infobox()
                 # self.options_frame.grid_remove()
                 # self.infoboxes_frame.grid_remove()
-
                 self.confirm_size.grid_remove()
-
 
             def set_viewer(self, viewer):
                 self.viewer = viewer
-
-
 
             def on_key_press_interval(self, event):
                 if event.keysym == "Return":
@@ -513,16 +508,13 @@ def run():
                 self.confirm_size.grid_remove()
                 self.options_frame.grid()
                 self.infoboxes_frame.grid()
-                # frame_viewer.update()
                 self.viewer.define_simulation_area()
 
             def update_image_array(self):
                 if self.is_running:
                     deleted = engine.update(self.iter_as_sec)
                     for coords in deleted:
-                        land_color = (38, 166, 91)
-                        ocean_color = (15, 10, 222)
-                        self.image_array[coords[1]][coords[0]] = land_color if coords in engine.lands else ocean_color
+                        self.image_array[coords[1]][coords[0]] = rgba_to_rgb(LAND_COLOR) if coords in engine.lands else rgba_to_rgb(SEA_COLOR)
                     self.value_not_yet_processed = 0
 
                 new_oil_mass_sea = 0
@@ -589,14 +581,11 @@ def run():
 
             return sym_data_reader.preprocess(SIMULATION_INITIAL_PARAMETERS)
 
-
         #TODO choose neighborhood type in gui
         neighborhood = Neighbourhood.MOORE
         engine = simulation.SimulationEngine(get_data_processor(), neighborhood)
-        land_color = (38, 166, 91)
-        ocean_color = (15, 10, 222)
         image_array = np.array(
-            [land_color if (j, i) in engine.lands else ocean_color for i in range(POINTS_SIDE_COUNT) for j in
+            [rgba_to_rgb(LAND_COLOR) if (j, i) in engine.lands else rgba_to_rgb(SEA_COLOR) for i in range(POINTS_SIDE_COUNT) for j in
              range(POINTS_SIDE_COUNT)]).reshape((POINTS_SIDE_COUNT, POINTS_SIDE_COUNT, 3)).astype(np.uint8)
 
         default_window_width = 1280
