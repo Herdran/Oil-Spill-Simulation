@@ -1,4 +1,3 @@
-from ast import Dict
 from typing import Tuple
 from enum import Enum
 
@@ -8,6 +7,7 @@ from numpy import exp, log, sqrt
 
 import constatnts as const
 from data.measurment_data import Coordinates
+from simulation.utilities import get_neighbour_coordinates, Neighbourhood
 
 DEFAULT_WAVE_VELOCITY = np.array([0.0, 0.0])  # [m/s]
 DEFAULT_WIND_VELOCITY = np.array([0.0, 0.0])  # [m/s]
@@ -20,8 +20,9 @@ class TopographyState(Enum):
     LAND = 0
     SEA = 1
 
+
 class InitialValues:
-    def __init__(self):
+    def __init__(self, neighbourhood: Neighbourhood = Neighbourhood.MOORE):
         self.water_density = 997  # [kg/m^3]
         self.density = 835  # [kg/m^3]
         self.surface_tension = 30  # [dyne/s]
@@ -34,6 +35,7 @@ class InitialValues:
         self.c = 0.7  # constant from paper
         self.viscosity = 10  # TODO: what is that value?
         self.emulsification_rate = 0.01
+        self.neighbourhood = neighbourhood
 
 
 class Point:
@@ -129,7 +131,9 @@ class Point:
         self.oil_mass -= delta_mass
         to_share = []
         (x, y) = self.coord
-        for cords in [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]:
+
+        neighbours = get_neighbour_coordinates(x, y, self.initial_values.neighbourhood)
+        for cords in neighbours:
             if not ((0 <= cords[0] < const.POINTS_SIDE_COUNT) and (0 <= cords[1] < const.POINTS_SIDE_COUNT)):
                 continue
             if cords in self.engine.lands:
@@ -187,13 +191,10 @@ class Point:
             self.viscosity = self.initial_values.viscosity
 
     def pour_from_buffer(self):
-        # nie uwzględniamy masy w punkcie, bo wszystko powinno być w buforze
-        oil_mass = sum([tup[0] for tup in self.oil_buffer])
+        oil_mass = sum([tup[0] for tup in self.oil_buffer]) + self.oil_mass
         if oil_mass < 1:
             return
-        self.viscosity = sum([tup[0] * tup[1] for tup in self.oil_buffer]) / oil_mass
-        self.emulsification_rate = sum([tup[0] * tup[2] for tup in self.oil_buffer]) / oil_mass
+        self.viscosity = (sum([tup[0] * tup[1] for tup in self.oil_buffer]) + self.oil_mass * self.viscosity) / oil_mass
+        self.emulsification_rate = (sum([tup[0] * tup[2] for tup in self.oil_buffer]) + self.oil_mass * self.emulsification_rate) / oil_mass
         self.oil_buffer = []
         self.oil_mass = oil_mass
-
-

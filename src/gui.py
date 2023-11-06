@@ -6,6 +6,7 @@ import numpy as np
 from PIL import Image, ImageTk
 
 import simulation.simulation as simulation
+from simulation.utilities import Neighbourhood
 from color import rgba, blend_color
 from constatnts import ITER_AS_SEC, POINTS_SIDE_COUNT, SIMULATION_INITIAL_PARAMETERS
 from data.data_processor import DataProcessor, DataReader, DataValidationException
@@ -436,7 +437,9 @@ def run():
 
         return sym_data_reader.preprocess(SIMULATION_INITIAL_PARAMETERS)
 
-    engine = simulation.SimulationEngine(get_data_processor())
+    #TODO choose neighborhood type in gui
+    neighborhood = Neighbourhood.MOORE
+    engine = simulation.SimulationEngine(get_data_processor(), neighborhood)
     land_color = (38, 166, 91)
     ocean_color = (15, 10, 222)
     image_array = np.array(
