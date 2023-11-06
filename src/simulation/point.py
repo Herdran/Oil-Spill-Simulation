@@ -58,7 +58,7 @@ class Point:
         self.data_processor = engine.data_processor
         self.viscosity = initial_values.viscosity  # [cP]
         self.oil_buffer = []  # contains tuples (mass, viscosity, emulsification_rate)
-        self.advection_buffer = np.array([0, 0], dtype='f')
+        self.advection_buffer = np.array([0, 0], dtype='float64')
         self.evaporation_rate = 0
 
     def contain_oil(self) -> bool:
@@ -165,11 +165,27 @@ class Point:
         x, y = self.coord
         next_x = x + int(self.advection_buffer[0])
         next_y = y + int(self.advection_buffer[1])
+
+        # check if there is a land between current and next point
+        for i in range(1, int(max(map(abs, self.advection_buffer)))):
+            advection_x, advection_y = self.advection_buffer
+            if abs(advection_x) > abs(advection_y):
+                # multiplying by advection_x / abs(advection_x) to get sign of advection_x
+                crossing_point = (x + i * advection_x / abs(advection_x), y + round(i * advection_y / abs(advection_x)))
+            else:
+                # multiplying by advection_y / abs(advection_y) to get sign of advection_y
+                crossing_point = (round(x + i * advection_x / abs(advection_y)), y + i * advection_y / abs(advection_y))
+            if self.engine.get_topography(crossing_point) == TopographyState.LAND:
+                next_x, next_y = map(int, crossing_point)
+                # to ensure that buffer will be zeroed in a next step, because oil can't go further
+                self.advection_buffer = np.array([next_x - x, next_y - y], dtype='float64')
+                break
+
         if 0 <= next_x < const.POINTS_SIDE_COUNT and 0 <= next_y < const.POINTS_SIDE_COUNT:
             if (next_x, next_y) not in self.world:
                 self.world[(next_x, next_y)] = Point((next_x, next_y), self.initial_values, self.engine)
             self.world[(next_x, next_y)].oil_buffer.append((self.oil_mass, self.viscosity, self.emulsification_rate))
-            self.advection_buffer -= np.array([next_x - x, next_y - y])
+        self.advection_buffer -= np.array([next_x - x, next_y - y])
         self.oil_mass = 0
 
     def process_natural_dispersion(self, delta_time: float) -> None:
