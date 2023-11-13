@@ -1,6 +1,5 @@
-import os
+import logging
 import tkinter as tk
-from pathlib import Path
 from tkinter import DISABLED, NORMAL
 
 import numpy as np
@@ -12,6 +11,7 @@ from simulation.utilities import Neighbourhood
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from data.utilities import kelvins_to_celsius
 from color import rgba, blend_color, rgba_to_rgb
+from files import get_main_path
 
 
 def get_tooltip_text(point: simulation.Point) -> str:
@@ -568,15 +568,12 @@ def run():
         #  for time saving
         def get_data_processor() -> DataProcessor:
             sym_data_reader = DataReader()
-
             try:
-                path = Path("data/test_data")
-                if os.getcwd().endswith('src'):
-                    path = os.path.join('..', path)
+                path = get_main_path().joinpath("data/test_data")
                 sym_data_reader.add_all_from_dir(path)
             except DataValidationException as ex:
                 # TODO: some kind of error popup?
-                print("Error with Data Validation: ", ex)
+                logging.error(f"Data validation exception: {ex}")
                 exit(1)
 
             return sym_data_reader.preprocess(SIMULATION_INITIAL_PARAMETERS)
