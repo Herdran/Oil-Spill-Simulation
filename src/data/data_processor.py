@@ -1,3 +1,5 @@
+import logging
+
 from enum import Enum
 from math import floor
 from os import PathLike, path, listdir
@@ -11,6 +13,8 @@ from data.generic import Range
 from data.utilities import dataframe_replace_applay, great_circle_distance, minutes, or_default, round_values, celcius_to_kelvins    
 from data.measurment_data import CertainMeasurment, Coordinates, SpeedMeasure, CoordinatesBase, avrage_measurment
 from data.simulation_run_parameters import SimulationRunParameters
+
+logger = logging.getLogger("data")
 
 MINUTES_IN_HOUR = 60
 SECONDS_IN_MINUTE = 60
@@ -82,7 +86,7 @@ class Loaded_data:
         measure = self.measurments_data.get((time, latitude, longitude))
         
         if measure is None:
-            print(f"WARNING: can't parse measurment for given coordinates {(latitude, longitude)} and time stamp {time}")
+            logger.warning(f"can't parse measurment for given coordinates {(latitude, longitude)} and time stamp {time}")
             DEFAULT_SPEED = SpeedMeasure(0, 0)
             DEFAULT_TEMPERATURE = 302.15
             return CertainMeasurment(DEFAULT_SPEED,DEFAULT_SPEED, DEFAULT_TEMPERATURE)
@@ -93,7 +97,7 @@ class Loaded_data:
 
 class DataProcessorImpl:
     def __init__(self, csv_paths: list[PathLike], simulation_run_parameters: SimulationRunParameters):
-        print("STARTED: Preprocessing data...")
+        logger.debug("STARTED: Preprocessing data...")
        
         self.loaded_data: dict[int, pd.DataFrame] = {}
         
@@ -150,9 +154,9 @@ class DataProcessorImpl:
         
         envirement_area.sort_values(inplace=True, by=[DataAggregatesDecriptior.TIME_STAMP.value])
 
-        print("FINISHED: Preprocessing data...")
+        logger.debug("FINISHED: Preprocessing data...")
         path_to_save = self.run_parameters.path_to_data
-        print(f"STARTED: Saving preprocessed data to {path_to_save}...")
+        logger.debug(f"STARTED: Saving preprocessed data to {path_to_save}...")
 
 
         # TODO: code below is a mess propably need to be refactored in the future
@@ -168,14 +172,14 @@ class DataProcessorImpl:
             if time > 0 and time % MINUTES_IN_HOUR == 0 and last_minutes != time:
                 to_save.to_csv(get_data_path(), index=False)
                 to_save = pd.DataFrame()
-                print(f"saved: {hour} hour")
+                logger.info(f"saved: {hour} hour")
                 hour += 1
             last_minutes = time
             to_save = pd.concat([to_save, pd.DataFrame([row])], ignore_index=True)
         to_save.to_csv(get_data_path(), index=False)
-        print(f"saved: {hour} hour")
+        logger.info(f"saved: {hour} hour")
         
-        print("FINISHED: Saving preprocessed data...")
+        logger.debug("FINISHED: Saving preprocessed data...")
         
     def should_update_data(self, time_from_last_update: pd.Timedelta) -> bool:
         return time_from_last_update > self.run_parameters.data_time_step
@@ -273,7 +277,7 @@ class DataProcessorImpl:
             self.loaded_data[simulation_hour] = Loaded_data.from_dataframe(readed_data)
         
     def _read_data_for_time(self, simulation_hour: int) -> Optional[pd.DataFrame]:
-        print(f"Reading data for hour {simulation_hour}")
+        logger.debug(f"Reading data for hour {simulation_hour}")
         data_path = path.join(self.run_parameters.path_to_data, f"{simulation_hour}.csv")
         return pd.read_csv(data_path) if path.exists(data_path) else None
 
@@ -428,7 +432,7 @@ class DataReader:
     def add_data(self, csv_path: PathLike):
         self._data_validator.validate(csv_path)
         self._dataset_paths.append(csv_path)
-        print(f"Added data from file: {csv_path}")
+        logger.debug(f"Added data from file: {csv_path}")
 
     def add_all_from_dir(self, dir_path: PathLike):
         CSV_EXT = ".csv"

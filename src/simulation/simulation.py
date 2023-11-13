@@ -1,12 +1,11 @@
 import csv
-import os
 from typing import Dict, Set, List
 
 from data.data_processor import DataProcessor
 from simulation.point import Point, Coord_t, InitialValues, TopographyState
 from simulation.spreading import SpreadingEngine
 from simulation.utilities import Neighbourhood
-
+from files import get_main_path
 
 class SimulationEngine:
     def __init__(self, data_processor: DataProcessor, neighbourhood: Neighbourhood = Neighbourhood.MOORE):
@@ -55,9 +54,7 @@ class SimulationEngine:
     def load_topography(self) -> Set[Coord_t]:
         # TODO!!!!! <- path need to be selected by GUI
         lands = set()
-        path = 'data/topography.csv'
-        if os.getcwd().endswith('src'):
-            path = '../' + path
+        path = get_main_path().joinpath('data/topography.csv')
         with open(path, 'r') as f:
             reader = csv.reader(f, delimiter=',')
             for y, row in enumerate(reader):

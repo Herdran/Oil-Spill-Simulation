@@ -1,11 +1,9 @@
-import os
-from pathlib import Path
-
 import pandas as pd
 
 from data.generic import Range
 from data.measurment_data import Coordinates
 from data.simulation_run_parameters import CellSideCount, SimulationRunParameters
+from files import get_data_path
 
 POINT_SIDE_SIZE = 50  # [m] #TODO: right now that could be different from what we have from coordinates :v - need to be calculated
 POINTS_SIDE_COUNT = 500
@@ -48,7 +46,7 @@ def set_simulation_coordinates_parameters(TOP_COORD, DOWN_COORD, LEFT_COORD, RIG
             latitude=10,
             longitude=10
         ),
-        path_to_data=Path("../data/processed_data") if os.getcwd().endswith('src') else Path("data/processed_data")
+        path_to_data=get_data_path()
     )
     POINT_LAT_SIZE = (TOP_COORD - DOWN_COORD) / POINTS_SIDE_COUNT
     POINT_LON_SIZE = (RIGHT_COORD - LEFT_COORD) / POINTS_SIDE_COUNT
