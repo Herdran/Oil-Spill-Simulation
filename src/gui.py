@@ -549,7 +549,7 @@ def run():
                     self.viewer.update_image()
                     self.curr_iter += 1
                     self.sim_sec_passed += self.iter_as_sec
-                    self.job_id = self.after(self.interval, threading.Thread(target=self.update_image_array).start())
+                    self.job_id = self.after(self.interval, self.update_image_array)
 
                 self.update_infobox()
 
