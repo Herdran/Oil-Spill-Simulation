@@ -6,6 +6,7 @@ from simulation.point import Point, Coord_t, InitialValues, TopographyState
 from simulation.spreading import SpreadingEngine
 from simulation.utilities import Neighbourhood
 from files import get_main_path
+import constatnts as const
 
 class SimulationEngine:
     def __init__(self, data_processor: DataProcessor, neighbourhood: Neighbourhood = Neighbourhood.MOORE):
@@ -22,7 +23,7 @@ class SimulationEngine:
         self.points_changed = []
 
     def is_finished(self) -> bool:
-        return self.total_time >= self.initial_values.time_limit
+        return self.total_time >= const.SIMULATION_TIME
 
     def update(self, delta_time) -> List[Coord_t]:
         self.points_changed = []

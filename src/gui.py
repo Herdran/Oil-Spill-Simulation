@@ -511,6 +511,9 @@ def run():
                 self.viewer.define_simulation_area()
 
             def update_image_array(self):
+                if engine.is_finished():
+                    self.is_running = False
+                
                 if self.is_running:
                     deleted = engine.update(self.iter_as_sec)
                     for coords in deleted:

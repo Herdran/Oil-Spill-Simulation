@@ -26,7 +26,6 @@ class InitialValues:
         self.water_density = 997  # [kg/m^3]
         self.density = 835  # [kg/m^3]
         self.surface_tension = 30  # [dyne/s]
-        self.time_limit = 24 * 60 * 60  # [s]    TODO: use that from simulation parameters
         self.emulsion_max_content_water = 0.7  # max content of water in the emulsion
         self.molar_mass = 348.23  # [g/mol] mean
         self.boiling_point = 609  # [K] mean
