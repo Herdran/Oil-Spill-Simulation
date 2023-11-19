@@ -1,6 +1,6 @@
 import logging
 import tkinter as tk
-from tkinter import DISABLED, NORMAL
+from tkinter import DISABLED, NORMAL, filedialog
 
 import numpy as np
 import threading
@@ -11,7 +11,8 @@ from simulation.utilities import Neighbourhood
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from data.utilities import kelvins_to_celsius
 from color import rgba, blend_color, rgba_to_rgb
-from files import get_main_path
+from files import get_main_path, get_data_path
+from constatnts import Constants as const, set_simulation_coordinates_parameters
 
 
 def get_tooltip_text(point: simulation.Point) -> str:
@@ -25,7 +26,7 @@ Temperature: {kelvins_to_celsius(point.temperature): .2f}°C"""
 
 
 def run():
-    def start_simulation():
+    def start_simulation(neighborhood):
         SEA_COLOR = rgba(15, 10, 222)
         LAND_COLOR = rgba(38, 166, 91)
         OIL_COLOR = rgba(0, 0, 0)
@@ -264,7 +265,7 @@ def run():
                 self.sim_sec_passed = 0
                 self.oil_to_add_on_click = 10000
                 self.minimal_oil_to_show = 100
-                self.iter_as_sec = ITER_AS_SEC
+                self.iter_as_sec = const.ITER_AS_SEC
                 self.viewer = None
                 self.value_not_yet_processed = 0
                 self.oil_spill_on_bool = True
@@ -345,15 +346,6 @@ def run():
                 self.text_minimal_oil_show.bind("<KeyPress>", self.on_key_press_oil_to_show)
                 self.text_minimal_oil_show.bind("<FocusOut>", self.on_focus_out_oil_to_show)
 
-                self.confirm_size = tk.Frame(window)
-                self.confirm_size.grid(row=1, column=0, rowspan=1, columnspan=2, padx=10, pady=10, sticky=tk.N + tk.S + tk.E)
-                confirm_frame = tk.Frame(self.confirm_size)
-
-                confirm_frame.grid(row=1, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
-
-                self.confirm_btn = tk.Button(confirm_frame, text="Confirm", width=10, command=self.confirm_func)
-                self.confirm_btn.pack(side=tk.TOP, padx=5, pady=5)
-
                 self.infoboxes_frame = tk.Frame(window)
                 self.infoboxes_frame.grid(row=0, column=1, rowspan=1, columnspan=1, sticky=tk.N + tk.S + tk.E)
 
@@ -405,9 +397,6 @@ def run():
 
                 self.update_image_array()
                 self.update_infobox()
-                # self.options_frame.grid_remove()
-                # self.infoboxes_frame.grid_remove()
-                self.confirm_size.grid_remove()
 
             def set_viewer(self, viewer):
                 self.viewer = viewer
@@ -513,12 +502,6 @@ def run():
                 if self.job_id is not None:
                     self.after_cancel(self.job_id)
 
-            def confirm_func(self):
-                self.confirm_size.grid_remove()
-                self.options_frame.grid()
-                self.infoboxes_frame.grid()
-                self.viewer.define_simulation_area()
-
             def update_image_array(self):
                 if engine.is_finished():
                     self.toggle_start_stop()
@@ -590,21 +573,13 @@ def run():
                 logging.error(f"Data validation exception: {ex}")
                 exit(1)
 
-            return sym_data_reader.preprocess(SIMULATION_INITIAL_PARAMETERS)
+            return sym_data_reader.preprocess(const.SIMULATION_INITIAL_PARAMETERS)
 
-        #TODO choose neighborhood type in gui
-        neighborhood = Neighbourhood.MOORE
         engine = simulation.SimulationEngine(get_data_processor(), neighborhood)
         image_array = np.array(
-            [rgba_to_rgb(LAND_COLOR) if (j, i) in engine.lands else rgba_to_rgb(SEA_COLOR) for i in range(POINTS_SIDE_COUNT) for j in
-             range(POINTS_SIDE_COUNT)]).reshape((POINTS_SIDE_COUNT, POINTS_SIDE_COUNT, 3)).astype(np.uint8)
+            [rgba_to_rgb(LAND_COLOR) if (j, i) in engine.lands else rgba_to_rgb(SEA_COLOR) for i in range(const.POINTS_SIDE_COUNT) for j in
+             range(const.POINTS_SIDE_COUNT)]).reshape((const.POINTS_SIDE_COUNT, const.POINTS_SIDE_COUNT, 3)).astype(np.uint8)
 
-        default_window_width = 1280
-        default_window_height = 720
-
-        window = tk.Tk()
-        window.geometry(f"{default_window_width}x{default_window_height}")
-        window.title('Oil Spill Simulation')
 
         window.rowconfigure(0, weight=5, uniform='row')
         window.rowconfigure(1, weight=1, uniform='row')
@@ -622,21 +597,255 @@ def run():
         viewer.update()
         viewer.update_image()
 
-        window.mainloop()
+    def start_initial_menu():
+        class ParametersSettingController(tk.Frame):
+            def __init__(self, parent):
+                super().__init__(parent)
+                self.top_coord = 30.24268
+                self.down_coord = 30.19767
+                self.left_coord = -88.77964
+                self.right_coord = -88.72648
+                self.correctly_set_coords = [1, 1, 1, 1]
 
-    def start_preview():
-        # default coordinates parameters
-        TOP_COORD = 30.24268
-        DOWN_COORD = 30.19767
-        LEFT_COORD = -88.77964
-        RIGHT_COORD = -88.72648
+                self.main_frame = tk.Frame(parent)
+                self.main_frame.grid(row=0, column=0, padx=10, pady=10, sticky=tk.N + tk.S + tk.E + tk.W)
 
-        set_simulation_coordinates_parameters(TOP_COORD, DOWN_COORD, LEFT_COORD, RIGHT_COORD)
+                self.main_frame.rowconfigure(0, weight=1, uniform='row')
+                self.main_frame.rowconfigure(1, weight=1, uniform='row')
+                self.main_frame.rowconfigure(2, weight=1, uniform='row')
+                self.main_frame.rowconfigure(3, weight=1, uniform='row')
+                self.main_frame.rowconfigure(4, weight=1, uniform='row')
+                self.main_frame.columnconfigure(0, weight=4, uniform='column')
+                self.main_frame.columnconfigure(1, weight=1, uniform='column')
 
-    from constatnts import set_simulation_coordinates_parameters
+                title_frame = tk.Frame(self.main_frame)
+                # top_coordinates_frame = tk.Frame(self.main_frame)
+                # current_map_frame = tk.Frame(self.main_frame)
+                # bottom_coordinates_frame = tk.Frame(self.main_frame)
+                coordinates_and_view_frame = tk.Frame(self.main_frame)
+                neighborhood_type_frame = tk.Frame(self.main_frame)
+                data_path_frame = tk.Frame(self.main_frame)
+                confirm_and_start_frame = tk.Frame(self.main_frame)
 
-    start_preview()
+                title_frame.grid(row=0, column=0, rowspan=1, columnspan=2, padx=10, pady=10, sticky=tk.N + tk.S)
+                # # top_coordinates_frame.grid(row=1, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+                # # current_map_frame.grid(row=2, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+                # # bottom_coordinates_frame.grid(row=3, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+                coordinates_and_view_frame.grid(row=1, column=0, rowspan=3, padx=10, pady=10, sticky=tk.N + tk.S +tk.W)
+                neighborhood_type_frame.grid(row=2, column=1, rowspan=2, padx=10, pady=10, sticky=tk.N + tk.S +tk.W)
+                data_path_frame.grid(row=4, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+                confirm_and_start_frame.grid(row=4, column=1, rowspan=1, columnspan=2, padx=10, pady=10, sticky=tk.N + tk.S)
 
-    from constatnts import ITER_AS_SEC, POINTS_SIDE_COUNT, SIMULATION_INITIAL_PARAMETERS
+                title_label = tk.Label(title_frame,
+                                       text="Oil Spill Simulation",
+                                       font=("Arial", 14, "bold"), padx=10, pady=5)
+                title_label.pack(side=tk.TOP)
 
-    start_simulation()
+                top_coord_label = tk.Label(coordinates_and_view_frame,
+                                           text="top_coord_label",
+                                           font=("Arial", 14, "bold"), padx=10, pady=5)
+                down_coord_label = tk.Label(coordinates_and_view_frame,
+                                            text="down_coord_label",
+                                            font=("Arial", 14, "bold"), padx=10, pady=5)
+                left_coord_label = tk.Label(coordinates_and_view_frame,
+                                            text="left_coord_label",
+                                            font=("Arial", 14, "bold"), padx=10, pady=5)
+                right_coord_label = tk.Label(coordinates_and_view_frame,
+                                             text="right_coord_label",
+                                             font=("Arial", 14, "bold"), padx=10, pady=5)
+
+                top_coord_label.grid(row=0, column=1, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+                down_coord_label.grid(row=1, column=1, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+                left_coord_label.grid(row=2, column=1, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+                right_coord_label.grid(row=3, column=1, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+
+                self.top_coord_input = tk.Entry(coordinates_and_view_frame, width=10)
+                self.top_coord_input.insert(tk.END, str(self.top_coord))
+                self.top_coord_input.bind("<KeyPress>", self.on_key_press_validate_coordinates_top)
+                self.top_coord_input.bind("<FocusOut>", self.on_focus_out_validate_coordinates_top)
+
+                self.down_coord_input = tk.Entry(coordinates_and_view_frame, width=10)
+                self.down_coord_input.insert(tk.END, str(self.down_coord))
+                self.down_coord_input.bind("<KeyPress>", self.on_key_press_validate_coordinates_down)
+                self.down_coord_input.bind("<FocusOut>", self.on_focus_out_validate_coordinates_down)
+
+                self.left_coord_input = tk.Entry(coordinates_and_view_frame, width=10)
+                self.left_coord_input.insert(tk.END, str(self.left_coord))
+                self.left_coord_input.bind("<KeyPress>", self.on_key_press_validate_coordinates_left)
+                self.left_coord_input.bind("<FocusOut>", self.on_focus_out_validate_coordinates_left)
+
+                self.right_coord_input = tk.Entry(coordinates_and_view_frame, width=10)
+                self.right_coord_input.insert(tk.END, str(self.right_coord))
+                self.right_coord_input.bind("<KeyPress>", self.on_key_press_validate_coordinates_right)
+                self.right_coord_input.bind("<FocusOut>", self.on_focus_out_validate_coordinates_right)
+
+                self.top_coord_input.grid(row=0, column=2, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+                self.down_coord_input.grid(row=1, column=2, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+                self.left_coord_input.grid(row=2, column=2, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+                self.right_coord_input.grid(row=3, column=2, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+
+                self.top_coord_validation_label = tk.Label(coordinates_and_view_frame,
+                                                           text="default_value",
+                                                           font=("Arial", 8, "bold"), padx=10, pady=5)
+                self.down_coord_validation_label = tk.Label(coordinates_and_view_frame,
+                                                            text="default_value",
+                                                            font=("Arial", 8, "bold"), padx=10, pady=5)
+                self.left_coord_validation_label = tk.Label(coordinates_and_view_frame,
+                                                            text="default_value",
+                                                            font=("Arial", 8, "bold"), padx=10, pady=5)
+                self.right_coord_validation_label = tk.Label(coordinates_and_view_frame,
+                                                             text="default_value",
+                                                             font=("Arial", 8, "bold"), padx=10, pady=5)
+
+                self.top_coord_validation_label.grid(row=0, column=3, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+                self.down_coord_validation_label.grid(row=1, column=3, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+                self.left_coord_validation_label.grid(row=2, column=3, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+                self.right_coord_validation_label.grid(row=3, column=3, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+
+                self.img = Image.open("data/Blue_Marble_2002.png")
+                # w = 200
+                # h = 160
+                # self.img = self.img.resize((w, h))
+                self.img = ImageTk.PhotoImage(self.img)
+
+
+                map_view = tk.Canvas(coordinates_and_view_frame)
+                map_view.create_image(0, 0, image=self.img, anchor='nw')
+                map_view.grid(row=0, column=0, rowspan=5, padx=10, pady=10, sticky=tk.N + tk.S)
+
+                neighborhood_label = tk.Label(neighborhood_type_frame,
+                                              text="neighborhood_label",
+                                              font=("Arial", 14, "bold"), padx=10, pady=5)
+                neighborhood_label.grid(row=0, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+
+                self.neighborhood_var = tk.IntVar()
+                NM = tk.Radiobutton(neighborhood_type_frame, text="Moore", variable=self.neighborhood_var, value=0)
+                NVN = tk.Radiobutton(neighborhood_type_frame, text="Von Neumann", variable=self.neighborhood_var, value=1)
+                NM.select()
+
+                NM.grid(row=1, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+                NVN.grid(row=2, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
+
+                self.data_path = tk.StringVar()
+                self.data_path.set(get_data_path())
+                path_label = tk.Label(data_path_frame,
+                                      text="browse_path_label",
+                                      font=("Arial", 14, "bold"), padx=10, pady=5)
+                path_label.grid(row=0, column=0, columnspan=2)
+
+                browse_path_label = tk.Label(data_path_frame, textvariable=self.data_path)
+                browse_path_label.grid(row=1, column=1)
+
+                data_path_browse = tk.Button(data_path_frame, text="Browse", command=self.browse_button)
+                data_path_browse.grid(row=1, column=0)
+
+                self.confirm_and_continue = tk.Button(confirm_and_start_frame, text='confirm_and_continue', command=self.confirm_and_start_simulation)
+                self.confirm_and_continue.pack(side=tk.TOP, padx=5, pady=5)
+
+            def on_key_press_validate_coordinates_top(self, event):
+                if event.keysym == "Return":
+                    self.validate_coordinates_top(self.top_coord_input.get())
+
+            def on_focus_out_validate_coordinates_top(self, _):
+                self.validate_coordinates_top(self.top_coord_input.get())
+
+            def on_key_press_validate_coordinates_down(self, event):
+                if event.keysym == "Return":
+                    self.validate_coordinates_down(self.down_coord_input.get())
+
+            def on_focus_out_validate_coordinates_down(self, _):
+                self.validate_coordinates_down(self.down_coord_input.get())
+
+            def on_key_press_validate_coordinates_left(self, event):
+                if event.keysym == "Return":
+                    self.validate_coordinates_left(self.left_coord_input.get())
+
+            def on_focus_out_validate_coordinates_left(self, _):
+                self.validate_coordinates_left(self.left_coord_input.get())
+
+            def on_key_press_validate_coordinates_right(self, event):
+                if event.keysym == "Return":
+                    self.validate_coordinates_right(self.right_coord_input.get())
+
+            def on_focus_out_validate_coordinates_right(self, _):
+                self.validate_coordinates_right(self.right_coord_input.get())
+
+            def validate_coordinates_top(self, value):
+                if value:
+                    if -90 <= float(value) <= 90 and float(value) > self.down_coord:
+                        self.top_coord = float(value)
+                        self.top_coord_validation_label.config(text="Value is valid")
+                        self.correctly_set_coords[0] = 1
+                        self.try_to_unlock_confirm_and_continue()
+                        return True
+                    self.top_coord_validation_label.config(text="Value is invalid")
+                    self.confirm_and_continue.config(state=DISABLED)
+                    self.correctly_set_coords[0] = 0
+                return False
+
+            def validate_coordinates_down(self, value):
+                if value:
+                    if -90 <= float(value) <= 90 and float(value) < self.top_coord:
+                        self.down_coord = float(value)
+                        self.down_coord_validation_label.config(text="Value is valid")
+                        self.correctly_set_coords[1] = 1
+                        self.try_to_unlock_confirm_and_continue()
+                        return True
+                    self.down_coord_validation_label.config(text="Value is invalid")
+                    self.confirm_and_continue.config(state=DISABLED)
+                    self.correctly_set_coords[1] = 0
+                return False
+
+            def validate_coordinates_left(self, value):
+                if value:
+                    if -180 <= float(value) <= 180 and float(value) < self.right_coord:
+                        self.left_coord = float(value)
+                        self.left_coord_validation_label.config(text="Value is valid")
+                        self.correctly_set_coords[2] = 1
+                        self.try_to_unlock_confirm_and_continue()
+                        return True
+                    self.left_coord_validation_label.config(text="Value is invalid")
+                    self.confirm_and_continue.config(state=DISABLED)
+                    self.correctly_set_coords[2] = 0
+                return False
+
+            def validate_coordinates_right(self, value):
+                if value:
+                    if -180 <= float(value) <= 180 and float(value) > self.left_coord:
+                        self.right_coord = float(value)
+                        self.right_coord_validation_label.config(text="Value is valid")
+                        self.correctly_set_coords[3] = 1
+                        self.try_to_unlock_confirm_and_continue()
+                        return True
+                    self.right_coord_validation_label.config(text="Value is invalid")
+                    self.confirm_and_continue.config(state=DISABLED)
+                    self.correctly_set_coords[3] = 0
+                return False
+
+            def try_to_unlock_confirm_and_continue(self):
+                if sum(self.correctly_set_coords) == 4:
+                    self.confirm_and_continue.config(state=NORMAL)
+
+            def browse_button(self):
+                filename = filedialog.askdirectory()
+                self.data_path.set(filename)
+
+            def confirm_and_start_simulation(self):
+                set_simulation_coordinates_parameters(self.top_coord, self.down_coord, self.left_coord, self.right_coord, self.data_path.get())
+
+                start_simulation(Neighbourhood.MOORE if self.neighborhood_var.get() == 0 else Neighbourhood.VON_NEUMANN)
+
+        window.rowconfigure(0, weight=1, uniform='row')
+        window.columnconfigure(0, weight=1, uniform='column')
+        ParametersSettingController(window)
+
+    default_window_width = 1280
+    default_window_height = 720
+
+    window = tk.Tk()
+    window.geometry(f"{default_window_width}x{default_window_height}")
+    window.title('Oil Spill Simulation')
+
+    start_initial_menu()
+
+    window.mainloop()

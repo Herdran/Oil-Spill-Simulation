@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from numpy import exp, log, sqrt
 
-import constatnts as const
+from constatnts import Constants as const
 from data.measurment_data import Coordinates
 from simulation.utilities import get_neighbour_coordinates, Neighbourhood
 
