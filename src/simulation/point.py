@@ -11,7 +11,7 @@ from simulation.utilities import get_neighbour_coordinates, Neighbourhood
 
 DEFAULT_WAVE_VELOCITY = np.array([0.0, 0.0])  # [m/s]
 DEFAULT_WIND_VELOCITY = np.array([0.0, 0.0])  # [m/s]
-DEFAULT_TEMPERATUTRE = 302.15  # [K]
+DEFAULT_TEMPERATURE = 302.15  # [K]
 
 Coord_t = Tuple[int, int]
 
@@ -49,7 +49,7 @@ class Point:
         self.weather_station_coordinates = engine.data_processor.weather_station_coordinates(self.coordinates)
         self.wind_velocity = DEFAULT_WIND_VELOCITY
         self.wave_velocity = DEFAULT_WAVE_VELOCITY
-        self.temperature = DEFAULT_TEMPERATUTRE
+        self.temperature = DEFAULT_TEMPERATURE
         self.last_weather_update_time = None
         self.oil_mass = 0  # [kg]
         self.initial_values = initial_values
