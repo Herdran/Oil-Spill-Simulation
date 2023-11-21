@@ -393,6 +393,15 @@ def run():
                 self.infobox5_values_label = tk.Label(frame_infoboxes_values, text="1.0", font=("Arial", 14, "bold"), padx=10,
                                                       pady=5)
                 self.infobox5_values_label.pack(side=tk.TOP)
+                
+                self.bottom_frame = tk.Frame(window)
+                self.bottom_frame.grid(row=1, column=0, rowspan=1, columnspan=2,  padx=10, pady=10, sticky=tk.N + tk.S)
+                self.label_finished = tk.Label(self.bottom_frame,
+                                                text="Simulation finished!",
+                                                font=("Arial", 14, "bold"), padx=10, pady=5)
+                
+                self.label_finished.pack(side=tk.TOP)
+                self.bottom_frame.grid_remove()
 
                 self.update_image_array()
                 self.update_infobox()
@@ -512,8 +521,10 @@ def run():
 
             def update_image_array(self):
                 if engine.is_finished():
-                    self.is_running = False
-                
+                    self.toggle_start_stop()
+                    self.options_frame.grid_remove()
+                    self.bottom_frame.grid()
+                    
                 if self.is_running:
                     deleted = engine.update(self.iter_as_sec)
                     for coords in deleted:
