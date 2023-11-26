@@ -10,7 +10,6 @@ from simulation.utilities import Neighbourhood
 from constatnts import Constants as const
 
 from files import get_main_path
-import constatnts as const
 
 class SimulationEngine:
     def __init__(self, data_processor: DataProcessor, neighbourhood: Neighbourhood = Neighbourhood.MOORE):
