@@ -6,8 +6,8 @@ from data.simulation_run_parameters import CellSideCount, SimulationRunParameter
 
 
 class Constants:
-    POINT_SIDE_SIZE = 50  # [m] #TODO: right now that could be different from what we have from coordinates :v - need to be calculated
-    POINTS_SIDE_COUNT = 500
+    POINT_SIDE_SIZE = None
+    POINTS_SIDE_COUNT = 500  # TODO to be calculated
     ITER_AS_SEC = 20
 
     POINT_LAT_SIZE = None
@@ -29,7 +29,8 @@ def set_simulation_coordinates_parameters(top_coord,
                                           data_time_step,
                                           cells_side_count_latitude,
                                           cells_side_count_longitude,
-                                          data_path
+                                          data_path,
+                                          point_side_size
                                           ):
 
     Constants.SIMULATION_INITIAL_PARAMETERS = SimulationRunParameters(
@@ -60,6 +61,8 @@ def set_simulation_coordinates_parameters(top_coord,
         ),
         path_to_data=data_path
     )
+
+    Constants.POINT_SIDE_SIZE = point_side_size
 
     Constants.POINT_LAT_SIZE = (top_coord - down_coord) / Constants.POINTS_SIDE_COUNT
     Constants.POINT_LON_SIZE = (right_coord - left_coord) / Constants.POINTS_SIDE_COUNT
