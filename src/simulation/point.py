@@ -101,7 +101,7 @@ class Point:
         self.process_advection(delta_time)
 
     def process_emulsification(self, delta_time: float) -> float:
-        K = 2.0e-6
+        K = 5.0e-7
         old_emulsification_rate = self.emulsification_rate
         self.emulsification_rate += delta_time * K * (
                 ((np.linalg.norm(self.wind_velocity) + 1) ** 2) * (
