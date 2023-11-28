@@ -1,6 +1,6 @@
 from math import acos, cos, radians, sin
 from typing import Callable, Optional
-from data.measurment_data import Coordinates, Temperature
+from data.measurment_data import CoordinatesBase, Coordinates, Temperature
 import pandas as pd
 import numpy as np
 
@@ -62,4 +62,13 @@ def round_values(arr: np.array):
     DATA_FLOAT_PRECISSION = 5
     return np.round(arr, DATA_FLOAT_PRECISSION)
     
+def project_coordinates(coordinates: Coordinates, width: int, height: int) -> CoordinatesBase[int]:
+    LONGITUDE_OFFSET = 180.0
+    LATITUDE_OFFSET = 90.0
+    LONGITUDE_RANGE = 360.0
+    LATITUDE_RANGE = 180.0
+
+    x = (coordinates.longitude + LONGITUDE_OFFSET) * (height / LONGITUDE_RANGE)
+    y = (-coordinates.latitude + LATITUDE_OFFSET) * (width / LATITUDE_RANGE)
     
+    return CoordinatesBase[int](int(x), int(y))
