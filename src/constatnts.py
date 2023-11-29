@@ -7,7 +7,7 @@ from data.simulation_run_parameters import CellSideCount, SimulationRunParameter
 
 class Constants:
     POINT_SIDE_SIZE = None
-    POINTS_SIDE_COUNT = 500  # TODO to be calculated
+    POINTS_SIDE_COUNT = 1000  # TODO to be calculated
     ITER_AS_SEC = 20
 
     POINT_LAT_SIZE = None
