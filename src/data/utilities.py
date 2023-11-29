@@ -68,7 +68,7 @@ def project_coordinates(coordinates: Coordinates, width: int, height: int) -> Co
     LONGITUDE_RANGE = 360.0
     LATITUDE_RANGE = 180.0
 
-    x = (coordinates.longitude + LONGITUDE_OFFSET) * (height / LONGITUDE_RANGE)
-    y = (-coordinates.latitude + LATITUDE_OFFSET) * (width / LATITUDE_RANGE)
+    lon = (coordinates.longitude + LONGITUDE_OFFSET) * (width / LONGITUDE_RANGE)
+    lat = (-coordinates.latitude + LATITUDE_OFFSET) * (height / LATITUDE_RANGE)
     
-    return CoordinatesBase[int](int(y), int(x))
+    return CoordinatesBase[int](int(lat), int(lon))
