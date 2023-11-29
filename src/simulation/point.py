@@ -24,16 +24,17 @@ class TopographyState(Enum):
 class InitialValues:
     def __init__(self, neighbourhood: Neighbourhood = Neighbourhood.MOORE):
         self.water_density = 997  # [kg/m^3]
-        self.density = 835  # [kg/m^3]
+        self.oil_density = 846  # [kg/m^3]
         self.surface_tension = 30  # [dyne/s]
         self.emulsion_max_content_water = 0.7  # max content of water in the emulsion
         self.molar_mass = 348.23  # [g/mol] mean
         self.boiling_point = 609  # [K] mean
         self.interfacial_tension = 30  # [dyna/cm]
         self.propagation_factor = 2.5
-        self.c = 0.7  # constant from paper
-        self.viscosity = 10  # TODO: what is that value?
-        self.emulsification_rate = 0.01
+        self.c = 10 # parameter dependant of oil type, used in viscosity change
+        self.viscosity_kinematic = 5.3e-6  # [m^2/s]
+        self.viscosity_dynamic = self.viscosity_kinematic * self.oil_density
+        self.emulsification_rate = 0
         self.neighbourhood = neighbourhood
 
 
@@ -55,7 +56,7 @@ class Point:
         self.initial_values = initial_values
         self.emulsification_rate = initial_values.emulsification_rate
         self.data_processor = engine.data_processor
-        self.viscosity = initial_values.viscosity  # [cP]
+        self.viscosity_dynamic = self.initial_values.viscosity_dynamic  # [Pa*s]
         self.oil_buffer = []  # contains tuples (mass, viscosity, emulsification_rate)
         self.advection_buffer = np.array([0, 0], dtype='float64')
         self.evaporation_rate = 0
@@ -68,7 +69,7 @@ class Point:
         # maybe initial emulsification rate will be changed
         self.emulsification_rate = (self.oil_mass * self.emulsification_rate +
                                     mass * self.initial_values.emulsification_rate) / (self.oil_mass + mass)
-        self.viscosity = (self.oil_mass * self.viscosity + mass * self.initial_values.viscosity) / (
+        self.viscosity_dynamic = (self.oil_mass * self.viscosity_dynamic + mass * self.initial_values.viscosity_dynamic) / (
                 self.oil_mass + mass)
         self.oil_mass += mass
 
@@ -105,7 +106,7 @@ class Point:
         old_emulsification_rate = self.emulsification_rate
         self.emulsification_rate += delta_time * K * (
                 ((np.linalg.norm(self.wind_velocity) + 1) ** 2) * (
-                1 - self.emulsification_rate / self.initial_values.c))
+                1 - self.emulsification_rate / self.initial_values.emulsion_max_content_water))
         if self.emulsification_rate > self.initial_values.emulsion_max_content_water:
             self.emulsification_rate = self.initial_values.emulsion_max_content_water
         return self.emulsification_rate - old_emulsification_rate
@@ -185,33 +186,33 @@ class Point:
             if (next_x, next_y) not in self.world:
                 self.world[(next_x, next_y)] = Point((next_x, next_y), self.initial_values, self.engine)
                 self.engine.points_changed.append((next_x, next_y))
-            self.world[(next_x, next_y)].oil_buffer.append((self.oil_mass, self.viscosity, self.emulsification_rate))
+            self.world[(next_x, next_y)].oil_buffer.append((self.oil_mass, self.viscosity_dynamic, self.emulsification_rate))
         self.advection_buffer -= np.array([next_x - x, next_y - y])
         self.oil_mass = 0
 
     def process_natural_dispersion(self, delta_time: float) -> None:
         Da = 0.11 * (np.linalg.norm(self.wind_velocity) + 1) ** 2
         interfacial_tension = self.initial_values.interfacial_tension * (1 + self.evaporation_rate)
-        Db = 1 / (1 + 50 * sqrt(self.viscosity) * self.slick_thickness() * interfacial_tension)
+        # multiply viscosity by 100 to convert from Pa*s to cPa*s
+        Db = 1 / (1 + 50 * sqrt(self.viscosity_dynamic*100) * self.slick_thickness() * interfacial_tension)
         self.oil_mass -= self.oil_mass * Da * Db / (3600 * delta_time)
 
     def slick_thickness(self) -> float:
-        thickness = (self.oil_mass / self.initial_values.density) / (const.POINT_SIDE_SIZE ** 2)  # [m]
+        thickness = (self.oil_mass / self.initial_values.oil_density) / (const.POINT_SIDE_SIZE ** 2)  # [m]
         return thickness / 100  # [cm]
 
     def viscosity_change(self, delta_F: float, delta_Y: float) -> None:
-        C2 = 10
-        delta_viscosity = C2 * self.viscosity * delta_F + (2.5 * self.viscosity * delta_Y) / (
+        delta_viscosity = self.initial_values.c * self.viscosity_dynamic * delta_F + (2.5 * self.viscosity_dynamic * delta_Y) / (
                 (1 - self.initial_values.emulsion_max_content_water * self.emulsification_rate) ** 2)
-        self.viscosity += delta_viscosity
+        self.viscosity_dynamic += delta_viscosity
         if self.oil_mass < 1:
-            self.viscosity = self.initial_values.viscosity
+            self.viscosity_dynamic = self.initial_values.viscosity_dynamic
 
     def pour_from_buffer(self):
         oil_mass = sum([tup[0] for tup in self.oil_buffer]) + self.oil_mass
         if oil_mass < 1:
             return
-        self.viscosity = (sum([tup[0] * tup[1] for tup in self.oil_buffer]) + self.oil_mass * self.viscosity) / oil_mass
+        self.viscosity_dynamic = (sum([tup[0] * tup[1] for tup in self.oil_buffer]) + self.oil_mass * self.viscosity_dynamic) / oil_mass
         self.emulsification_rate = (sum([tup[0] * tup[2] for tup in self.oil_buffer]) + self.oil_mass * self.emulsification_rate) / oil_mass
         self.oil_buffer = []
         self.oil_mass = oil_mass
