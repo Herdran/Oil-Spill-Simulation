@@ -71,4 +71,4 @@ def project_coordinates(coordinates: Coordinates, width: int, height: int) -> Co
     x = (coordinates.longitude + LONGITUDE_OFFSET) * (height / LONGITUDE_RANGE)
     y = (-coordinates.latitude + LATITUDE_OFFSET) * (width / LATITUDE_RANGE)
     
-    return CoordinatesBase[int](int(x), int(y))
+    return CoordinatesBase[int](int(y), int(x))
