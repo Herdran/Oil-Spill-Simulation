@@ -76,15 +76,15 @@ class SimulationEngine:
 
     def load_topography(self) -> Set[Coord_t]:
         path_to_world_map = get_main_path().joinpath('data/world_map/full_world_map.bin')
-        WIDTH = 86400
+        WIDTH  = 86400
         HEIGHT = 43200
         
         map_bytes = np.fromfile(path_to_world_map, dtype='uint8')
         binary_map = np.unpackbits(map_bytes)
         
         top_left = Coordinates(
-            80, 
-            -175
+            latitude=const.SIMULATION_INITIAL_PARAMETERS.area.max.latitude,
+            longitude=const.SIMULATION_INITIAL_PARAMETERS.area.min.longitude
         )
         
         print(top_left)
