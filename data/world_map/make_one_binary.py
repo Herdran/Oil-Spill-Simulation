@@ -36,7 +36,7 @@ if __name__ == "__main__":
             print(f"progress: {row/SIDE_COUNT}")
             for bin_col in range(X_BIN_COUNT):
                 for col in range(SIDE_COUNT):
-                    image_index = (bin_col * Y_BIN_COUNT) + bin_row
+                    image_index = (bin_row * X_BIN_COUNT) + bin_col
                     bit_index = (row * SIDE_COUNT) + col
                     result_binary.append(binaries[image_index][bit_index])
                     
