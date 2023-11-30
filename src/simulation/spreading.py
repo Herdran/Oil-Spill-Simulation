@@ -49,7 +49,7 @@ class SpreadingEngine:
         V = total_mass / self.initial_values.oil_density
         G = 9.8
         delta = (self.initial_values.water_density - self.initial_values.oil_density) / self.initial_values.water_density
-        dynamic_viscosity = (first.viscosity_dynamic + second.viscosity_dynamic) / 2  # divided by 100 to convert from cPa to Pa
+        dynamic_viscosity = (first.viscosity_dynamic + second.viscosity_dynamic) / 2
         kinematic_viscosity = dynamic_viscosity / self.initial_values.oil_density
         D = 0.48 / self.initial_values.propagation_factor * (V ** 2 * G * delta / sqrt(kinematic_viscosity)) ** (1 / 3) / sqrt(
             delta_time)
