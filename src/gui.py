@@ -1,4 +1,5 @@
 import logging
+import os.path
 import tkinter as tk
 from tkinter import DISABLED, NORMAL, filedialog
 import re
@@ -798,7 +799,7 @@ def run():
                 self.cells_side_count_longitude_validation_label.grid(row=2, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
                 self.point_side_size_validation_label.grid(row=2, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
 
-                self.loaded_img = Image.open("data/Blue_Marble_2002.png")
+                self.loaded_img = Image.open(os.path.join(get_main_path(), "data/Blue_Marble_2002.png"))
 
                 self.map_view_frame = tk.Frame(inputs_frame)
                 self.map_view_frame.grid(row=0, column=0, rowspan=4, padx=3, pady=3, sticky=tk.N + tk.S)
