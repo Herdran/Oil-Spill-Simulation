@@ -1,17 +1,13 @@
-import csv
-from typing import Dict, Set, List
+from typing import Dict, List
 
-import numpy as np
 import pandas as pd
 
 from data.data_processor import DataProcessor
 from simulation.point import Point, Coord_t, InitialValues, TopographyState
 from simulation.spreading import SpreadingEngine
 from simulation.utilities import Neighbourhood
+from simulation.topology import load_topography
 from constatnts import Constants as const
-from files import get_main_path
-from data.measurment_data import Coordinates
-from data.utilities import project_coordinates
 
 
 class SimulationEngine:
@@ -24,7 +20,7 @@ class SimulationEngine:
         self.data_processor = data_processor
         self.total_mass = 0
         self.total_land_mass = 0
-        self.lands = self.load_topography()
+        self.lands = load_topography()
         self.total_time = 0
         self.points_changed = []
         self._constants_sources = []
@@ -73,38 +69,6 @@ class SimulationEngine:
                     self.world[cords] = Point(cords, self.initial_values, self)
                     self.points_changed.append(cords)
                 self.world[cords].add_oil(mass_per_minute * delta_seconds / 60)
-
-    def load_topography(self) -> Set[Coord_t]:
-        path_to_world_map = get_main_path().joinpath('data/world_map/full_world_map.bin')
-        WIDTH  = 86400
-        HEIGHT = 43200
-        
-        map_bytes = np.fromfile(path_to_world_map, dtype='uint8')
-        binary_map = np.unpackbits(map_bytes)
-        
-        top_left = Coordinates(
-            latitude=const.SIMULATION_INITIAL_PARAMETERS.area.max.latitude,
-            longitude=const.SIMULATION_INITIAL_PARAMETERS.area.min.longitude
-        )
-        
-        print(top_left)
-        
-        offsets = project_coordinates(top_left, WIDTH, HEIGHT)
-                
-        print(offsets)
-                
-        lands = set()
-        
-        for x in range(const.POINTS_SIDE_COUNT):
-            for y in range(const.POINTS_SIDE_COUNT):
-                bin_x = offsets.longitude + x
-                bin_y = offsets.latitude + y   
-                index = (bin_y * WIDTH) + bin_x
-                if binary_map[index] == 0:
-                    lands.add((x, y))
-        
-        
-        return lands
 
     def get_topography(self, coord: Coord_t) -> TopographyState:
         if coord in self.lands:
