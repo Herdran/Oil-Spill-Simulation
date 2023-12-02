@@ -1,3 +1,4 @@
+from logging import getLogger
 from typing import Set
 from os import PathLike, path
 from itertools import product
@@ -13,11 +14,14 @@ from constatnts import Constants as const
 from files import get_binary_world_map_path, get_binary_world_map_zip_path, get_unzipped_world_map_dir_path
 
 
+BinaryMap = npt.ArrayLike
+
+
 BINARY_MAP_WIDTH = 86400
 BINARY_MAP_HEIGHT = 43200
 
 
-BinaryMap = npt.ArrayLike
+logger = getLogger("topology")
 
 
 def load_binary_from_file(path_to_world_map: PathLike) -> BinaryMap:
@@ -26,10 +30,17 @@ def load_binary_from_file(path_to_world_map: PathLike) -> BinaryMap:
 
 
 def unzip_world_map():
+    logger.info("Unzipping world map")
     output_dir = get_unzipped_world_map_dir_path()
+    
     with ZipFile(get_binary_world_map_zip_path(), 'r') as zip_ref:
         output_dir.mkdir(parents=True, exist_ok=True)
         zip_ref.extractall(output_dir)
+        
+    if not path.exists(get_binary_world_map_path()):
+        raise FileNotFoundError("World map not found after unzipping")
+    
+    logger.info("World map has been unzipped successfully and saved to %s", output_dir)
 
 
 def get_binary_map_path() -> BinaryMap:
@@ -59,10 +70,12 @@ def get_cartesian_product_range() -> product:
 
 
 def get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int]) -> Set[Coord_t]:
+    logger.debug("STATED: Loading lands set")
     lands = set()
     for x, y in get_cartesian_product_range():
         if is_land(binary_map, top_left_offset, x, y):
             lands.add((x, y))
+    logger.debug("FINISHED: Loading lands set")
     return lands
 
 
