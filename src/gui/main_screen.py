@@ -11,15 +11,15 @@ from color import rgba, blend_color, rgba_to_rgb
 from constatnts import Constants as const
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from files import get_main_path
-from gui.gui_utilities import get_tooltip_text, create_frame, create_label_pack, create_input_entry_pack
+from gui.utilities import get_tooltip_text, create_frame, create_label_pack, create_input_entry_pack
+
+SEA_COLOR = rgba(15, 10, 222)
+LAND_COLOR = rgba(38, 166, 91)
+OIL_COLOR = rgba(0, 0, 0)
+LAND_WITH_OIL_COLOR = rgba(0, 100, 0)
 
 
 def start_simulation(neighborhood, window):
-    SEA_COLOR = rgba(15, 10, 222)
-    LAND_COLOR = rgba(38, 166, 91)
-    OIL_COLOR = rgba(0, 0, 0)
-    LAND_WITH_OIL_COLOR = rgba(0, 100, 0)
-
     class ImageViewer(tk.Canvas):
         def __init__(self, parent, image_array, image_change_controller, initial_zoom_level):
             super().__init__(parent)
@@ -122,41 +122,44 @@ def start_simulation(neighborhood, window):
             self.is_holding = False
             if self.is_panning:
                 self.is_panning = False
-            elif self.image_change_controller.oil_spill_on_bool:
-                window_width = self.winfo_width()
-                window_height = self.winfo_height()
-                x = int((event.x - self.pan_x - max((window_width - self.zoomed_width) // 2, 0)) / self.zoom_level)
-                y = int((event.y - self.pan_y - max((window_height - self.zoomed_height) // 2, 0)) / self.zoom_level)
-                if 0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]:
-                    coord = (x, y)
-                    if coord not in engine.lands:
-                        if coord not in engine.world:
-                            engine.world[coord] = simulation.Point(coord, engine.initial_values, engine)
-                        point_clicked = engine.world[coord]
-                        point_clicked.add_oil(self.image_change_controller.oil_to_add_on_click)
+                return
+            elif not self.image_change_controller.oil_spill_on_bool:
+                return
+            window_width = self.winfo_width()
+            window_height = self.winfo_height()
+            x = int((event.x - self.pan_x - max((window_width - self.zoomed_width) // 2, 0)) / self.zoom_level)
+            y = int((event.y - self.pan_y - max((window_height - self.zoomed_height) // 2, 0)) / self.zoom_level)
+            if 0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]:
+                coord = (x, y)
+                if coord not in engine.lands:
+                    if coord not in engine.world:
+                        engine.world[coord] = simulation.Point(coord, engine.initial_values, engine)
+                    point_clicked = engine.world[coord]
+                    point_clicked.add_oil(self.image_change_controller.oil_to_add_on_click)
 
-                        var = blend_color(OIL_COLOR, SEA_COLOR,
-                                          point_clicked.oil_mass / self.image_change_controller.minimal_oil_to_show,
-                                          True)
-                        self.image_change_controller.update_infobox()
-                        image_array[y][x] = var[:3]
-                        self.update_image()
-                        self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(point_clicked))
-                        self.image_change_controller.value_not_yet_processed += self.image_change_controller.oil_to_add_on_click
-                self.image_change_controller.update_oil_amount_infobox()
+                    var = blend_color(OIL_COLOR, SEA_COLOR,
+                                      point_clicked.oil_mass / self.image_change_controller.minimal_oil_to_show,
+                                      True)
+                    self.image_change_controller.update_infobox()
+                    image_array[y][x] = var[:3]
+                    self.update_image()
+                    self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(point_clicked))
+                    self.image_change_controller.value_not_yet_processed += self.image_change_controller.oil_to_add_on_click
+            self.image_change_controller.update_oil_amount_infobox()
 
         def on_button_motion(self, event):
-            if self.is_holding:
-                self.is_panning = True
-                delta_x = event.x - self.prev_x
-                delta_y = event.y - self.prev_y
-                self.pan_x += delta_x
-                self.pan_y += delta_y
-                self.prev_x = event.x
-                self.prev_y = event.y
-                self.update_image()
-                if self.tooltip:
-                    self.tooltip.update_position(event.x_root, event.y_root)
+            if not self.is_holding:
+                return
+            self.is_panning = True
+            delta_x = event.x - self.prev_x
+            delta_y = event.y - self.prev_y
+            self.pan_x += delta_x
+            self.pan_y += delta_y
+            self.prev_x = event.x
+            self.prev_y = event.y
+            self.update_image()
+            if self.tooltip:
+                self.tooltip.update_position(event.x_root, event.y_root)
 
         def on_motion(self, event):
             window_width = self.winfo_width()
@@ -164,14 +167,14 @@ def start_simulation(neighborhood, window):
             x = int((event.x - self.pan_x - max((window_width - self.zoomed_width) // 2, 0)) / self.zoom_level)
             y = int((event.y - self.pan_y - max((window_height - self.zoomed_height) // 2, 0)) / self.zoom_level)
             coord = (x, y)
-            if 0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]:
-                if coord not in engine.world:
-                    self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {0: .2f}kg")
-                else:
-                    point = engine.world[(x, y)]
-                    self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(point))
-            else:
+            if not (0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]):
                 self.hide_tooltip()
+                return
+            if coord not in engine.world:
+                self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {0: .2f}kg")
+            else:
+                point = engine.world[(x, y)]
+                self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(point))
 
         def on_leave(self, _):
             self.hide_tooltip()

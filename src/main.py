@@ -1,7 +1,6 @@
-from gui import gui_run
+from gui import application_controller
 from logger import init_logger
 
 if __name__ == "__main__":
     init_logger()
-    gui_run.run()
-    
+    application_controller.run()
