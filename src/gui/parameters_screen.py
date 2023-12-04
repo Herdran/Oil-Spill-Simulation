@@ -9,7 +9,8 @@ from PIL import Image, ImageTk
 
 from constatnts import set_simulation_coordinates_parameters
 from files import get_main_path, get_data_path
-from gui.utilities import create_frame, create_label_pack, create_label_grid, create_input_entry_grid
+from gui.utilities import create_frame, create_label_pack, create_label_grid, create_input_entry_grid, \
+    create_label_grid_parameter_screen
 from gui.main_screen import start_simulation
 from simulation.utilities import Neighbourhood
 
@@ -107,28 +108,16 @@ def start_initial_menu(window):
             self.point_side_size_input = create_input_entry_grid(point_side_size_frame, 3, str(self.point_side_size),
                                                                  self.validate_point_side_size)
 
-            self.top_coord_validation_label = create_label_grid(top_coord_frame, "Default value", 2, 0,
-                                                                ("Arial", 8, "bold"))
-            self.down_coord_validation_label = create_label_grid(down_coord_frame, "Default value", 2, 0,
-                                                                 ("Arial", 8, "bold"))
-            self.left_coord_validation_label = create_label_grid(left_coord_frame, "Default value", 2, 0,
-                                                                 ("Arial", 8, "bold"))
-            self.right_coord_validation_label = create_label_grid(right_coord_frame, "Default value", 2, 0,
-                                                                  ("Arial", 8, "bold"))
-            self.time_range_start_validation_label = create_label_grid(time_range_start_frame, "Default value", 2, 0,
-                                                                       ("Arial", 8, "bold"))
-            self.time_range_end_validation_label = create_label_grid(time_range_end_frame, "Default value", 2, 0,
-                                                                     ("Arial", 8, "bold"))
-            self.data_time_step_validation_label = create_label_grid(data_time_step_frame, "Default value", 2, 0,
-                                                                     ("Arial", 8, "bold"))
-            self.cells_side_count_latitude_validation_label = create_label_grid(cells_side_count_latitude_frame,
-                                                                                "Default value", 2, 0,
-                                                                                ("Arial", 8, "bold"))
-            self.cells_side_count_longitude_validation_label = create_label_grid(cells_side_count_longitude_frame,
-                                                                                 "Default value", 2, 0,
-                                                                                 ("Arial", 8, "bold"))
-            self.point_side_size_validation_label = create_label_grid(point_side_size_frame, "Default value", 2, 0,
-                                                                      ("Arial", 8, "bold"))
+            self.top_coord_validation_label = create_label_grid_parameter_screen(top_coord_frame)
+            self.down_coord_validation_label = create_label_grid_parameter_screen(down_coord_frame)
+            self.left_coord_validation_label = create_label_grid_parameter_screen(left_coord_frame)
+            self.right_coord_validation_label = create_label_grid_parameter_screen(right_coord_frame)
+            self.time_range_start_validation_label = create_label_grid_parameter_screen(time_range_start_frame)
+            self.time_range_end_validation_label = create_label_grid_parameter_screen(time_range_end_frame)
+            self.data_time_step_validation_label = create_label_grid_parameter_screen(data_time_step_frame)
+            self.cells_side_count_latitude_validation_label = create_label_grid_parameter_screen(cells_side_count_latitude_frame)
+            self.cells_side_count_longitude_validation_label = create_label_grid_parameter_screen(cells_side_count_longitude_frame)
+            self.point_side_size_validation_label = create_label_grid_parameter_screen(point_side_size_frame)
 
             self.loaded_img = Image.open(os.path.join(get_main_path(), "data/Blue_Marble_2002.png"))
 
@@ -139,7 +128,7 @@ def start_initial_menu(window):
 
             self.map_view.grid(row=0, column=0, rowspan=3, padx=3, pady=3, sticky=tk.N + tk.S)
 
-            create_label_grid(neighborhood_type_frame, "Neighborhood type:", 0, 0, ("Arial", 14, "bold"))
+            create_label_grid(neighborhood_type_frame, "Neighborhood type:", font=("Arial", 14, "bold"))
 
             self.neighborhood_var = tk.IntVar()
             nm = tk.Radiobutton(neighborhood_type_frame, text="Moore", variable=self.neighborhood_var, value=0)

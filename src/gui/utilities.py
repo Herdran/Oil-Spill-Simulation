@@ -34,6 +34,10 @@ def create_label_pack(parent: tk.Frame, text: str = "", font: tuple[str, int, st
     return label
 
 
+def create_label_grid_parameter_screen(parent: tk.Frame) -> tk.Label:
+    return create_label_grid(parent, "Default value", 2, 0, ("Arial", 8, "bold"))
+
+
 def create_label_grid(parent: tk.Frame, text: str, row: int = 0, column: int = 0,
                       font: tuple[str, int, str] = ("Arial", 12, "bold"), padx: int = 10, pady: int = 5,
                       rowspan: int = 1, columnspan: int = 1, sticky: str = tk.N + tk.S, padx_grid: int = 3,
