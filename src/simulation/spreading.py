@@ -46,7 +46,7 @@ class SpreadingEngine:
             return
           
         length = const.point_side_size
-        V = total_mass / self.initial_values.density
+        V = total_mass / self.initial_values.oil_density
         G = 9.8
         delta = (self.initial_values.water_density - self.initial_values.oil_density) / self.initial_values.water_density
         dynamic_viscosity = (first.viscosity_dynamic + second.viscosity_dynamic) / 2
