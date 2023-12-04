@@ -44,13 +44,14 @@ class SpreadingEngine:
     def process_spread_between(self, total_mass: float, delta_time: float, first: Point, second: Point, is_new: bool) -> None:
         if not (first.topography == TopographyState.SEA and second.topography == TopographyState.SEA):
             return
-
+          
         length = const.point_side_size
         V = total_mass / self.initial_values.density
         G = 9.8
-        delta = (self.initial_values.water_density - self.initial_values.density) / self.initial_values.water_density
-        viscosity = 10e-6
-        D = 0.49 / self.initial_values.propagation_factor * (V ** 2 * G * delta / sqrt(viscosity)) ** (1 / 3) / sqrt(
+        delta = (self.initial_values.water_density - self.initial_values.oil_density) / self.initial_values.water_density
+        dynamic_viscosity = (first.viscosity_dynamic + second.viscosity_dynamic) / 2
+        kinematic_viscosity = dynamic_viscosity / self.initial_values.oil_density
+        D = 0.48 / self.initial_values.propagation_factor * (V ** 2 * G * delta / sqrt(kinematic_viscosity)) ** (1 / 3) / sqrt(
             delta_time)
         delta_mass = 0.5 * (second.oil_mass - first.oil_mass) * (1 - exp(-2 * D / (length ** 2) * delta_time))
         if not is_new:
@@ -69,4 +70,4 @@ class SpreadingEngine:
 
         real_delta = rand() * ratio * from_cell.oil_mass
         from_cell.oil_mass -= real_delta
-        to_cell.oil_buffer.append((real_delta, from_cell.viscosity, from_cell.emulsification_rate))
+        to_cell.oil_buffer.append((real_delta, from_cell.viscosity_dynamic, from_cell.emulsification_rate))
