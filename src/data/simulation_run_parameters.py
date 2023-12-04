@@ -1,4 +1,3 @@
-import os
 from dataclasses import dataclass
 import pandas as pd
 from data.generic import Range
@@ -12,6 +11,6 @@ class SimulationRunParameters:
     time: Range[pd.Timestamp]
     data_time_step: pd.Timedelta
     cells_side_count: CellSideCount
-    path_to_data: os.PathLike
+    path_to_data: str
     
     

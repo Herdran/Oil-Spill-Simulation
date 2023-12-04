@@ -52,8 +52,8 @@ def get_binary_map_path() -> BinaryMap:
 
 def get_top_left_offset() -> CoordinatesBase[int]:
     top_left = Coordinates(
-        latitude  = const.SIMULATION_INITIAL_PARAMETERS.area.max.latitude,
-        longitude = const.SIMULATION_INITIAL_PARAMETERS.area.min.longitude
+        latitude  = const.simulation_initial_parameters.area.max.latitude,
+        longitude = const.simulation_initial_parameters.area.min.longitude
     )        
     return project_coordinates(top_left, BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
 
@@ -66,7 +66,7 @@ def is_land(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], x: int
 
 
 def get_cartesian_product_range() -> product:
-    return product(range(const.POINTS_SIDE_COUNT), range(const.POINTS_SIDE_COUNT))
+    return product(range(const.point_side_count), range(const.point_side_count))
 
 
 def get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int]) -> Set[Coord_t]:

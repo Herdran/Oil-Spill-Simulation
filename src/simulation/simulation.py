@@ -26,7 +26,7 @@ class SimulationEngine:
         self._constants_sources = []
 
     def is_finished(self) -> bool:
-        return self.total_time >= const.SIMULATION_TIME
+        return self.total_time >= const.simulation_time
 
     def update(self, delta_time) -> List[Coord_t]:
         self.points_changed = []
@@ -61,7 +61,7 @@ class SimulationEngine:
         self._constants_sources.append((coord, mass_per_minute, spill_start, spill_end))
 
     def pour_from_sources(self, delta_seconds: float):
-        current_timestamp = const.SIMULATION_INITIAL_PARAMETERS.time.min + pd.Timedelta(seconds=self.total_time)
+        current_timestamp = const.simulation_initial_parameters.time.min + pd.Timedelta(seconds=self.total_time)
         for spill in self._constants_sources:
             cords, mass_per_minute, spill_start, spill_end = spill
             if spill_start <= current_timestamp <= spill_end:

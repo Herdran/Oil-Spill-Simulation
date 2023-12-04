@@ -6,34 +6,34 @@ from data.simulation_run_parameters import CellSideCount, SimulationRunParameter
 
 
 class Constants:
-    POINT_SIDE_SIZE = None
-    POINTS_SIDE_COUNT = 1000  # TODO to be calculated
-    ITER_AS_SEC = 20
+    point_side_size: int = None
+    point_side_count: int = 1000  # TODO to be calculated
+    iter_as_sec: int = 20
 
-    POINT_LAT_SIZE = None
-    POINT_LON_SIZE = None
+    point_lat_size: float = None
+    point_lon_size: float = None
 
-    POINT_LAT_CENTERS = None
-    POINT_LON_CENTERS = None
+    point_lat_centers: list[float] = None
+    point_lon_centers: list[float] = None
 
-    SIMULATION_INITIAL_PARAMETERS = None
-    SIMULATION_TIME = None
+    simulation_initial_parameters: SimulationRunParameters = None
+    simulation_time: float = None
 
 
-def set_simulation_coordinates_parameters(top_coord,
-                                          down_coord,
-                                          left_coord,
-                                          right_coord,
-                                          time_range_start,
-                                          time_range_end,
-                                          data_time_step,
-                                          cells_side_count_latitude,
-                                          cells_side_count_longitude,
-                                          data_path,
-                                          point_side_size
+def set_simulation_coordinates_parameters(top_coord: float,
+                                          down_coord: float,
+                                          left_coord: float,
+                                          right_coord: float,
+                                          time_range_start: str,
+                                          time_range_end: str,
+                                          data_time_step: int,
+                                          cells_side_count_latitude: int,
+                                          cells_side_count_longitude: int,
+                                          data_path: str,
+                                          point_side_size: int
                                           ):
 
-    Constants.SIMULATION_INITIAL_PARAMETERS = SimulationRunParameters(
+    Constants.simulation_initial_parameters = SimulationRunParameters(
         area=Range(
             min=Coordinates(
                 latitude=down_coord,
@@ -62,14 +62,14 @@ def set_simulation_coordinates_parameters(top_coord,
         path_to_data=data_path
     )
 
-    Constants.POINT_SIDE_SIZE = point_side_size
+    Constants.point_side_size = point_side_size
 
-    Constants.POINT_LAT_SIZE = (top_coord - down_coord) / Constants.POINTS_SIDE_COUNT
-    Constants.POINT_LON_SIZE = (right_coord - left_coord) / Constants.POINTS_SIDE_COUNT
+    Constants.point_lat_size = (top_coord - down_coord) / Constants.point_side_count
+    Constants.point_lon_size = (right_coord - left_coord) / Constants.point_side_count
 
-    Constants.POINT_LAT_CENTERS = [top_coord - Constants.POINT_LAT_SIZE / 2 - (Constants.POINT_LAT_SIZE * i) for i in
-                                   range(Constants.POINTS_SIDE_COUNT)]
-    Constants.POINT_LON_CENTERS = [left_coord + Constants.POINT_LON_SIZE / 2 + (Constants.POINT_LON_SIZE * i) for i in
-                                   range(Constants.POINTS_SIDE_COUNT)]
+    Constants.point_lat_centers = [top_coord - Constants.point_lat_size / 2 - (Constants.point_lat_size * i) for i in
+                                   range(Constants.point_side_count)]
+    Constants.point_lon_centers = [left_coord + Constants.point_lon_size / 2 + (Constants.point_lon_size * i) for i in
+                                   range(Constants.point_side_count)]
 
-    Constants.SIMULATION_TIME = (Constants.SIMULATION_INITIAL_PARAMETERS.time.max - Constants.SIMULATION_INITIAL_PARAMETERS.time.min).total_seconds()
+    Constants.simulation_time = (Constants.simulation_initial_parameters.time.max - Constants.simulation_initial_parameters.time.min).total_seconds()

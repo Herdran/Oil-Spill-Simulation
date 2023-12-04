@@ -45,7 +45,7 @@ class Point:
         self.engine = engine
         self.coord = coord
         x, y = coord
-        self.coordinates = Coordinates(latitude=const.POINT_LAT_CENTERS[y], longitude=const.POINT_LON_CENTERS[x])
+        self.coordinates = Coordinates(latitude=const.point_lat_centers[y], longitude=const.point_lon_centers[x])
         self.weather_station_coordinates = engine.data_processor.weather_station_coordinates(self.coordinates)
         self.wind_velocity = DEFAULT_WIND_VELOCITY
         self.wave_velocity = DEFAULT_WAVE_VELOCITY
@@ -79,7 +79,7 @@ class Point:
     def update_weather_data(self) -> None:
         time_delta = pd.Timedelta(seconds=int(self.engine.total_time))
         if self.should_update_weather_data(time_delta):
-            time_stamp = const.SIMULATION_INITIAL_PARAMETERS.time.min + time_delta
+            time_stamp = const.simulation_initial_parameters.time.min + time_delta
             measurment = self.data_processor.get_measurment(self.coordinates, self.weather_station_coordinates,
                                                             time_stamp)
             self.wave_velocity = measurment.current.to_numpy()
@@ -118,7 +118,7 @@ class Point:
         R = 8.314  # [J/(mol*K)]
 
         self.evaporation_rate = (K * (self.initial_values.molar_mass / 1000) * P) / (R * self.temperature)
-        delta_mass = -1 * min(delta_time * const.POINT_SIDE_SIZE * const.POINT_SIDE_SIZE * self.evaporation_rate,
+        delta_mass = -1 * min(delta_time * const.point_side_size * const.point_side_size * self.evaporation_rate,
                               self.oil_mass)
         delta_f = -delta_mass / self.oil_mass
         self.oil_mass += delta_mass
@@ -133,7 +133,7 @@ class Point:
 
         neighbours = get_neighbour_coordinates(x, y, self.initial_values.neighbourhood)
         for cords in neighbours:
-            if not ((0 <= cords[0] < const.POINTS_SIDE_COUNT) and (0 <= cords[1] < const.POINTS_SIDE_COUNT)):
+            if not ((0 <= cords[0] < const.point_side_count) and (0 <= cords[1] < const.point_side_count)):
                 continue
             if cords in self.engine.lands:
                 continue
@@ -158,7 +158,7 @@ class Point:
         BETA = 0.03
 
         delta_r = (ALPHA * self.wave_velocity + BETA * self.wind_velocity) * delta_time
-        delta_r /= const.POINT_SIDE_SIZE
+        delta_r /= const.point_side_size
 
         # buffering how far oil went in time step
         self.advection_buffer += [delta_r[1], -delta_r[0]]
@@ -181,7 +181,7 @@ class Point:
                 self.advection_buffer = np.array([next_x - x, next_y - y], dtype='float64')
                 break
 
-        if 0 <= next_x < const.POINTS_SIDE_COUNT and 0 <= next_y < const.POINTS_SIDE_COUNT:
+        if 0 <= next_x < const.point_side_count and 0 <= next_y < const.point_side_count:
             if (next_x, next_y) not in self.world:
                 self.world[(next_x, next_y)] = Point((next_x, next_y), self.initial_values, self.engine)
                 self.engine.points_changed.append((next_x, next_y))
@@ -196,7 +196,7 @@ class Point:
         self.oil_mass -= self.oil_mass * Da * Db / (3600 * delta_time)
 
     def slick_thickness(self) -> float:
-        thickness = (self.oil_mass / self.initial_values.density) / (const.POINT_SIDE_SIZE ** 2)  # [m]
+        thickness = (self.oil_mass / self.initial_values.density) / (const.point_side_size ** 2)  # [m]
         return thickness / 100  # [cm]
 
     def viscosity_change(self, delta_F: float, delta_Y: float) -> None:

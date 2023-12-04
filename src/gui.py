@@ -1,22 +1,21 @@
 import logging
 import os.path
+import re
+import threading
 import tkinter as tk
 from tkinter import DISABLED, NORMAL, filedialog
-import re
 
 import numpy as np
-import threading
-
 import pandas as pd
 from PIL import Image, ImageTk
 
 import simulation.simulation as simulation
-from simulation.utilities import Neighbourhood
+from color import rgba, blend_color, rgba_to_rgb
+from constatnts import Constants as const, set_simulation_coordinates_parameters
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from data.utilities import kelvins_to_celsius
-from color import rgba, blend_color, rgba_to_rgb
 from files import get_main_path, get_data_path
-from constatnts import Constants as const, set_simulation_coordinates_parameters
+from simulation.utilities import Neighbourhood
 
 
 def get_tooltip_text(point: simulation.Point) -> str:
@@ -245,7 +244,7 @@ def run():
                 self.sim_sec_passed = 0
                 self.oil_to_add_on_click = 10000
                 self.minimal_oil_to_show = 100
-                self.iter_as_sec = const.ITER_AS_SEC
+                self.iter_as_sec = const.iter_as_sec
                 self.viewer = None
                 self.value_not_yet_processed = 0
                 self.oil_spill_on_bool = True
@@ -553,12 +552,12 @@ def run():
                 logging.error(f"Data validation exception: {ex}")
                 exit(1)
 
-            return sym_data_reader.preprocess(const.SIMULATION_INITIAL_PARAMETERS)
+            return sym_data_reader.preprocess(const.simulation_initial_parameters)
 
         engine = simulation.SimulationEngine(get_data_processor(), neighborhood)
         image_array = np.array(
-            [rgba_to_rgb(LAND_COLOR) if (j, i) in engine.lands else rgba_to_rgb(SEA_COLOR) for i in range(const.POINTS_SIDE_COUNT) for j in
-             range(const.POINTS_SIDE_COUNT)]).reshape((const.POINTS_SIDE_COUNT, const.POINTS_SIDE_COUNT, 3)).astype(np.uint8)
+            [rgba_to_rgb(LAND_COLOR) if (j, i) in engine.lands else rgba_to_rgb(SEA_COLOR) for i in range(const.point_side_count) for j in
+             range(const.point_side_count)]).reshape((const.point_side_count, const.point_side_count, 3)).astype(np.uint8)
 
         window.rowconfigure(0, weight=5, uniform='row')
         window.rowconfigure(1, weight=1, uniform='row')
@@ -809,22 +808,18 @@ def run():
 
                 self.map_view.grid(row=0, column=0, rowspan=3, padx=3, pady=3, sticky=tk.N + tk.S)
 
-                # self.manual_map_coords_selection = tk.Button(self.map_view_frame, text='manual_coords_selection TODO',
-                #                                              command=self.manual_map_coords_selection)
-                # self.manual_map_coords_selection.grid(row=4, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
-
                 neighborhood_label = tk.Label(neighborhood_type_frame,
                                               text="Neighborhood type:",
                                               font=("Arial", 14, "bold"), padx=3, pady=3)
                 neighborhood_label.grid(row=0, column=0, rowspan=1, padx=3, pady=3, sticky=tk.N + tk.S)
 
                 self.neighborhood_var = tk.IntVar()
-                NM = tk.Radiobutton(neighborhood_type_frame, text="Moore", variable=self.neighborhood_var, value=0)
-                NVN = tk.Radiobutton(neighborhood_type_frame, text="Von Neumann", variable=self.neighborhood_var, value=1)
-                NM.select()
+                nm = tk.Radiobutton(neighborhood_type_frame, text="Moore", variable=self.neighborhood_var, value=0)
+                nvm = tk.Radiobutton(neighborhood_type_frame, text="Von Neumann", variable=self.neighborhood_var, value=1)
+                nm.select()
 
-                NM.grid(row=1, column=0, rowspan=1, padx=3, pady=3, sticky=tk.N + tk.S)
-                NVN.grid(row=2, column=0, rowspan=1, padx=3, pady=3, sticky=tk.N + tk.S)
+                nm.grid(row=1, column=0, rowspan=1, padx=3, pady=3, sticky=tk.N + tk.S)
+                nvm.grid(row=2, column=0, rowspan=1, padx=3, pady=3, sticky=tk.N + tk.S)
 
                 self.data_path = tk.StringVar()
                 self.data_path.set(get_data_path())
