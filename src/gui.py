@@ -915,58 +915,66 @@ def run():
             def on_key_press_validate_point_side_size(self, _):
                 self.validate_point_side_size()
 
-            def validate_coordinates_top(self):
+            def validate_coordinates_top(self, is_first_run=True):
                 value = self.top_coord_input.get()
                 if value:
                     if -90 <= float(value) <= 90 and float(value) > self.down_coord:
                         self.top_coord = float(value)
-                        self.top_coord_validation_label.config(text="Valid value")
+                        self.top_coord_validation_label.config(text="Valid value", fg="black")
                         self.correctly_set_parameters[0] = 1
                         self.check_all_parameters_validity_and_refresh_image()
+                        if is_first_run:
+                            self.validate_coordinates_down(False)
                         return True
-                    self.top_coord_validation_label.config(text="Invalid value")
+                    self.top_coord_validation_label.config(text="Invalid value", fg="red")
                     self.confirm_and_continue.config(state=DISABLED)
                     self.correctly_set_parameters[0] = 0
                 return False
 
-            def validate_coordinates_down(self):
+            def validate_coordinates_down(self, is_first_run=True):
                 value = self.down_coord_input.get()
                 if value:
                     if -90 <= float(value) <= 90 and float(value) < self.top_coord:
                         self.down_coord = float(value)
-                        self.down_coord_validation_label.config(text="Valid value")
+                        self.down_coord_validation_label.config(text="Valid value", fg="black")
                         self.correctly_set_parameters[1] = 1
                         self.check_all_parameters_validity_and_refresh_image()
+                        if is_first_run:
+                            self.validate_coordinates_top(False)
                         return True
-                    self.down_coord_validation_label.config(text="Invalid value")
+                    self.down_coord_validation_label.config(text="Invalid value", fg="red")
                     self.confirm_and_continue.config(state=DISABLED)
                     self.correctly_set_parameters[1] = 0
                 return False
 
-            def validate_coordinates_left(self):
+            def validate_coordinates_left(self, is_first_run=True):
                 value = self.left_coord_input.get()
                 if value:
                     if -180 <= float(value) <= 180 and float(value) < self.right_coord:
                         self.left_coord = float(value)
-                        self.left_coord_validation_label.config(text="Valid value")
+                        self.left_coord_validation_label.config(text="Valid value", fg="black")
                         self.correctly_set_parameters[2] = 1
                         self.check_all_parameters_validity_and_refresh_image()
+                        if is_first_run:
+                            self.validate_coordinates_right(False)
                         return True
-                    self.left_coord_validation_label.config(text="Invalid value")
+                    self.left_coord_validation_label.config(text="Invalid value", fg="red")
                     self.confirm_and_continue.config(state=DISABLED)
                     self.correctly_set_parameters[2] = 0
                 return False
 
-            def validate_coordinates_right(self):
+            def validate_coordinates_right(self, is_first_run=True):
                 value = self.right_coord_input.get()
                 if value:
                     if -180 <= float(value) <= 180 and float(value) > self.left_coord:
                         self.right_coord = float(value)
-                        self.right_coord_validation_label.config(text="Valid value")
+                        self.right_coord_validation_label.config(text="Valid value", fg="black")
                         self.correctly_set_parameters[3] = 1
                         self.check_all_parameters_validity_and_refresh_image()
+                        if is_first_run:
+                            self.validate_coordinates_left(False)
                         return True
-                    self.right_coord_validation_label.config(text="Invalid value")
+                    self.right_coord_validation_label.config(text="Invalid value", fg="red")
                     self.confirm_and_continue.config(state=DISABLED)
                     self.correctly_set_parameters[3] = 0
                 return False
@@ -978,13 +986,13 @@ def run():
                         try:
                             pd.Timestamp(value)
                             self.time_range_start = value
-                            self.time_range_start_validation_label.config(text="Valid value")
+                            self.time_range_start_validation_label.config(text="Valid value", fg="black")
                             self.correctly_set_parameters[4] = 1
                             self.check_all_parameters_validity_and_refresh_image()
                             return True
                         except ValueError:
                             pass
-                    self.time_range_start_validation_label.config(text="Invalid value")
+                    self.time_range_start_validation_label.config(text="Invalid value", fg="red")
                     self.confirm_and_continue.config(state=DISABLED)
                     self.correctly_set_parameters[4] = 0
                 return False
@@ -996,13 +1004,13 @@ def run():
                         try:
                             pd.Timestamp(value)
                             self.time_range_end = value
-                            self.time_range_end_validation_label.config(text="Valid value")
+                            self.time_range_end_validation_label.config(text="Valid value", fg="black")
                             self.correctly_set_parameters[5] = 1
                             self.check_all_parameters_validity_and_refresh_image()
                             return True
                         except ValueError:
                             pass
-                    self.time_range_end_validation_label.config(text="Invalid value")
+                    self.time_range_end_validation_label.config(text="Invalid value", fg="red")
                     self.confirm_and_continue.config(state=DISABLED)
                     self.correctly_set_parameters[5] = 0
                 return False
@@ -1013,13 +1021,13 @@ def run():
                     try:
                         if float(value) % 1 == 0:
                             self.data_time_step_minutes = int(value)
-                            self.data_time_step_validation_label.config(text="Valid value")
+                            self.data_time_step_validation_label.config(text="Valid value", fg="black")
                             self.correctly_set_parameters[6] = 1
                             self.check_all_parameters_validity_and_refresh_image()
                             return True
                     except ValueError:
                         pass
-                    self.data_time_step_validation_label.config(text="Invalid value")
+                    self.data_time_step_validation_label.config(text="Invalid value", fg="red")
                     self.confirm_and_continue.config(state=DISABLED)
                     self.correctly_set_parameters[6] = 0
                 return False
@@ -1030,13 +1038,13 @@ def run():
                     try:
                         if float(value) % 1 == 0 and float(value) > 0:  # TODO I don't really know how to validate this value
                             self.cells_side_count_latitude = int(value)
-                            self.cells_side_count_latitude_validation_label.config(text="Valid value")
+                            self.cells_side_count_latitude_validation_label.config(text="Valid value", fg="black")
                             self.correctly_set_parameters[7] = 1
                             self.check_all_parameters_validity_and_refresh_image()
                             return True
                     except ValueError:
                         pass
-                    self.cells_side_count_latitude_validation_label.config(text="Invalid value")
+                    self.cells_side_count_latitude_validation_label.config(text="Invalid value", fg="red")
                     self.confirm_and_continue.config(state=DISABLED)
                     self.correctly_set_parameters[7] = 0
                 return False
@@ -1047,13 +1055,13 @@ def run():
                     try:
                         if float(value) % 1 == 0 and float(value) > 0:  # TODO I don't really know how to validate this value
                             self.cells_side_count_longitude = int(value)
-                            self.cells_side_count_longitude_validation_label.config(text="Valid value")
+                            self.cells_side_count_longitude_validation_label.config(text="Valid value", fg="black")
                             self.correctly_set_parameters[8] = 1
                             self.check_all_parameters_validity_and_refresh_image()
                             return True
                     except ValueError:
                         pass
-                    self.cells_side_count_longitude_validation_label.config(text="Invalid value")
+                    self.cells_side_count_longitude_validation_label.config(text="Invalid value", fg="red")
                     self.confirm_and_continue.config(state=DISABLED)
                     self.correctly_set_parameters[8] = 0
                 return False
@@ -1064,13 +1072,13 @@ def run():
                     try:
                         if float(value) % 1 == 0 and float(value) > 0:
                             self.point_side_size = int(value)
-                            self.point_side_size_validation_label.config(text="Valid value")
+                            self.point_side_size_validation_label.config(text="Valid value", fg="black")
                             self.correctly_set_parameters[9] = 1
                             self.check_all_parameters_validity_and_refresh_image()
                             return True
                     except ValueError:
                         pass
-                    self.point_side_size_validation_label.config(text="Invalid value")
+                    self.point_side_size_validation_label.config(text="Invalid value", fg="red")
                     self.confirm_and_continue.config(state=DISABLED)
                     self.correctly_set_parameters[9] = 0
                 return False
