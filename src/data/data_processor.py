@@ -2,7 +2,7 @@ import logging
 
 from enum import Enum
 from math import floor
-from os import PathLike, path, listdir
+from os import PathLike, path, listdir, mkdir
 from dataclasses import dataclass
 from typing import Optional
 import numpy as np
@@ -156,6 +156,9 @@ class DataProcessorImpl:
 
         logger.debug("FINISHED: Preprocessing data...")
         path_to_save = self.run_parameters.path_to_data
+        if not path.exists(path_to_save):
+            logger.debug(f"Creating directory {path_to_save}")
+            mkdir(path_to_save)
         logger.debug(f"STARTED: Saving preprocessed data to {path_to_save}...")
 
 

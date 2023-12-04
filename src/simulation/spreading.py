@@ -3,7 +3,7 @@ from random import random as rand
 from random import shuffle
 from typing import Dict
 
-import constatnts as const
+from constatnts import Constants as const
 from simulation.point import Point, Coord_t, TopographyState
 from simulation.utilities import get_neighbour_coordinates
 
@@ -21,7 +21,7 @@ class SpreadingEngine:
             neighbours = get_neighbour_coordinates(x, y, self.initial_values.neighbourhood)
             shuffle(neighbours)
             for neighbour in neighbours:
-                if not (0 <= neighbour[0] < const.POINTS_SIDE_COUNT and 0 <= neighbour[1] < const.POINTS_SIDE_COUNT):
+                if not (0 <= neighbour[0] < const.point_side_count and 0 <= neighbour[1] < const.point_side_count):
                     continue
                 if neighbour not in self.world:
                     neighbour_point = self.new_point(neighbour, new_points)
@@ -44,9 +44,9 @@ class SpreadingEngine:
     def process_spread_between(self, total_mass: float, delta_time: float, first: Point, second: Point, is_new: bool) -> None:
         if not (first.topography == TopographyState.SEA and second.topography == TopographyState.SEA):
             return
-
-        length = const.POINT_SIDE_SIZE
-        V = total_mass / self.initial_values.oil_density
+          
+        length = const.point_side_size
+        V = total_mass / self.initial_values.density
         G = 9.8
         delta = (self.initial_values.water_density - self.initial_values.oil_density) / self.initial_values.water_density
         dynamic_viscosity = (first.viscosity_dynamic + second.viscosity_dynamic) / 2

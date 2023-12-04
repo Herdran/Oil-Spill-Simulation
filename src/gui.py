@@ -1,17 +1,21 @@
 import logging
+import os.path
+import re
+import threading
 import tkinter as tk
-from tkinter import DISABLED, NORMAL
+from tkinter import DISABLED, NORMAL, filedialog
 
 import numpy as np
-import threading
+import pandas as pd
 from PIL import Image, ImageTk
 
 import simulation.simulation as simulation
-from simulation.utilities import Neighbourhood
+from color import rgba, blend_color, rgba_to_rgb
+from constatnts import Constants as const, set_simulation_coordinates_parameters
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from data.utilities import kelvins_to_celsius
-from color import rgba, blend_color, rgba_to_rgb
-from files import get_main_path
+from files import get_main_path, get_data_path
+from simulation.utilities import Neighbourhood
 
 
 def get_tooltip_text(point: simulation.Point) -> str:
@@ -25,7 +29,7 @@ Temperature: {kelvins_to_celsius(point.temperature): .2f}°C"""
 
 
 def run():
-    def start_simulation():
+    def start_simulation(neighborhood):
         SEA_COLOR = rgba(15, 10, 222)
         LAND_COLOR = rgba(38, 166, 91)
         OIL_COLOR = rgba(0, 0, 0)
@@ -51,8 +55,6 @@ def run():
                 self.tooltip = None
                 self.img = None
                 self.image_change_controller = image_change_controller
-                # self.preview_mode = True
-                self.preview_mode = False
 
                 self.bind("<MouseWheel>", self.on_mousewheel)
                 self.bind("<ButtonPress-1>", self.on_button_press)
@@ -167,8 +169,10 @@ def run():
                         self.tooltip.update_position(event.x_root, event.y_root)
 
             def on_motion(self, event):
-                x = int((event.x - self.pan_x) / self.zoom_level)
-                y = int((event.y - self.pan_y) / self.zoom_level)
+                window_width = self.winfo_width()
+                window_height = self.winfo_height()
+                x = int((event.x - self.pan_x - max((window_width - self.zoomed_width) // 2, 0)) / self.zoom_level)
+                y = int((event.y - self.pan_y - max((window_height - self.zoomed_height) // 2, 0)) / self.zoom_level)
                 coord = (x, y)
                 if 0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]:
                     if coord not in engine.world:
@@ -200,30 +204,6 @@ def run():
                 self.initial_zoom_level = min(window_width / image_array.shape[1], window_height / image_array.shape[0])
                 self.zoom_level *= self.initial_zoom_level
                 self.update_image()
-
-            def define_simulation_area(self):
-                self.preview_mode = False
-                height, width, channels = self.image_array.shape
-                self.zoomed_width = int(width * self.zoom_level)
-                self.zoomed_height = int(height * self.zoom_level)
-
-                window_width = self.winfo_width()
-                window_height = self.winfo_height()
-
-                self.pan_x = max(min(self.pan_x, 0), min(window_width - self.zoomed_width, 0))
-                self.pan_y = max(min(self.pan_y, 0), min(window_height - self.zoomed_height, 0))
-
-                self.image_array = self.image_array[
-                                   int(-self.pan_y / self.zoom_level):
-                                   int(window_height / self.zoom_level - (self.pan_y / self.zoom_level)),
-                                   int(-self.pan_x / self.zoom_level):
-                                   int(window_width / self.zoom_level - (self.pan_x / self.zoom_level))
-                                   ]
-                self.prev_x = 0
-                self.prev_y = 0
-                self.pan_x = 0
-                self.pan_y = 0
-                self.initial_zoom_level = self.zoom_level
 
         class ToolTip:
             def __init__(self, parent, x, y, text):
@@ -264,7 +244,7 @@ def run():
                 self.sim_sec_passed = 0
                 self.oil_to_add_on_click = 10000
                 self.minimal_oil_to_show = 100
-                self.iter_as_sec = ITER_AS_SEC
+                self.iter_as_sec = const.iter_as_sec
                 self.viewer = None
                 self.value_not_yet_processed = 0
                 self.oil_spill_on_bool = True
@@ -345,15 +325,6 @@ def run():
                 self.text_minimal_oil_show.bind("<KeyPress>", self.on_key_press_oil_to_show)
                 self.text_minimal_oil_show.bind("<FocusOut>", self.on_focus_out_oil_to_show)
 
-                self.confirm_size = tk.Frame(window)
-                self.confirm_size.grid(row=1, column=0, rowspan=1, columnspan=2, padx=10, pady=10, sticky=tk.N + tk.S + tk.E)
-                confirm_frame = tk.Frame(self.confirm_size)
-
-                confirm_frame.grid(row=1, column=0, rowspan=1, padx=10, pady=10, sticky=tk.N + tk.S)
-
-                self.confirm_btn = tk.Button(confirm_frame, text="Confirm", width=10, command=self.confirm_func)
-                self.confirm_btn.pack(side=tk.TOP, padx=5, pady=5)
-
                 self.infoboxes_frame = tk.Frame(window)
                 self.infoboxes_frame.grid(row=0, column=1, rowspan=1, columnspan=1, sticky=tk.N + tk.S + tk.E)
 
@@ -405,9 +376,6 @@ def run():
 
                 self.update_image_array()
                 self.update_infobox()
-                # self.options_frame.grid_remove()
-                # self.infoboxes_frame.grid_remove()
-                self.confirm_size.grid_remove()
 
             def set_viewer(self, viewer):
                 self.viewer = viewer
@@ -513,12 +481,6 @@ def run():
                 if self.job_id is not None:
                     self.after_cancel(self.job_id)
 
-            def confirm_func(self):
-                self.confirm_size.grid_remove()
-                self.options_frame.grid()
-                self.infoboxes_frame.grid()
-                self.viewer.define_simulation_area()
-
             def update_image_array(self):
                 if engine.is_finished():
                     self.toggle_start_stop()
@@ -549,7 +511,7 @@ def run():
                     self.viewer.update_image()
                     self.curr_iter += 1
                     self.sim_sec_passed += self.iter_as_sec
-                    self.job_id = self.after(self.interval, threading.Thread(target=self.update_image_array).start())
+                    self.job_id = self.after(self.interval, self.update_image_array)
 
                 self.update_infobox()
 
@@ -590,21 +552,12 @@ def run():
                 logging.error(f"Data validation exception: {ex}")
                 exit(1)
 
-            return sym_data_reader.preprocess(SIMULATION_INITIAL_PARAMETERS)
+            return sym_data_reader.preprocess(const.simulation_initial_parameters)
 
-        #TODO choose neighborhood type in gui
-        neighborhood = Neighbourhood.MOORE
         engine = simulation.SimulationEngine(get_data_processor(), neighborhood)
         image_array = np.array(
-            [rgba_to_rgb(LAND_COLOR) if (j, i) in engine.lands else rgba_to_rgb(SEA_COLOR) for i in range(POINTS_SIDE_COUNT) for j in
-             range(POINTS_SIDE_COUNT)]).reshape((POINTS_SIDE_COUNT, POINTS_SIDE_COUNT, 3)).astype(np.uint8)
-
-        default_window_width = 1280
-        default_window_height = 720
-
-        window = tk.Tk()
-        window.geometry(f"{default_window_width}x{default_window_height}")
-        window.title('Oil Spill Simulation')
+            [rgba_to_rgb(LAND_COLOR) if (j, i) in engine.lands else rgba_to_rgb(SEA_COLOR) for i in range(const.point_side_count) for j in
+             range(const.point_side_count)]).reshape((const.point_side_count, const.point_side_count, 3)).astype(np.uint8)
 
         window.rowconfigure(0, weight=5, uniform='row')
         window.rowconfigure(1, weight=1, uniform='row')
@@ -622,21 +575,591 @@ def run():
         viewer.update()
         viewer.update_image()
 
-        window.mainloop()
+    def start_initial_menu():
+        class ParametersSettingController(tk.Frame):
+            def __init__(self, parent):
+                super().__init__(parent)
+                self.top_coord = 30.24268
+                self.down_coord = 30.19767
+                self.left_coord = -88.77964
+                self.right_coord = -88.72648
+                self.time_range_start = "2010-04-01 00:00:00"
+                self.time_range_end = "2010-04-02 00:00:00"
+                self.data_time_step_minutes = 30
+                self.cells_side_count_latitude = 10
+                self.cells_side_count_longitude = 10
+                self.point_side_size = 50
+                self.correctly_set_parameters = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+                self.img = None
 
-    def start_preview():
-        # default coordinates parameters
-        TOP_COORD = 30.24268
-        DOWN_COORD = 30.19767
-        LEFT_COORD = -88.77964
-        RIGHT_COORD = -88.72648
+                self.main_frame = tk.Frame(parent)
+                self.main_frame.grid(row=0, column=0, padx=5, pady=5, sticky=tk.N + tk.S + tk.E + tk.W)
 
-        set_simulation_coordinates_parameters(TOP_COORD, DOWN_COORD, LEFT_COORD, RIGHT_COORD)
+                self.main_frame.rowconfigure(0, weight=2, uniform='row')
+                self.main_frame.rowconfigure(1, weight=1, uniform='row')
+                self.main_frame.rowconfigure(2, weight=1, uniform='row')
+                self.main_frame.rowconfigure(3, weight=1, uniform='row')
+                self.main_frame.rowconfigure(4, weight=2, uniform='row')
+                self.main_frame.rowconfigure(5, weight=2, uniform='row')
+                self.main_frame.columnconfigure(0, weight=2, uniform='column')
+                self.main_frame.columnconfigure(1, weight=3, uniform='column')
+                self.main_frame.columnconfigure(2, weight=1, uniform='column')
 
-    from constatnts import set_simulation_coordinates_parameters
+                title_frame = tk.Frame(self.main_frame)
+                neighborhood_type_frame = tk.Frame(self.main_frame)
+                inputs_frame = tk.Frame(self.main_frame)
+                data_path_frame = tk.Frame(self.main_frame)
+                confirm_and_start_frame = tk.Frame(self.main_frame)
 
-    start_preview()
+                title_frame.grid(row=0, column=0, rowspan=1, columnspan=3, sticky=tk.N + tk.S)
+                neighborhood_type_frame.grid(row=4, column=0, sticky=tk.S + tk.W)
+                inputs_frame.grid(row=1, column=0, rowspan=3, columnspan=3, sticky=tk.N + tk.S + tk.W)
+                data_path_frame.grid(row=5, column=0, rowspan=1, columnspan=1, sticky=tk.S + tk.W)
+                confirm_and_start_frame.grid(row=5, column=2, rowspan=1, columnspan=1, sticky=tk.S + tk.E)
 
-    from constatnts import ITER_AS_SEC, POINTS_SIDE_COUNT, SIMULATION_INITIAL_PARAMETERS
+                title_label = tk.Label(title_frame,
+                                       text="Oil Spill Simulation",
+                                       font=("Arial", 14, "bold"), padx=10, pady=5)
+                title_label.pack(side=tk.TOP)
 
-    start_simulation()
+                inputs_frame.rowconfigure(0, weight=1, uniform='row')
+                inputs_frame.rowconfigure(1, weight=1, uniform='row')
+                inputs_frame.rowconfigure(2, weight=1, uniform='row')
+                inputs_frame.columnconfigure(0, weight=5, uniform='column')
+                inputs_frame.columnconfigure(1, weight=3, uniform='column')
+                inputs_frame.columnconfigure(2, weight=3, uniform='column')
+                inputs_frame.columnconfigure(3, weight=3, uniform='column')
+                inputs_frame.columnconfigure(4, weight=3, uniform='column')
+
+                top_coord_frame = tk.Frame(inputs_frame)
+                down_coord_frame = tk.Frame(inputs_frame)
+                left_coord_frame = tk.Frame(inputs_frame)
+                right_coord_frame = tk.Frame(inputs_frame)
+                time_range_start_frame = tk.Frame(inputs_frame)
+                time_range_end_frame = tk.Frame(inputs_frame)
+                data_time_step_frame = tk.Frame(inputs_frame)
+                cells_side_count_latitude_frame = tk.Frame(inputs_frame)
+                cells_side_count_longitude_frame = tk.Frame(inputs_frame)
+                point_side_size_frame = tk.Frame(inputs_frame)
+
+                top_coord_frame.grid(row=0, column=1, sticky=tk.N + tk.S)
+                down_coord_frame.grid(row=1, column=1, sticky=tk.N + tk.S)
+                left_coord_frame.grid(row=0, column=2, sticky=tk.N + tk.S)
+                right_coord_frame.grid(row=1, column=2, sticky=tk.N + tk.S)
+                time_range_start_frame.grid(row=2, column=1, sticky=tk.N + tk.S)
+                time_range_end_frame.grid(row=2, column=2, sticky=tk.N + tk.S)
+                data_time_step_frame.grid(row=2, column=3, sticky=tk.N + tk.S)
+                cells_side_count_latitude_frame.grid(row=0, column=3, sticky=tk.N + tk.S)
+                cells_side_count_longitude_frame.grid(row=1, column=3, sticky=tk.N + tk.S)
+                point_side_size_frame.grid(row=1, column=4, sticky=tk.N + tk.S)
+
+                top_coord_label = tk.Label(top_coord_frame,
+                                           text="Top coord value\n[latitude]",
+                                           font=("Arial", 12, "bold"))
+                down_coord_label = tk.Label(down_coord_frame,
+                                            text="Bottom coord value\n[latitude]",
+                                            font=("Arial", 12, "bold"))
+                left_coord_label = tk.Label(left_coord_frame,
+                                            text="Left coord value\n[longitude]",
+                                            font=("Arial", 12, "bold"))
+                right_coord_label = tk.Label(right_coord_frame,
+                                             text="Right coord value\n[longitude]",
+                                             font=("Arial", 12, "bold"))
+                time_range_start_label = tk.Label(time_range_start_frame,
+                                                  text="Time range: start\n[yyyy-mm-dd hh:mm:ss]",
+                                                  font=("Arial", 12, "bold"))
+                time_range_end_label = tk.Label(time_range_end_frame,
+                                                text="Time range: end\n[yyyy-mm-dd hh:mm:ss]",
+                                                font=("Arial", 12, "bold"))
+                data_time_step_label = tk.Label(data_time_step_frame,
+                                                text="Data time step\n[min]",
+                                                font=("Arial", 12, "bold"))
+                cells_side_count_latitude_label = tk.Label(cells_side_count_latitude_frame,
+                                                           text="Data stations count:\nlatitude",
+                                                           font=("Arial", 12, "bold"))
+                cells_side_count_longitude_label = tk.Label(cells_side_count_longitude_frame,
+                                                            text="Data stations count:\nlongitude",
+                                                            font=("Arial", 12, "bold"))
+                point_side_size_label = tk.Label(point_side_size_frame,
+                                                            text="Point side size\n[m]",
+                                                            font=("Arial", 12, "bold"))
+
+                top_coord_label.grid(row=0, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                down_coord_label.grid(row=0, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                left_coord_label.grid(row=0, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                right_coord_label.grid(row=0, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                time_range_start_label.grid(row=0, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                time_range_end_label.grid(row=0, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                data_time_step_label.grid(row=0, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                cells_side_count_latitude_label.grid(row=0, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                cells_side_count_longitude_label.grid(row=0, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                point_side_size_label.grid(row=0, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+
+                self.top_coord_input = tk.Entry(top_coord_frame, width=9)
+                self.top_coord_input.insert(tk.END, str(self.top_coord))
+                self.top_coord_input.bind("<KeyPress>", self.on_key_press_validate_coordinates_top)
+                self.top_coord_input.bind("<FocusOut>", self.on_focus_out_validate_coordinates_top)
+
+                self.down_coord_input = tk.Entry(down_coord_frame, width=9)
+                self.down_coord_input.insert(tk.END, str(self.down_coord))
+                self.down_coord_input.bind("<KeyPress>", self.on_key_press_validate_coordinates_down)
+                self.down_coord_input.bind("<FocusOut>", self.on_focus_out_validate_coordinates_down)
+
+                self.left_coord_input = tk.Entry(left_coord_frame, width=9)
+                self.left_coord_input.insert(tk.END, str(self.left_coord))
+                self.left_coord_input.bind("<KeyPress>", self.on_key_press_validate_coordinates_left)
+                self.left_coord_input.bind("<FocusOut>", self.on_focus_out_validate_coordinates_left)
+
+                self.right_coord_input = tk.Entry(right_coord_frame, width=9)
+                self.right_coord_input.insert(tk.END, str(self.right_coord))
+                self.right_coord_input.bind("<KeyPress>", self.on_key_press_validate_coordinates_right)
+                self.right_coord_input.bind("<FocusOut>", self.on_focus_out_validate_coordinates_right)
+
+                self.time_range_start_input = tk.Entry(time_range_start_frame, width=17)
+                self.time_range_start_input.insert(tk.END, str(self.time_range_start))
+                self.time_range_start_input.bind("<KeyPress>", self.on_key_press_validate_time_range_start)
+                self.time_range_start_input.bind("<FocusOut>", self.on_focus_out_validate_time_range_start)
+
+                self.time_range_end_input = tk.Entry(time_range_end_frame, width=17)
+                self.time_range_end_input.insert(tk.END, str(self.time_range_end))
+                self.time_range_end_input.bind("<KeyPress>", self.on_key_press_validate_time_range_end)
+                self.time_range_end_input.bind("<FocusOut>", self.on_focus_out_validate_time_range_end)
+
+                self.data_time_step_input = tk.Entry(data_time_step_frame, width=3)
+                self.data_time_step_input.insert(tk.END, str(self.data_time_step_minutes))
+                self.data_time_step_input.bind("<KeyPress>", self.on_key_press_validate_data_time_step)
+                self.data_time_step_input.bind("<FocusOut>", self.on_focus_out_validate_data_time_step)
+
+                self.cells_side_count_latitude_input = tk.Entry(cells_side_count_latitude_frame, width=3)
+                self.cells_side_count_latitude_input.insert(tk.END, str(self.cells_side_count_latitude))
+                self.cells_side_count_latitude_input.bind("<KeyPress>", self.on_key_press_validate_cells_side_count_latitude)
+                self.cells_side_count_latitude_input.bind("<FocusOut>", self.on_focus_out_validate_cells_side_count_latitude)
+
+                self.cells_side_count_longitude_input = tk.Entry(cells_side_count_longitude_frame, width=3)
+                self.cells_side_count_longitude_input.insert(tk.END, str(self.cells_side_count_longitude))
+                self.cells_side_count_longitude_input.bind("<KeyPress>", self.on_key_press_validate_cells_side_count_longitude)
+                self.cells_side_count_longitude_input.bind("<FocusOut>", self.on_focus_out_validate_cells_side_count_longitude)
+
+                self.point_side_size_input = tk.Entry(point_side_size_frame, width=3)
+                self.point_side_size_input.insert(tk.END, str(self.point_side_size))
+                self.point_side_size_input.bind("<KeyPress>", self.on_key_press_validate_point_side_size)
+                self.point_side_size_input.bind("<FocusOut>", self.on_focus_out_validate_point_side_size)
+
+                self.top_coord_input.grid(row=1, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.down_coord_input.grid(row=1, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.left_coord_input.grid(row=1, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.right_coord_input.grid(row=1, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.time_range_start_input.grid(row=1, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.time_range_end_input.grid(row=1, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.data_time_step_input.grid(row=1, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.cells_side_count_latitude_input.grid(row=1, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.cells_side_count_longitude_input.grid(row=1, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.point_side_size_input.grid(row=1, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+
+                self.top_coord_validation_label = tk.Label(top_coord_frame,
+                                                           text="Default value",
+                                                           font=("Arial", 8, "bold"), padx=3, pady=3)
+                self.down_coord_validation_label = tk.Label(down_coord_frame,
+                                                            text="Default value",
+                                                            font=("Arial", 8, "bold"), padx=3, pady=3)
+                self.left_coord_validation_label = tk.Label(left_coord_frame,
+                                                            text="Default value",
+                                                            font=("Arial", 8, "bold"), padx=3, pady=3)
+                self.right_coord_validation_label = tk.Label(right_coord_frame,
+                                                             text="Default value",
+                                                             font=("Arial", 8, "bold"), padx=3, pady=3)
+                self.time_range_start_validation_label = tk.Label(time_range_start_frame,
+                                                                  text="Default value",
+                                                                  font=("Arial", 8, "bold"), padx=3, pady=3)
+                self.time_range_end_validation_label = tk.Label(time_range_end_frame,
+                                                                text="Default value",
+                                                                font=("Arial", 8, "bold"), padx=3, pady=3)
+                self.data_time_step_validation_label = tk.Label(data_time_step_frame,
+                                                                text="Default value",
+                                                                font=("Arial", 8, "bold"), padx=3, pady=3)
+                self.cells_side_count_latitude_validation_label = tk.Label(cells_side_count_latitude_frame,
+                                                                           text="Default value",
+                                                                           font=("Arial", 8, "bold"), padx=3, pady=3)
+                self.cells_side_count_longitude_validation_label = tk.Label(cells_side_count_longitude_frame,
+                                                                            text="Default value",
+                                                                            font=("Arial", 8, "bold"), padx=3, pady=3)
+                self.point_side_size_validation_label = tk.Label(point_side_size_frame,
+                                                                            text="Default value",
+                                                                            font=("Arial", 8, "bold"), padx=3, pady=3)
+
+                self.top_coord_validation_label.grid(row=2, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.down_coord_validation_label.grid(row=2, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.left_coord_validation_label.grid(row=2, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.right_coord_validation_label.grid(row=2, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.time_range_start_validation_label.grid(row=2, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.time_range_end_validation_label.grid(row=2, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.data_time_step_validation_label.grid(row=2, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.cells_side_count_latitude_validation_label.grid(row=2, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.cells_side_count_longitude_validation_label.grid(row=2, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+                self.point_side_size_validation_label.grid(row=2, column=0, padx=3, pady=3, sticky=tk.N + tk.S)
+
+                self.loaded_img = Image.open(os.path.join(get_main_path(), "data/Blue_Marble_2002.png"))
+
+                self.map_view_frame = tk.Frame(inputs_frame)
+                self.map_view_frame.grid(row=0, column=0, rowspan=4, padx=3, pady=3, sticky=tk.N + tk.S)
+
+                self.map_view = tk.Canvas(self.map_view_frame)
+                self.load_and_crop_image()
+
+                self.map_view.grid(row=0, column=0, rowspan=3, padx=3, pady=3, sticky=tk.N + tk.S)
+
+                neighborhood_label = tk.Label(neighborhood_type_frame,
+                                              text="Neighborhood type:",
+                                              font=("Arial", 14, "bold"), padx=3, pady=3)
+                neighborhood_label.grid(row=0, column=0, rowspan=1, padx=3, pady=3, sticky=tk.N + tk.S)
+
+                self.neighborhood_var = tk.IntVar()
+                nm = tk.Radiobutton(neighborhood_type_frame, text="Moore", variable=self.neighborhood_var, value=0)
+                nvm = tk.Radiobutton(neighborhood_type_frame, text="Von Neumann", variable=self.neighborhood_var, value=1)
+                nm.select()
+
+                nm.grid(row=1, column=0, rowspan=1, padx=3, pady=3, sticky=tk.N + tk.S)
+                nvm.grid(row=2, column=0, rowspan=1, padx=3, pady=3, sticky=tk.N + tk.S)
+
+                self.data_path = tk.StringVar()
+                self.data_path.set(get_data_path())
+                path_label = tk.Label(data_path_frame,
+                                      text="Data files path:",
+                                      font=("Arial", 14, "bold"), padx=10, pady=5)
+                path_label.grid(row=0, column=0, columnspan=2, padx=3, pady=3, sticky=tk.N + tk.S + tk.W)
+
+                browse_path_label = tk.Label(data_path_frame, textvariable=self.data_path)
+                browse_path_label.grid(row=1, column=1, padx=3, pady=3, sticky=tk.N + tk.S + tk.W)
+
+                data_path_browse = tk.Button(data_path_frame, text="Browse", command=self.browse_button)
+                data_path_browse.grid(row=1, column=0, padx=3, pady=3, sticky=tk.N + tk.S + tk.W)
+
+                self.confirm_and_continue = tk.Button(confirm_and_start_frame, text='Confirm and continue',
+                                                      command=self.confirm_and_start_simulation)
+                self.confirm_and_continue.pack(side=tk.RIGHT, padx=5, pady=5)
+
+                self.validate_all_parameters()
+
+            def on_key_press_validate_coordinates_top(self, event):
+                if event.keysym == "Return":
+                    self.validate_coordinates_top()
+
+            def on_focus_out_validate_coordinates_top(self, _):
+                self.validate_coordinates_top()
+
+            def on_key_press_validate_coordinates_down(self, event):
+                if event.keysym == "Return":
+                    self.validate_coordinates_down()
+
+            def on_focus_out_validate_coordinates_down(self, _):
+                self.validate_coordinates_down()
+
+            def on_key_press_validate_coordinates_left(self, event):
+                if event.keysym == "Return":
+                    self.validate_coordinates_left()
+
+            def on_focus_out_validate_coordinates_left(self, _):
+                self.validate_coordinates_left()
+
+            def on_key_press_validate_coordinates_right(self, event):
+                if event.keysym == "Return":
+                    self.validate_coordinates_right()
+
+            def on_focus_out_validate_coordinates_right(self, _):
+                self.validate_coordinates_right()
+
+            def on_key_press_validate_time_range_start(self, event):
+                if event.keysym == "Return":
+                    self.validate_time_range_start()
+
+            def on_focus_out_validate_time_range_start(self, _):
+                self.validate_time_range_start()
+
+            def on_key_press_validate_time_range_end(self, event):
+                if event.keysym == "Return":
+                    self.validate_time_range_end()
+
+            def on_focus_out_validate_time_range_end(self, _):
+                self.validate_time_range_end()
+
+            def on_key_press_validate_data_time_step(self, event):
+                if event.keysym == "Return":
+                    self.validate_data_time_step()
+
+            def on_focus_out_validate_data_time_step(self, _):
+                self.validate_data_time_step()
+
+            def on_key_press_validate_cells_side_count_latitude(self, event):
+                if event.keysym == "Return":
+                    self.validate_cells_side_count_latitude()
+
+            def on_focus_out_validate_cells_side_count_latitude(self, _):
+                self.validate_cells_side_count_latitude()
+
+            def on_key_press_validate_cells_side_count_longitude(self, event):
+                if event.keysym == "Return":
+                    self.validate_cells_side_count_longitude()
+
+            def on_focus_out_validate_cells_side_count_longitude(self, _):
+                self.validate_cells_side_count_longitude()
+
+            def on_focus_out_validate_point_side_size(self, event):
+                if event.keysym == "Return":
+                    self.validate_point_side_size()
+
+            def on_key_press_validate_point_side_size(self, _):
+                self.validate_point_side_size()
+
+            def validate_coordinates_top(self, is_first_run=True):
+                value = self.top_coord_input.get()
+                if value:
+                    if -90 <= float(value) <= 90 and float(value) > self.down_coord:
+                        self.top_coord = float(value)
+                        self.top_coord_validation_label.config(text="Valid value", fg="black")
+                        self.correctly_set_parameters[0] = 1
+                        self.check_all_parameters_validity_and_refresh_image()
+                        if is_first_run:
+                            self.validate_coordinates_down(False)
+                        return True
+                    self.top_coord_validation_label.config(text="Invalid value", fg="red")
+                    self.confirm_and_continue.config(state=DISABLED)
+                    self.correctly_set_parameters[0] = 0
+                return False
+
+            def validate_coordinates_down(self, is_first_run=True):
+                value = self.down_coord_input.get()
+                if value:
+                    if -90 <= float(value) <= 90 and float(value) < self.top_coord:
+                        self.down_coord = float(value)
+                        self.down_coord_validation_label.config(text="Valid value", fg="black")
+                        self.correctly_set_parameters[1] = 1
+                        self.check_all_parameters_validity_and_refresh_image()
+                        if is_first_run:
+                            self.validate_coordinates_top(False)
+                        return True
+                    self.down_coord_validation_label.config(text="Invalid value", fg="red")
+                    self.confirm_and_continue.config(state=DISABLED)
+                    self.correctly_set_parameters[1] = 0
+                return False
+
+            def validate_coordinates_left(self, is_first_run=True):
+                value = self.left_coord_input.get()
+                if value:
+                    if -180 <= float(value) <= 180 and float(value) < self.right_coord:
+                        self.left_coord = float(value)
+                        self.left_coord_validation_label.config(text="Valid value", fg="black")
+                        self.correctly_set_parameters[2] = 1
+                        self.check_all_parameters_validity_and_refresh_image()
+                        if is_first_run:
+                            self.validate_coordinates_right(False)
+                        return True
+                    self.left_coord_validation_label.config(text="Invalid value", fg="red")
+                    self.confirm_and_continue.config(state=DISABLED)
+                    self.correctly_set_parameters[2] = 0
+                return False
+
+            def validate_coordinates_right(self, is_first_run=True):
+                value = self.right_coord_input.get()
+                if value:
+                    if -180 <= float(value) <= 180 and float(value) > self.left_coord:
+                        self.right_coord = float(value)
+                        self.right_coord_validation_label.config(text="Valid value", fg="black")
+                        self.correctly_set_parameters[3] = 1
+                        self.check_all_parameters_validity_and_refresh_image()
+                        if is_first_run:
+                            self.validate_coordinates_left(False)
+                        return True
+                    self.right_coord_validation_label.config(text="Invalid value", fg="red")
+                    self.confirm_and_continue.config(state=DISABLED)
+                    self.correctly_set_parameters[3] = 0
+                return False
+
+            def validate_time_range_start(self):
+                value = self.time_range_start_input.get()
+                if value:
+                    if re.match('\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', value):
+                        try:
+                            pd.Timestamp(value)
+                            self.time_range_start = value
+                            self.time_range_start_validation_label.config(text="Valid value", fg="black")
+                            self.correctly_set_parameters[4] = 1
+                            self.check_all_parameters_validity_and_refresh_image()
+                            return True
+                        except ValueError:
+                            pass
+                    self.time_range_start_validation_label.config(text="Invalid value", fg="red")
+                    self.confirm_and_continue.config(state=DISABLED)
+                    self.correctly_set_parameters[4] = 0
+                return False
+
+            def validate_time_range_end(self):
+                value = self.time_range_end_input.get()
+                if value:
+                    if re.match('\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', value):
+                        try:
+                            pd.Timestamp(value)
+                            self.time_range_end = value
+                            self.time_range_end_validation_label.config(text="Valid value", fg="black")
+                            self.correctly_set_parameters[5] = 1
+                            self.check_all_parameters_validity_and_refresh_image()
+                            return True
+                        except ValueError:
+                            pass
+                    self.time_range_end_validation_label.config(text="Invalid value", fg="red")
+                    self.confirm_and_continue.config(state=DISABLED)
+                    self.correctly_set_parameters[5] = 0
+                return False
+
+            def validate_data_time_step(self):
+                value = self.data_time_step_input.get()
+                if value:
+                    try:
+                        if float(value) % 1 == 0:
+                            self.data_time_step_minutes = int(value)
+                            self.data_time_step_validation_label.config(text="Valid value", fg="black")
+                            self.correctly_set_parameters[6] = 1
+                            self.check_all_parameters_validity_and_refresh_image()
+                            return True
+                    except ValueError:
+                        pass
+                    self.data_time_step_validation_label.config(text="Invalid value", fg="red")
+                    self.confirm_and_continue.config(state=DISABLED)
+                    self.correctly_set_parameters[6] = 0
+                return False
+
+            def validate_cells_side_count_latitude(self):
+                value = self.cells_side_count_latitude_input.get()
+                if value:
+                    try:
+                        if float(value) % 1 == 0 and float(value) > 0:  # TODO I don't really know how to validate this value
+                            self.cells_side_count_latitude = int(value)
+                            self.cells_side_count_latitude_validation_label.config(text="Valid value", fg="black")
+                            self.correctly_set_parameters[7] = 1
+                            self.check_all_parameters_validity_and_refresh_image()
+                            return True
+                    except ValueError:
+                        pass
+                    self.cells_side_count_latitude_validation_label.config(text="Invalid value", fg="red")
+                    self.confirm_and_continue.config(state=DISABLED)
+                    self.correctly_set_parameters[7] = 0
+                return False
+
+            def validate_cells_side_count_longitude(self):
+                value = self.cells_side_count_longitude_input.get()
+                if value:
+                    try:
+                        if float(value) % 1 == 0 and float(value) > 0:  # TODO I don't really know how to validate this value
+                            self.cells_side_count_longitude = int(value)
+                            self.cells_side_count_longitude_validation_label.config(text="Valid value", fg="black")
+                            self.correctly_set_parameters[8] = 1
+                            self.check_all_parameters_validity_and_refresh_image()
+                            return True
+                    except ValueError:
+                        pass
+                    self.cells_side_count_longitude_validation_label.config(text="Invalid value", fg="red")
+                    self.confirm_and_continue.config(state=DISABLED)
+                    self.correctly_set_parameters[8] = 0
+                return False
+
+            def validate_point_side_size(self):
+                value = self.point_side_size_input.get()
+                if value:
+                    try:
+                        if float(value) % 1 == 0 and float(value) > 0:
+                            self.point_side_size = int(value)
+                            self.point_side_size_validation_label.config(text="Valid value", fg="black")
+                            self.correctly_set_parameters[9] = 1
+                            self.check_all_parameters_validity_and_refresh_image()
+                            return True
+                    except ValueError:
+                        pass
+                    self.point_side_size_validation_label.config(text="Invalid value", fg="red")
+                    self.confirm_and_continue.config(state=DISABLED)
+                    self.correctly_set_parameters[9] = 0
+                return False
+
+            def validate_all_parameters(self):
+                self.validate_coordinates_top()
+                self.validate_coordinates_down()
+                self.validate_coordinates_left()
+                self.validate_coordinates_right()
+                self.validate_time_range_start()
+                self.validate_time_range_end()
+                self.validate_data_time_step()
+                self.validate_cells_side_count_latitude()
+                self.validate_cells_side_count_longitude()
+                self.validate_point_side_size()
+
+            def check_all_parameters_validity_and_refresh_image(self):
+                if sum(self.correctly_set_parameters[:4]) == 4:
+                    self.load_and_crop_image()
+                    if sum(self.correctly_set_parameters) == 10:
+                        self.confirm_and_continue.config(state=NORMAL)
+
+            def browse_button(self):
+                filename = filedialog.askdirectory()
+                if filename:
+                    self.data_path.set(filename)
+
+            def confirm_and_start_simulation(self):
+                set_simulation_coordinates_parameters(self.top_coord,
+                                                      self.down_coord,
+                                                      self.left_coord,
+                                                      self.right_coord,
+                                                      self.time_range_start,
+                                                      self.time_range_end,
+                                                      self.data_time_step_minutes,
+                                                      self.cells_side_count_latitude,
+                                                      self.cells_side_count_longitude,
+                                                      self.data_path.get(),
+                                                      self.point_side_size
+                                                      )
+
+                start_simulation(Neighbourhood.MOORE if self.neighborhood_var.get() == 0 else Neighbourhood.VON_NEUMANN)
+
+            def load_and_crop_image(self):
+                w, h = self.loaded_img.size
+
+                longitude_west_bound = int(w * (self.left_coord + 180) / 360)
+                longitude_east_bound = int(w * (self.right_coord + 180) / 360)
+                latitude_upper_bound = int(h * -(self.top_coord - 90) / 180)
+                latitude_lower_bound = int(h * -(self.down_coord - 90) / 180)
+
+                # TODO Temporary measure in place for the view to actually show anything when the coordinates values are very similiar
+                if longitude_west_bound + 10 >= longitude_east_bound:
+                    longitude_west_bound -= 10
+                    longitude_east_bound += 10
+                if latitude_upper_bound + 10 >= latitude_lower_bound:
+                    latitude_lower_bound += 10
+                    latitude_upper_bound -= 10
+
+                cropped_img = self.loaded_img.crop((longitude_west_bound, latitude_upper_bound, longitude_east_bound, latitude_lower_bound))
+
+                w, h = cropped_img.size
+
+                if w >= h and h / w < 0.5:
+                    w_resize = 400
+                    h_resize = int(400 * (h / w))
+                else:
+                    h_resize = 200
+                    w_resize = int(200 * (w / h))
+
+                resized_img = cropped_img.resize((w_resize, h_resize))
+
+                self.img = ImageTk.PhotoImage(resized_img)
+                self.map_view.create_image(0, 0, image=self.img, anchor=tk.NW)
+
+        ParametersSettingController(window)
+
+    default_window_width = 1280
+    default_window_height = 720
+
+    window = tk.Tk()
+    window.geometry(f"{default_window_width}x{default_window_height}")
+    window.title('Oil Spill Simulation')
+    window.rowconfigure(0, weight=1, uniform='row')
+    window.columnconfigure(0, weight=1, uniform='column')
+
+    start_initial_menu()
+
+    window.mainloop()
