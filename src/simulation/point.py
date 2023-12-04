@@ -240,7 +240,7 @@ class Point:
 
     def add_oil_to_other(self, coord: Coord_t, mass: float) -> None:
         self.oil_mass -= mass
-        if 0 > coord[0] >= const.point_side_count or 0 > coord[1] >= const.point_side_count:
+        if not (0 <= coord[0] < const.point_side_count and 0 <= coord[1] < const.point_side_count):
             return
         if coord not in self.world:
             self.world[coord] = Point(coord, self.initial_values, self.engine)
