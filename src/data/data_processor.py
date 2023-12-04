@@ -167,7 +167,7 @@ class DataProcessorImpl:
         
         hour = 0
         last_minutes = -1
-            
+        
         get_data_path = lambda: path.join(path_to_save, f"{hour}.csv")
         
         for _, row in envirement_area.iterrows():
