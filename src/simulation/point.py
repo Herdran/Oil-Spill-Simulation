@@ -162,14 +162,17 @@ class Point:
         delta_r /= const.point_side_size
 
         # buffering how far oil went in time step
-        self.advection_buffer += [delta_r[1], -delta_r[0]]
+        # self.advection_buffer += [delta_r[1], -delta_r[0]]
         x, y = self.coord
-        next_x = x + int(self.advection_buffer[0])
-        next_y = y + int(self.advection_buffer[1])
+        # next_x = x + int(self.advection_buffer[0])
+        # next_y = y + int(self.advection_buffer[1])
+        advection_vector = [delta_r[1], -delta_r[0]]
+        next_x = x + int(advection_vector[0])
+        next_y = y - int(advection_vector[1])
 
         # check if there is a land between current and next point
-        for i in range(1, int(max(map(abs, self.advection_buffer)))):
-            advection_x, advection_y = self.advection_buffer
+        for i in range(1, int(max(map(abs, advection_vector)))):
+            advection_x, advection_y = advection_vector
             if abs(advection_x) > abs(advection_y):
                 # multiplying by advection_x / abs(advection_x) to get sign of advection_x
                 crossing_point = (x + i * advection_x / abs(advection_x), y + round(i * advection_y / abs(advection_x)))
@@ -178,17 +181,35 @@ class Point:
                 crossing_point = (round(x + i * advection_x / abs(advection_y)), y + i * advection_y / abs(advection_y))
             if self.engine.get_topography(crossing_point) == TopographyState.LAND:
                 next_x, next_y = map(int, crossing_point)
-                # to ensure that buffer will be zeroed in a next step, because oil can't go further
-                self.advection_buffer = np.array([next_x - x, next_y - y], dtype='float64')
+                advection_vector = [next_x - x, next_y - y]  # so it's not going through land in the next step
                 break
 
-        if 0 <= next_x < const.point_side_count and 0 <= next_y < const.point_side_count:
-            if (next_x, next_y) not in self.world:
-                self.world[(next_x, next_y)] = Point((next_x, next_y), self.initial_values, self.engine)
-                self.engine.points_changed.append((next_x, next_y))
-            self.world[(next_x, next_y)].oil_buffer.append((self.oil_mass, self.viscosity_dynamic, self.emulsification_rate))
-        self.advection_buffer -= np.array([next_x - x, next_y - y])
-        self.oil_mass = 0
+        fractional_part_x = advection_vector[0] % 1
+        fractional_part_y = advection_vector[1] % 1
+        if self.initial_values.neighbourhood == Neighbourhood.VON_NEUMANN:
+            x_mass = self.oil_mass * abs(fractional_part_x) / 2
+            y_mass = self.oil_mass * abs(fractional_part_y) / 2
+            next_horizontal = (next_x+fractional_part_x/abs(fractional_part_x), next_y)
+            next_vertical = (next_x, next_y+fractional_part_y/abs(fractional_part_y))
+            if next_horizontal not in self.world:
+                self.world[next_horizontal] = Point(next_horizontal, self.initial_values, self.engine)
+                self.engine.points_changed.append(next_horizontal)
+            if next_vertical not in self.world:
+                self.world[next_vertical] = Point(next_vertical, self.initial_values, self.engine)
+                self.engine.points_changed.append(next_vertical)
+            self.world[next_horizontal].oil_buffer.append((x_mass, self.viscosity_dynamic, self.emulsification_rate))
+            self.world[next_vertical].oil_buffer.append((y_mass, self.viscosity_dynamic, self.emulsification_rate))
+            self.oil_mass -= x_mass + y_mass
+        elif self.initial_values.neighbourhood == Neighbourhood.MOORE:
+            x_shift = int(fractional_part_x / abs(fractional_part_x))
+            y_shift = int(fractional_part_y / abs(fractional_part_y))
+            neighbours = [(next_x, next_y + y_shift), (next_x + x_shift, next_y), (next_x + x_shift, next_y + y_shift)]
+            areas = [fractional_part_y*(1-fractional_part_x), fractional_part_x*(1-fractional_part_y), fractional_part_x*fractional_part_y]
+            for neighbour, area in zip(neighbours, areas):
+                self.add_oil_to_other(neighbour, self.oil_mass * area)
+
+        if (next_x, next_y) != self.coord:
+            self.add_oil_to_other((next_x, next_y), self.oil_mass)
 
     def process_natural_dispersion(self, delta_time: float) -> None:
         Da = 0.11 * (np.linalg.norm(self.wind_velocity) + 1) ** 2
@@ -216,3 +237,12 @@ class Point:
         self.emulsification_rate = (sum([tup[0] * tup[2] for tup in self.oil_buffer]) + self.oil_mass * self.emulsification_rate) / oil_mass
         self.oil_buffer = []
         self.oil_mass = oil_mass
+
+    def add_oil_to_other(self, coord: Coord_t, mass: float) -> None:
+        self.oil_mass -= mass
+        if 0 > coord[0] >= const.point_side_count or 0 > coord[1] >= const.point_side_count:
+            return
+        if coord not in self.world:
+            self.world[coord] = Point(coord, self.initial_values, self.engine)
+            self.engine.points_changed.append(coord)
+        self.world[coord].oil_buffer.append((mass, self.viscosity_dynamic, self.emulsification_rate))
