@@ -25,7 +25,6 @@ class InitialValues:
     def __init__(self, neighbourhood: Neighbourhood = Neighbourhood.MOORE):
         self.water_density = 997  # [kg/m^3]
         self.oil_density = 846  # [kg/m^3]
-        self.surface_tension = 30  # [dyne/s]
         self.emulsion_max_content_water = 0.7  # max content of water in the emulsion
         self.molar_mass = 348.23  # [g/mol] mean
         self.boiling_point = 609  # [K] mean
@@ -161,14 +160,10 @@ class Point:
         delta_r = (ALPHA * self.wave_velocity + BETA * self.wind_velocity) * delta_time
         delta_r /= const.point_side_size
 
-        # buffering how far oil went in time step
-        # self.advection_buffer += [delta_r[1], -delta_r[0]]
         x, y = self.coord
-        # next_x = x + int(self.advection_buffer[0])
-        # next_y = y + int(self.advection_buffer[1])
         advection_vector = [delta_r[1], -delta_r[0]]
         next_x = x + int(advection_vector[0])
-        next_y = y - int(advection_vector[1])
+        next_y = y + int(advection_vector[1])
 
         # check if there is a land between current and next point
         for i in range(1, int(max(map(abs, advection_vector)))):
@@ -181,35 +176,26 @@ class Point:
                 crossing_point = (round(x + i * advection_x / abs(advection_y)), y + i * advection_y / abs(advection_y))
             if self.engine.get_topography(crossing_point) == TopographyState.LAND:
                 next_x, next_y = map(int, crossing_point)
-                advection_vector = [next_x - x, next_y - y]  # so it's not going through land in the next step
+                advection_vector = [0, 0]  # so it's not going through land in the next step
                 break
 
         fractional_part_x = advection_vector[0] % 1
         fractional_part_y = advection_vector[1] % 1
+        x_shift = int(fractional_part_x / abs(fractional_part_x)) if fractional_part_x != 0 else 0
+        y_shift = int(fractional_part_y / abs(fractional_part_y)) if fractional_part_y != 0 else 0
+        neighbours = [(next_x, next_y + y_shift), (next_x + x_shift, next_y), (next_x + x_shift, next_y + y_shift)]
+        areas = [fractional_part_y * (1 - fractional_part_x), fractional_part_x * (1 - fractional_part_y),
+                 fractional_part_x * fractional_part_y]
         if self.initial_values.neighbourhood == Neighbourhood.VON_NEUMANN:
-            x_mass = self.oil_mass * abs(fractional_part_x) / 2
-            y_mass = self.oil_mass * abs(fractional_part_y) / 2
-            next_horizontal = (next_x+fractional_part_x/abs(fractional_part_x), next_y)
-            next_vertical = (next_x, next_y+fractional_part_y/abs(fractional_part_y))
-            if next_horizontal not in self.world:
-                self.world[next_horizontal] = Point(next_horizontal, self.initial_values, self.engine)
-                self.engine.points_changed.append(next_horizontal)
-            if next_vertical not in self.world:
-                self.world[next_vertical] = Point(next_vertical, self.initial_values, self.engine)
-                self.engine.points_changed.append(next_vertical)
-            self.world[next_horizontal].oil_buffer.append((x_mass, self.viscosity_dynamic, self.emulsification_rate))
-            self.world[next_vertical].oil_buffer.append((y_mass, self.viscosity_dynamic, self.emulsification_rate))
-            self.oil_mass -= x_mass + y_mass
-        elif self.initial_values.neighbourhood == Neighbourhood.MOORE:
-            x_shift = int(fractional_part_x / abs(fractional_part_x))
-            y_shift = int(fractional_part_y / abs(fractional_part_y))
-            neighbours = [(next_x, next_y + y_shift), (next_x + x_shift, next_y), (next_x + x_shift, next_y + y_shift)]
-            areas = [fractional_part_y*(1-fractional_part_x), fractional_part_x*(1-fractional_part_y), fractional_part_x*fractional_part_y]
-            for neighbour, area in zip(neighbours, areas):
-                self.add_oil_to_other(neighbour, self.oil_mass * area)
+            neighbours.pop()
+            area_to_split = areas.pop()
+            areas[0] += area_to_split * areas[0] / (areas[0] + areas[1])
+            areas[1] += area_to_split * areas[1] / (areas[0] + areas[1])
+        for neighbour, area in zip(neighbours, areas):
+            self.move_oil_to_other(neighbour, self.oil_mass * area)
 
         if (next_x, next_y) != self.coord:
-            self.add_oil_to_other((next_x, next_y), self.oil_mass)
+            self.move_oil_to_other((next_x, next_y), self.oil_mass)
 
     def process_natural_dispersion(self, delta_time: float) -> None:
         Da = 0.11 * (np.linalg.norm(self.wind_velocity) + 1) ** 2
@@ -238,7 +224,7 @@ class Point:
         self.oil_buffer = []
         self.oil_mass = oil_mass
 
-    def add_oil_to_other(self, coord: Coord_t, mass: float) -> None:
+    def move_oil_to_other(self, coord: Coord_t, mass: float) -> None:
         self.oil_mass -= mass
         if not (0 <= coord[0] < const.point_side_count and 0 <= coord[1] < const.point_side_count):
             return
