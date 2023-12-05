@@ -1,5 +1,5 @@
-from typing import Tuple
 from enum import Enum
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -7,7 +7,7 @@ from numpy import exp, log, sqrt
 
 from constatnts import Constants as const
 from data.measurment_data import Coordinates
-from simulation.utilities import get_neighbour_coordinates, Neighbourhood
+from simulation.utilities import get_neighbour_coordinates, Neighbourhood, sign
 
 DEFAULT_WAVE_VELOCITY = np.array([0.0, 0.0])  # [m/s]
 DEFAULT_WIND_VELOCITY = np.array([0.0, 0.0])  # [m/s]
@@ -30,7 +30,7 @@ class InitialValues:
         self.boiling_point = 609  # [K] mean
         self.interfacial_tension = 30  # [dyna/cm]
         self.propagation_factor = 2.5
-        self.c = 10 # parameter dependant of oil type, used in viscosity change
+        self.c = 10  # parameter dependant of oil type, used in viscosity change
         self.viscosity_kinematic = 5.3e-6  # [m^2/s]
         self.viscosity_dynamic = self.viscosity_kinematic * self.oil_density
         self.emulsification_rate = 0
@@ -68,8 +68,9 @@ class Point:
         # maybe initial emulsification rate will be changed
         self.emulsification_rate = (self.oil_mass * self.emulsification_rate +
                                     mass * self.initial_values.emulsification_rate) / (self.oil_mass + mass)
-        self.viscosity_dynamic = (self.oil_mass * self.viscosity_dynamic + mass * self.initial_values.viscosity_dynamic) / (
-                self.oil_mass + mass)
+        self.viscosity_dynamic = (
+                (self.oil_mass * self.viscosity_dynamic + mass * self.initial_values.viscosity_dynamic) / (
+                self.oil_mass + mass))
         self.oil_mass += mass
 
     def should_update_weather_data(self, time_delta: pd.Timedelta) -> bool:
@@ -147,11 +148,21 @@ class Point:
         for neighbor in to_share:
             neighbor.oil_mass += delta_mass
 
-    def into_min_max(self, x, y):
-        return [
-            [x - 0.5, y - 0.5],
-            [x + 0.5, y + 0.5],
-        ]
+    def advection_land_collision(self, advection_vector: Tuple[float, float]) -> Tuple[int, int, Tuple[float, float]]:
+        x, y = self.coord
+        next_x = x + int(advection_vector[0])
+        next_y = y + int(advection_vector[1])
+        for i in range(1, int(max(map(abs, advection_vector)))):
+            advection_x, advection_y = advection_vector
+            if abs(advection_x) > abs(advection_y):
+                crossing_point = (x + i * sign(advection_x), y + round(i * advection_y / abs(advection_x)))
+            else:
+                crossing_point = (round(x + i * advection_x / abs(advection_y)), y + i * sign(advection_y))
+            if self.engine.get_topography(crossing_point) == TopographyState.LAND:
+                next_x, next_y = map(int, crossing_point)
+                advection_vector = (0, 0)  # so it's not going through land in the next step
+                break
+        return next_x, next_y, advection_vector
 
     def process_advection(self, delta_time: float) -> None:
         ALPHA = 1.1
@@ -159,40 +170,28 @@ class Point:
 
         delta_r = (ALPHA * self.wave_velocity + BETA * self.wind_velocity) * delta_time
         delta_r /= const.point_side_size
-
-        x, y = self.coord
-        advection_vector = [delta_r[1], -delta_r[0]]
-        next_x = x + int(advection_vector[0])
-        next_y = y + int(advection_vector[1])
+        advection_vector = (delta_r[1], -delta_r[0])
 
         # check if there is a land between current and next point
-        for i in range(1, int(max(map(abs, advection_vector)))):
-            advection_x, advection_y = advection_vector
-            if abs(advection_x) > abs(advection_y):
-                # multiplying by advection_x / abs(advection_x) to get sign of advection_x
-                crossing_point = (x + i * advection_x / abs(advection_x), y + round(i * advection_y / abs(advection_x)))
-            else:
-                # multiplying by advection_y / abs(advection_y) to get sign of advection_y
-                crossing_point = (round(x + i * advection_x / abs(advection_y)), y + i * advection_y / abs(advection_y))
-            if self.engine.get_topography(crossing_point) == TopographyState.LAND:
-                next_x, next_y = map(int, crossing_point)
-                advection_vector = [0, 0]  # so it's not going through land in the next step
-                break
+        next_x, next_y, advection_vector = self.advection_land_collision(advection_vector)
 
-        fractional_part_x = advection_vector[0] % 1
-        fractional_part_y = advection_vector[1] % 1
-        x_shift = int(fractional_part_x / abs(fractional_part_x)) if fractional_part_x != 0 else 0
-        y_shift = int(fractional_part_y / abs(fractional_part_y)) if fractional_part_y != 0 else 0
+        fractional_part_x = (abs(advection_vector[0]) % 1) * sign(advection_vector[0])
+        fractional_part_y = (abs(advection_vector[1]) % 1) * sign(advection_vector[1])
+        x_shift = sign(fractional_part_x)
+        y_shift = sign(fractional_part_y)
         neighbours = [(next_x, next_y + y_shift), (next_x + x_shift, next_y), (next_x + x_shift, next_y + y_shift)]
-        areas = [fractional_part_y * (1 - fractional_part_x), fractional_part_x * (1 - fractional_part_y),
-                 fractional_part_x * fractional_part_y]
+        areas = [abs(fractional_part_y) * (1 - abs(fractional_part_x)),
+                 abs(fractional_part_x) * (1 - abs(fractional_part_y)),
+                 abs(fractional_part_x * fractional_part_y)]
         if self.initial_values.neighbourhood == Neighbourhood.VON_NEUMANN:
             neighbours.pop()
             area_to_split = areas.pop()
-            areas[0] += area_to_split * areas[0] / (areas[0] + areas[1]) if areas[0] + areas[1] != 0 else 0
-            areas[1] += area_to_split * areas[1] / (areas[0] + areas[1]) if areas[0] + areas[1] != 0 else 0
+            if sum(areas) > 0:
+                areas[0] += area_to_split * areas[0] / sum(areas)
+                areas[1] += area_to_split * areas[1] / sum(areas)
+        oil_mass = self.oil_mass
         for neighbour, area in zip(neighbours, areas):
-            self.move_oil_to_other(neighbour, self.oil_mass * area)
+            self.move_oil_to_other(neighbour, oil_mass * area)
 
         if (next_x, next_y) != self.coord:
             self.move_oil_to_other((next_x, next_y), self.oil_mass)
@@ -201,7 +200,7 @@ class Point:
         Da = 0.11 * (np.linalg.norm(self.wind_velocity) + 1) ** 2
         interfacial_tension = self.initial_values.interfacial_tension * (1 + self.evaporation_rate)
         # multiply viscosity by 100 to convert from Pa*s to cPa*s
-        Db = 1 / (1 + 50 * sqrt(self.viscosity_dynamic*100) * self.slick_thickness() * interfacial_tension)
+        Db = 1 / (1 + 50 * sqrt(self.viscosity_dynamic * 100) * self.slick_thickness() * interfacial_tension)
         self.oil_mass -= self.oil_mass * Da * Db / (3600 * delta_time)
 
     def slick_thickness(self) -> float:
@@ -209,8 +208,9 @@ class Point:
         return thickness / 100  # [cm]
 
     def viscosity_change(self, delta_F: float, delta_Y: float) -> None:
-        delta_viscosity = self.initial_values.c * self.viscosity_dynamic * delta_F + (2.5 * self.viscosity_dynamic * delta_Y) / (
-                (1 - self.initial_values.emulsion_max_content_water * self.emulsification_rate) ** 2)
+        delta_viscosity = self.initial_values.c * self.viscosity_dynamic * delta_F + (
+                2.5 * self.viscosity_dynamic * delta_Y) / (
+                                  (1 - self.initial_values.emulsion_max_content_water * self.emulsification_rate) ** 2)
         self.viscosity_dynamic += delta_viscosity
         if self.oil_mass < 1:
             self.viscosity_dynamic = self.initial_values.viscosity_dynamic
@@ -219,8 +219,10 @@ class Point:
         oil_mass = sum([tup[0] for tup in self.oil_buffer]) + self.oil_mass
         if oil_mass < 1:
             return
-        self.viscosity_dynamic = (sum([tup[0] * tup[1] for tup in self.oil_buffer]) + self.oil_mass * self.viscosity_dynamic) / oil_mass
-        self.emulsification_rate = (sum([tup[0] * tup[2] for tup in self.oil_buffer]) + self.oil_mass * self.emulsification_rate) / oil_mass
+        self.viscosity_dynamic = (sum([tup[0] * tup[1] for tup in
+                                       self.oil_buffer]) + self.oil_mass * self.viscosity_dynamic) / oil_mass
+        self.emulsification_rate = (sum([tup[0] * tup[2] for tup in
+                                         self.oil_buffer]) + self.oil_mass * self.emulsification_rate) / oil_mass
         self.oil_buffer = []
         self.oil_mass = oil_mass
 
