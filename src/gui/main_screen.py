@@ -123,7 +123,7 @@ def start_simulation(neighborhood, window):
             if self.is_panning:
                 self.is_panning = False
                 return
-            elif not self.image_change_controller.oil_spill_on_bool:
+            if not self.image_change_controller.oil_spill_on_bool:
                 return
             window_width = self.winfo_width()
             window_height = self.winfo_height()

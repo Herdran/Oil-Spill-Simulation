@@ -366,6 +366,18 @@ def start_initial_menu(window):
             start_simulation(Neighbourhood.MOORE if self.neighborhood_var.get() == 0 else Neighbourhood.VON_NEUMANN,
                              window)
 
+        def resize_img_to_fit_frame(self, img):
+            w, h = img.size
+
+            if w >= h and h / w < 0.5:
+                w_resize = 400
+                h_resize = int(400 * (h / w))
+            else:
+                h_resize = 200
+                w_resize = int(200 * (w / h))
+
+            return img.resize((w_resize, h_resize))
+
         def load_and_crop_image(self):
             w, h = self.loaded_img.size
 
@@ -385,16 +397,7 @@ def start_initial_menu(window):
             cropped_img = self.loaded_img.crop(
                 (longitude_west_bound, latitude_upper_bound, longitude_east_bound, latitude_lower_bound))
 
-            w, h = cropped_img.size
-
-            if w >= h and h / w < 0.5:
-                w_resize = 400
-                h_resize = int(400 * (h / w))
-            else:
-                h_resize = 200
-                w_resize = int(200 * (w / h))
-
-            resized_img = cropped_img.resize((w_resize, h_resize))
+            resized_img = self.resize_img_to_fit_frame(cropped_img)
 
             self.img = ImageTk.PhotoImage(resized_img)
             self.map_view.create_image(0, 0, image=self.img, anchor=tk.NW)
