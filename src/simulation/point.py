@@ -189,8 +189,8 @@ class Point:
         if self.initial_values.neighbourhood == Neighbourhood.VON_NEUMANN:
             neighbours.pop()
             area_to_split = areas.pop()
-            areas[0] += area_to_split * areas[0] / (areas[0] + areas[1])
-            areas[1] += area_to_split * areas[1] / (areas[0] + areas[1])
+            areas[0] += area_to_split * areas[0] / (areas[0] + areas[1]) if areas[0] + areas[1] != 0 else 0
+            areas[1] += area_to_split * areas[1] / (areas[0] + areas[1]) if areas[0] + areas[1] != 0 else 0
         for neighbour, area in zip(neighbours, areas):
             self.move_oil_to_other(neighbour, self.oil_mass * area)
 
