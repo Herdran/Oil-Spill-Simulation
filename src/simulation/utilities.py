@@ -15,3 +15,7 @@ def get_neighbour_coordinates(x: int, y: int, neighbourhood: Neighbourhood) -> L
                 (x + 1, y + 1), (x + 1, y - 1), (x - 1, y + 1), (x - 1, y - 1)]
     else:
         raise ValueError("Unknown neighbourhood type")
+
+
+def sign(x):
+    return 1 if x > 0 else -1 if x < 0 else 0

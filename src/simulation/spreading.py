@@ -29,7 +29,7 @@ class SpreadingEngine:
                 else:
                     neighbour_point = self.world[neighbour]
                     self.process_spread_between(total_mass, delta_time, point, neighbour_point, False)
-        self.world.update(new_points)
+        self.update_new_points(new_points)
         for point in self.world.values():
             point.pour_from_buffer()
 
@@ -37,9 +37,15 @@ class SpreadingEngine:
         if coord in new_points:
             return new_points[coord]
         point = Point(coord, self.initial_values, self.engine)
-        self.engine.points_changed.append(coord)
         new_points[coord] = point
         return point
+
+    def update_new_points(self, new_points: Dict[Coord_t, Point]) -> None:
+        for coord, point in new_points.items():
+            if not (0 <= coord[0] < const.point_side_count and 0 <= coord[1] < const.point_side_count):
+                continue
+            self.world[coord] = point
+            self.engine.points_changed.append(coord)
 
     def process_spread_between(self, total_mass: float, delta_time: float, first: Point, second: Point, is_new: bool) -> None:
         if not (first.topography == TopographyState.SEA and second.topography == TopographyState.SEA):
