@@ -14,7 +14,7 @@ class SpreadingEngine:
         self.world = engine.world
         self.engine = engine
 
-    def spread_oil_points(self, total_mass: float, delta_time: float):
+    def spread_oil_points(self, total_mass: float):
         new_points = {}
         for coord, point in self.world.items():
             x, y = coord
@@ -25,10 +25,10 @@ class SpreadingEngine:
                     continue
                 if neighbour not in self.world:
                     neighbour_point = self.new_point(neighbour, new_points)
-                    self.process_spread_between(total_mass, delta_time, point, neighbour_point, True)
+                    self.process_spread_between(total_mass, point, neighbour_point, True)
                 else:
                     neighbour_point = self.world[neighbour]
-                    self.process_spread_between(total_mass, delta_time, point, neighbour_point, False)
+                    self.process_spread_between(total_mass, point, neighbour_point, False)
         self.update_new_points(new_points)
         for point in self.world.values():
             point.pour_from_buffer()
@@ -47,7 +47,7 @@ class SpreadingEngine:
             self.world[coord] = point
             self.engine.points_changed.append(coord)
 
-    def process_spread_between(self, total_mass: float, delta_time: float, first: Point, second: Point, is_new: bool) -> None:
+    def process_spread_between(self, total_mass: float, first: Point, second: Point, is_new: bool) -> None:
         if not (first.topography == TopographyState.SEA and second.topography == TopographyState.SEA):
             return
           
@@ -58,8 +58,8 @@ class SpreadingEngine:
         dynamic_viscosity = (first.viscosity_dynamic + second.viscosity_dynamic) / 2
         kinematic_viscosity = dynamic_viscosity / self.initial_values.oil_density
         D = 0.48 / self.initial_values.propagation_factor * (V ** 2 * G * delta / sqrt(kinematic_viscosity)) ** (1 / 3) / sqrt(
-            delta_time)
-        delta_mass = 0.5 * (second.oil_mass - first.oil_mass) * (1 - exp(-2 * D / (length ** 2) * delta_time))
+            const.iter_as_sec)
+        delta_mass = 0.5 * (second.oil_mass - first.oil_mass) * (1 - exp(-2 * D / (length ** 2) * const.iter_as_sec))
         if not is_new:
             delta_mass = delta_mass / 2  # due to double spreading on the same pair
 
