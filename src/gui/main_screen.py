@@ -396,7 +396,7 @@ def start_simulation(neighborhood, window):
                 self.bottom_frame.grid()
 
             if self.is_running:
-                deleted = engine.update(self.iter_as_sec)
+                deleted = engine.update()
                 for coords in deleted:
                     self.image_array[coords[1]][coords[0]] = rgba_to_rgb(
                         LAND_COLOR) if coords in engine.lands else rgba_to_rgb(SEA_COLOR)
