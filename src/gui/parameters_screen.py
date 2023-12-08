@@ -26,8 +26,8 @@ def start_initial_menu(window):
             self.time_range_start = "2010-04-01 00:00:00"
             self.time_range_end = "2010-04-02 00:00:00"
             self.data_time_step_minutes = 30
-            self.cells_side_count_latitude = 10
-            self.cells_side_count_longitude = 10
+            self.interpolation_grid_size_latitude = 10
+            self.interpolation_grid_size_longitude = 10
             self.point_side_size = 50
             self.correctly_set_parameters = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
             self.img = None
@@ -68,8 +68,8 @@ def start_initial_menu(window):
             time_range_start_frame = create_frame(inputs_frame, 2, 1, 1, 1, tk.N + tk.S)
             time_range_end_frame = create_frame(inputs_frame, 2, 2, 1, 1, tk.N + tk.S)
             data_time_step_frame = create_frame(inputs_frame, 2, 3, 1, 1, tk.N + tk.S)
-            cells_side_count_latitude_frame = create_frame(inputs_frame, 0, 3, 1, 1, tk.N + tk.S)
-            cells_side_count_longitude_frame = create_frame(inputs_frame, 1, 3, 1, 1, tk.N + tk.S)
+            interpolation_grid_size_latitude_frame = create_frame(inputs_frame, 0, 3, 1, 1, tk.N + tk.S)
+            interpolation_grid_size_longitude_frame = create_frame(inputs_frame, 1, 3, 1, 1, tk.N + tk.S)
             point_side_size_frame = create_frame(inputs_frame, 1, 4, 1, 1, tk.N + tk.S)
 
             create_label_grid(top_coord_frame, "Top coord value\n[latitude]")
@@ -79,8 +79,8 @@ def start_initial_menu(window):
             create_label_grid(time_range_start_frame, "Time range: start\n[yyyy-mm-dd hh:mm:ss]")
             create_label_grid(time_range_end_frame, "Time range: end\n[yyyy-mm-dd hh:mm:ss]")
             create_label_grid(data_time_step_frame, "Data time step\n[min]")
-            create_label_grid(cells_side_count_latitude_frame, "Data stations count:\nlatitude")
-            create_label_grid(cells_side_count_longitude_frame, "Data stations count:\nlongitude")
+            create_label_grid(interpolation_grid_size_latitude_frame, "Data stations count:\nlatitude")
+            create_label_grid(interpolation_grid_size_longitude_frame, "Data stations count:\nlongitude")
             create_label_grid(point_side_size_frame, "Point side size\n[m]")
 
             self.top_coord_input = create_input_entry_grid(top_coord_frame, 9, str(self.top_coord),
@@ -99,12 +99,12 @@ def start_initial_menu(window):
             self.data_time_step_input = create_input_entry_grid(data_time_step_frame, 3,
                                                                 str(self.data_time_step_minutes),
                                                                 self.validate_data_time_step)
-            self.cells_side_count_latitude_input = create_input_entry_grid(cells_side_count_latitude_frame, 3,
-                                                                           str(self.cells_side_count_latitude),
-                                                                           self.validate_cells_side_count_latitude)
-            self.cells_side_count_longitude_input = create_input_entry_grid(cells_side_count_longitude_frame, 3,
-                                                                            str(self.cells_side_count_longitude),
-                                                                            self.validate_cells_side_count_longitude)
+            self.interpolation_grid_size_latitude_input = create_input_entry_grid(interpolation_grid_size_latitude_frame, 3,
+                                                                           str(self.interpolation_grid_size_latitude),
+                                                                           self.validate_interpolation_grid_size_latitude)
+            self.interpolation_grid_size_longitude_input = create_input_entry_grid(interpolation_grid_size_longitude_frame, 3,
+                                                                            str(self.interpolation_grid_size_longitude),
+                                                                            self.validate_interpolation_grid_size_longitude)
             self.point_side_size_input = create_input_entry_grid(point_side_size_frame, 3, str(self.point_side_size),
                                                                  self.validate_point_side_size)
 
@@ -115,8 +115,8 @@ def start_initial_menu(window):
             self.time_range_start_validation_label = create_label_grid_parameter_screen(time_range_start_frame)
             self.time_range_end_validation_label = create_label_grid_parameter_screen(time_range_end_frame)
             self.data_time_step_validation_label = create_label_grid_parameter_screen(data_time_step_frame)
-            self.cells_side_count_latitude_validation_label = create_label_grid_parameter_screen(cells_side_count_latitude_frame)
-            self.cells_side_count_longitude_validation_label = create_label_grid_parameter_screen(cells_side_count_longitude_frame)
+            self.interpolation_grid_size_latitude_validation_label = create_label_grid_parameter_screen(interpolation_grid_size_latitude_frame)
+            self.interpolation_grid_size_longitude_validation_label = create_label_grid_parameter_screen(interpolation_grid_size_longitude_frame)
             self.point_side_size_validation_label = create_label_grid_parameter_screen(point_side_size_frame)
 
             self.loaded_img = Image.open(os.path.join(get_main_path(), "data/Blue_Marble_2002.png"))
@@ -273,39 +273,39 @@ def start_initial_menu(window):
             self.confirm_and_continue.config(state=DISABLED)
             self.correctly_set_parameters[6] = 0
 
-        def validate_cells_side_count_latitude(self):
-            value = self.cells_side_count_latitude_input.get()
+        def validate_interpolation_grid_size_latitude(self):
+            value = self.interpolation_grid_size_latitude_input.get()
             if not value:
                 return False
             try:
                 if float(value) % 1 == 0 and float(
                         value) > 0:
-                    self.cells_side_count_latitude = int(value)
-                    self.cells_side_count_latitude_validation_label.config(text="Valid value", fg="black")
+                    self.interpolation_grid_size_latitude = int(value)
+                    self.interpolation_grid_size_latitude_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[7] = 1
                     self.check_all_parameters_validity_and_refresh_image()
                     return True
             except ValueError:
                 pass
-            self.cells_side_count_latitude_validation_label.config(text="Invalid value", fg="red")
+            self.interpolation_grid_size_latitude_validation_label.config(text="Invalid value", fg="red")
             self.confirm_and_continue.config(state=DISABLED)
             self.correctly_set_parameters[7] = 0
 
-        def validate_cells_side_count_longitude(self):
-            value = self.cells_side_count_longitude_input.get()
+        def validate_interpolation_grid_size_longitude(self):
+            value = self.interpolation_grid_size_longitude_input.get()
             if not value:
                 return False
             try:
                 if float(value) % 1 == 0 and float(
                         value) > 0:
-                    self.cells_side_count_longitude = int(value)
-                    self.cells_side_count_longitude_validation_label.config(text="Valid value", fg="black")
+                    self.interpolation_grid_size_longitude = int(value)
+                    self.interpolation_grid_size_longitude_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[8] = 1
                     self.check_all_parameters_validity_and_refresh_image()
                     return True
             except ValueError:
                 pass
-            self.cells_side_count_longitude_validation_label.config(text="Invalid value", fg="red")
+            self.interpolation_grid_size_longitude_validation_label.config(text="Invalid value", fg="red")
             self.confirm_and_continue.config(state=DISABLED)
             self.correctly_set_parameters[8] = 0
 
@@ -334,8 +334,8 @@ def start_initial_menu(window):
             self.validate_time_range_start()
             self.validate_time_range_end()
             self.validate_data_time_step()
-            self.validate_cells_side_count_latitude()
-            self.validate_cells_side_count_longitude()
+            self.validate_interpolation_grid_size_latitude()
+            self.validate_interpolation_grid_size_longitude()
             self.validate_point_side_size()
 
         def check_all_parameters_validity_and_refresh_image(self):
@@ -357,8 +357,8 @@ def start_initial_menu(window):
                                                   self.time_range_start,
                                                   self.time_range_end,
                                                   self.data_time_step_minutes,
-                                                  self.cells_side_count_latitude,
-                                                  self.cells_side_count_longitude,
+                                                  self.interpolation_grid_size_latitude,
+                                                  self.interpolation_grid_size_longitude,
                                                   self.data_path.get(),
                                                   self.point_side_size
                                                   )

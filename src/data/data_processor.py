@@ -117,8 +117,8 @@ class DataProcessorImpl:
         )
         
         self.coord_range = CoordinatesBase(
-            latitude=(max(self.latitude_points) - min(self.latitude_points)) / simulation_run_parameters.cells_side_count.latitude,
-            longitude=(max(self.longitude_points) - min(self.longitude_points)) / simulation_run_parameters.cells_side_count.longitude
+            latitude=(max(self.latitude_points) - min(self.latitude_points)) / simulation_run_parameters.interpolation_grid_size.latitude,
+            longitude=(max(self.longitude_points) - min(self.longitude_points)) / simulation_run_parameters.interpolation_grid_size.longitude
         )
         
         time_points, latitude_points, longitude_points = np.meshgrid(time_points, self.latitude_points, self.longitude_points)
@@ -236,8 +236,8 @@ class DataProcessorImpl:
         lon_candidate = station_info.longitude + neigbour_type.value.longitude
         
         MIN_COORD = 0
-        if (not (MIN_COORD <= lat_candidate < self.run_parameters.cells_side_count.latitude) or 
-            not (MIN_COORD <= lon_candidate < self.run_parameters.cells_side_count.longitude)):
+        if (not (MIN_COORD <= lat_candidate < self.run_parameters.interpolation_grid_size.latitude) or 
+            not (MIN_COORD <= lon_candidate < self.run_parameters.interpolation_grid_size.longitude)):
             return None
         
         return DataStationInfo(lat_candidate, lon_candidate)     
@@ -310,13 +310,13 @@ class DataProcessorImpl:
         
     def _create_envirement_latitude_range(self, simulation_run_parameters: SimulationRunParameters) -> np.array:
         latitude_range = Range(simulation_run_parameters.area.min.latitude, simulation_run_parameters.area.max.latitude)
-        latitude_step = (latitude_range.max - latitude_range.min) / simulation_run_parameters.cells_side_count.latitude
-        return np.array([latitude_range.min + i * latitude_step for i in range(simulation_run_parameters.cells_side_count.latitude)])
+        latitude_step = (latitude_range.max - latitude_range.min) / simulation_run_parameters.interpolation_grid_size.latitude
+        return np.array([latitude_range.min + i * latitude_step for i in range(simulation_run_parameters.interpolation_grid_size.latitude)])
         
     def _create_envirement_longitude_range(self, simulation_run_parameters: SimulationRunParameters) -> np.array:
         longitude_range = Range(simulation_run_parameters.area.min.longitude, simulation_run_parameters.area.max.longitude)
-        longitude_step = (longitude_range.max - longitude_range.min) / simulation_run_parameters.cells_side_count.longitude
-        return np.array([longitude_range.min + i * longitude_step for i in range(simulation_run_parameters.cells_side_count.longitude)])
+        longitude_step = (longitude_range.max - longitude_range.min) / simulation_run_parameters.interpolation_grid_size.longitude
+        return np.array([longitude_range.min + i * longitude_step for i in range(simulation_run_parameters.interpolation_grid_size.longitude)])
     
     def _create_envirement_time_range(self, simulation_run_parameters: SimulationRunParameters) -> np.array:
         time_range = simulation_run_parameters.time
@@ -382,8 +382,8 @@ class DataProcessorImpl:
         )
         
         return DataStationInfo(
-            latitude=min(self.run_parameters.cells_side_count.latitude - 1, floor(coords.latitude / self.coord_range.latitude)),
-            longitude=min(self.run_parameters.cells_side_count.longitude - 1, floor(coords.longitude / self.coord_range.longitude))
+            latitude=min(self.run_parameters.interpolation_grid_size.latitude - 1, floor(coords.latitude / self.coord_range.latitude)),
+            longitude=min(self.run_parameters.interpolation_grid_size.longitude - 1, floor(coords.longitude / self.coord_range.longitude))
         )
 
 class DataProcessor:

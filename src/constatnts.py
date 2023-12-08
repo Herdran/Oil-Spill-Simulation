@@ -2,7 +2,7 @@ import pandas as pd
 
 from data.generic import Range
 from data.measurment_data import Coordinates
-from data.simulation_run_parameters import CellSideCount, SimulationRunParameters
+from data.simulation_run_parameters import Interpolation_grid_size , SimulationRunParameters
 from data.utilities import Move_direction, coordinates_distance, move_coordinate
 
 
@@ -25,8 +25,8 @@ def set_simulation_coordinates_parameters(top_coord: float,
                                           time_range_start: str,
                                           time_range_end: str,
                                           data_time_step: int,
-                                          cells_side_count_latitude: int,
-                                          cells_side_count_longitude: int,
+                                          interpolation_grid_size_latitude: int,
+                                          interpolation_grid_size_longitude: int,
                                           data_path: str,
                                           point_side_size: int
                                           ):
@@ -47,9 +47,9 @@ def set_simulation_coordinates_parameters(top_coord: float,
             max=pd.Timestamp(time_range_end),
         ),
         data_time_step=pd.Timedelta(minutes=data_time_step),
-        cells_side_count=CellSideCount( 
-            latitude=cells_side_count_latitude,
-            longitude=cells_side_count_longitude
+        interpolation_grid_size=Interpolation_grid_size ( 
+            latitude=interpolation_grid_size_latitude,
+            longitude=interpolation_grid_size_longitude
         ),
         path_to_data=data_path
     )

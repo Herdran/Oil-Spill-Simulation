@@ -6,14 +6,14 @@ from data.generic import Range
 from data.measurment_data import Coordinates, CoordinatesBase
 
 
-CellSideCount = CoordinatesBase[int]
+Interpolation_grid_size  = CoordinatesBase[int]
 
 @dataclass
 class SimulationRunParameters:
     area: Range[Coordinates]
     time: Range[pd.Timestamp]
     data_time_step: pd.Timedelta
-    cells_side_count: CellSideCount
+    interpolation_grid_size: Interpolation_grid_size 
     path_to_data: str
     
     
