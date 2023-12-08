@@ -94,20 +94,22 @@ def get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], 
 
 def map_binary_lands(binary_lands: set[Coord_t]) -> set[Coord_t]:
     logger.debug("STATED: Mapping binary lands")
-    mapped_lands = set()
     top_left_binary_map_offset = get_top_left_offset()
-    for x, y in get_cartesian_product_range(const.point_side_count, const.point_side_count):
+    
+    def is_land(coord: Coord_t) -> bool:
         center = Coordinates(
-            latitude=const.point_lat_centers[y],
-            longitude=const.point_lon_centers[x]
+            latitude=const.point_lat_centers[coord[1]],
+            longitude=const.point_lon_centers[coord[0]]
         )
         binary_map_coordinates = project_binary_map_coordinates(center)
         lat = binary_map_coordinates.longitude - top_left_binary_map_offset.longitude
         lon = binary_map_coordinates.latitude - top_left_binary_map_offset.latitude
-        if (lat, lon) in binary_lands:
-            mapped_lands.add((x, y))
+        return (lat, lon) in binary_lands
+       
+    product = get_cartesian_product_range(const.point_side_count, const.point_side_count)
+    result = {coord for coord in product if is_land(coord)}
     logger.debug("FINISHED: Mapping binary lands")
-    return mapped_lands
+    return result
 
 
 def load_topography() -> set[Coord_t]:        
