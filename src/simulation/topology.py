@@ -54,11 +54,12 @@ def get_top_left_offset() -> CoordinatesBase[int]:
     top_left = Coordinates(
         latitude  = const.simulation_initial_parameters.area.max.latitude,
         longitude = const.simulation_initial_parameters.area.min.longitude
-    )        
+    )     
     return project_coordinates(top_left, BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
 
 
 def is_land(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], x: int, y: int) -> bool:
+    # TODO: use size from constants! one point here != one bit
     bin_x = top_left_offset.longitude + x
     bin_y = top_left_offset.latitude + y   
     index = (bin_y * BINARY_MAP_WIDTH) + bin_x

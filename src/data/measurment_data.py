@@ -1,14 +1,19 @@
 import math
-import re
-from dataclasses import dataclass
 from typing import Generic, Optional
+from dataclasses import dataclass
+
 from data.generic import GenericT
+
 import numpy as np
+
 
 @dataclass
 class CoordinatesBase(Generic[GenericT]):
     latitude: GenericT
     longitude: GenericT
+    
+    def as_tuple(self) -> tuple[GenericT, GenericT]:
+        return (self.latitude, self.longitude)
             
 
 Coordinates = CoordinatesBase[float]

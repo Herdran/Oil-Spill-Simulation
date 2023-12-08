@@ -1,7 +1,10 @@
 from dataclasses import dataclass
+
 import pandas as pd
+
 from data.generic import Range
 from data.measurment_data import Coordinates, CoordinatesBase
+
 
 CellSideCount = CoordinatesBase[int]
 

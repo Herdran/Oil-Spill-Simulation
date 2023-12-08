@@ -10,7 +10,7 @@ import pandas as pd
 from scipy.interpolate import NearestNDInterpolator
 
 from data.generic import Range
-from data.utilities import dataframe_replace_applay, great_circle_distance, minutes, or_default, round_values, celcius_to_kelvins    
+from data.utilities import dataframe_replace_applay, coordinates_distance, minutes, or_default, round_values, celcius_to_kelvins    
 from data.measurment_data import CertainMeasurment, Coordinates, SpeedMeasure, CoordinatesBase, avrage_measurment
 from data.simulation_run_parameters import SimulationRunParameters
 
@@ -201,7 +201,7 @@ class DataProcessorImpl:
         interpolation_neigbours = self._get_direction_of_stataion(coordinates, station_coordinates).get_interpolation_neigbours()
         neigbours_stations_info = self._get_neigbours_station_info(interpolation_neigbours, nearest_station_info)
         neigbours_stations_coords = [self._get_coord_for_station(station_info) for station_info in neigbours_stations_info]
-        weights = [great_circle_distance(coordinates, coord) for coord in neigbours_stations_coords]
+        weights = [coordinates_distance(coordinates, coord) for coord in neigbours_stations_coords]
         measurments = [self._get_certain_measurment(loaded_data, coord, time_stamp) for coord in neigbours_stations_coords]    
     
         return CertainMeasurment(
