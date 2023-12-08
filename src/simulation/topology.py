@@ -42,20 +42,28 @@ def unzip_world_map():
     
     logger.info("World map has been unzipped successfully and saved to %s", output_dir)
 
-
 def get_binary_map_path() -> BinaryMap:
     binary_map_path = get_binary_world_map_path()
     if not path.exists(binary_map_path):
         unzip_world_map()    
     return load_binary_from_file(binary_map_path)
 
+def project_binary_map_coordinates(coord: Coordinates) -> CoordinatesBase[int]:
+    return project_coordinates(coord, BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
 
 def get_top_left_offset() -> CoordinatesBase[int]:
     top_left = Coordinates(
-        latitude  = const.simulation_initial_parameters.area.max.latitude,
-        longitude = const.simulation_initial_parameters.area.min.longitude
+        latitude  = const.point_lat_centers[0],
+        longitude = const.point_lon_centers[0]
     )     
-    return project_coordinates(top_left, BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
+    return project_binary_map_coordinates(top_left)
+
+def get_bottom_right_offset() -> CoordinatesBase[int]:
+    bottom_right = Coordinates(
+        latitude  = const.point_lat_centers[-1],
+        longitude = const.point_lon_centers[-1]
+    )
+    return project_binary_map_coordinates(bottom_right)
 
 
 def is_land(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], x: int, y: int) -> bool:
@@ -66,19 +74,42 @@ def is_land(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], x: int
     return binary_map[index] == 0
 
 
-def get_cartesian_product_range() -> product:
-    return product(range(const.point_side_count), range(const.point_side_count))
+def get_cartesian_product_range(size_x: int, size_y: int) -> product:
+     return product(range(size_x), range(size_y))
+
+def get_map_range(top_left_offset: CoordinatesBase[int], bottom_right_offset: CoordinatesBase[int]) -> product:
+    size_x = bottom_right_offset.longitude - top_left_offset.longitude
+    size_y = bottom_right_offset.latitude - top_left_offset.latitude
+    return get_cartesian_product_range(size_x, size_y)
 
 
-def get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int]) -> Set[Coord_t]:
+def get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], bottom_right_offset: CoordinatesBase[int]) -> set[Coord_t]:
     logger.debug("STATED: Loading lands set")
     lands = set()
-    for x, y in get_cartesian_product_range():
+    for x, y in get_map_range(top_left_offset, bottom_right_offset):
         if is_land(binary_map, top_left_offset, x, y):
             lands.add((x, y))
     logger.debug("FINISHED: Loading lands set")
     return lands
 
+def map_binary_lands(binary_lands: set[Coord_t]) -> set[Coord_t]:
+    logger.debug("STATED: Mapping binary lands")
+    mapped_lands = set()
+    top_left_binary_map_offset = get_top_left_offset()
+    for x, y in get_cartesian_product_range(const.point_side_count, const.point_side_count):
+        center = Coordinates(
+            latitude=const.point_lat_centers[y],
+            longitude=const.point_lon_centers[x]
+        )
+        binary_map_coordinates = project_binary_map_coordinates(center)
+        lat = binary_map_coordinates.longitude - top_left_binary_map_offset.longitude
+        lon = binary_map_coordinates.latitude - top_left_binary_map_offset.latitude
+        if (lat, lon) in binary_lands:
+            mapped_lands.add((x, y))
+    logger.debug("FINISHED: Mapping binary lands")
+    return mapped_lands
 
-def load_topography() -> Set[Coord_t]:        
-    return get_lands_set(get_binary_map_path(), get_top_left_offset())
+
+def load_topography() -> set[Coord_t]:        
+    binary_lands = get_lands_set(get_binary_map_path(), get_top_left_offset(), get_bottom_right_offset())
+    return map_binary_lands(binary_lands)

@@ -63,19 +63,31 @@ def set_simulation_coordinates_parameters(top_coord: float,
     height = coordinates_distance(middle_coord_lat(top_coord), middle_coord_lat(down_coord))
     width = coordinates_distance(middle_coord_lon(left_coord), middle_coord_lon(right_coord))
     
+    print(height, width)
+    
+    
     Constants.point_side_count = int(max(height, width) / Constants.point_side_size)
 
-    point_lat_size = (top_coord - down_coord) / Constants.point_side_count
-    point_lon_size = (right_coord - left_coord) / Constants.point_side_count
-
-    def get_center(first, direction, point_size, index) -> float:
+    def get_center(first, direction, index) -> float:
         center_offset = 0.5 + index
-        return move_coordinate(first, point_size * center_offset, direction)
+        return move_coordinate(first, Constants.point_side_size * center_offset, direction)
 
-    get_lat_centers = lambda i: get_center(middle_coord_lat(top_coord), Move_direction.South, point_lat_size, i)    
-    get_lon_centers = lambda i: get_center(middle_coord_lon(left_coord), Move_direction.East, point_lon_size, i) 
+    get_lat_centers = lambda i: get_center(middle_coord_lat(top_coord), Move_direction.South, i).latitude 
+    get_lon_centers = lambda i: get_center(middle_coord_lon(left_coord), Move_direction.East, i).longitude
+
+    print(Constants.point_side_count)
 
     Constants.point_lat_centers = list(map(get_lat_centers, range(Constants.point_side_count)))
     Constants.point_lon_centers = list(map(get_lon_centers, range(Constants.point_side_count)))
 
     Constants.simulation_time = (Constants.simulation_initial_parameters.time.max - Constants.simulation_initial_parameters.time.min).total_seconds()
+    
+    print(move_coordinate(middle_coord_lat(top_coord), height, Move_direction.South).latitude)
+    print(down_coord, Constants.point_lat_centers[-1], move_coordinate(middle_coord_lat(down_coord), point_side_size / 2, Move_direction.North).latitude)
+
+    
+    # assert(down_coord <= Constants.point_lat_centers[-1])
+    # assert(right_coord <= Constants.point_lon_centers[-1])
+    
+    
+    
