@@ -1,3 +1,6 @@
+from logging import getLogger
+from math import ceil
+
 import pandas as pd
 
 from data.generic import Range
@@ -6,13 +9,18 @@ from data.simulation_run_parameters import Interpolation_grid_size , SimulationR
 from data.utilities import Move_direction, coordinates_distance, move_coordinate
 
 
+logger = getLogger("constants")
+
+
 class Constants:
     point_side_size: int = None
-    point_side_count: int = None
     iter_as_sec: int = 20
 
     point_lat_centers: list[float] = None
     point_lon_centers: list[float] = None
+    
+    point_lat_side_count: int = None
+    point_lon_side_count: int = None
 
     simulation_initial_parameters: SimulationRunParameters = None
     simulation_time: float = None
@@ -63,10 +71,12 @@ def set_simulation_coordinates_parameters(top_coord: float,
     height = coordinates_distance(middle_coord_lat(top_coord), middle_coord_lat(down_coord))
     width = coordinates_distance(middle_coord_lon(left_coord), middle_coord_lon(right_coord))
     
-    print(height, width)
+    get_points_count = lambda size: int(ceil(size / Constants.point_side_size))
     
+    Constants.point_side_lat_count = get_points_count(height)
+    Constants.point_side_lon_count = get_points_count(width)
     
-    Constants.point_side_count = int(max(height, width) / Constants.point_side_size)
+    logger.debug(f"Points count: {Constants.point_side_lat_count} x {Constants.point_side_lon_count}")
 
     def get_center(first, direction, index) -> float:
         center_offset = 0.5 + index
@@ -75,19 +85,10 @@ def set_simulation_coordinates_parameters(top_coord: float,
     get_lat_centers = lambda i: get_center(middle_coord_lat(top_coord), Move_direction.South, i).latitude 
     get_lon_centers = lambda i: get_center(middle_coord_lon(left_coord), Move_direction.East, i).longitude
 
-    print(Constants.point_side_count)
-
-    Constants.point_lat_centers = list(map(get_lat_centers, range(Constants.point_side_count)))
-    Constants.point_lon_centers = list(map(get_lon_centers, range(Constants.point_side_count)))
+    Constants.point_lat_centers = list(map(get_lat_centers, range(Constants.point_side_lat_count)))
+    Constants.point_lon_centers = list(map(get_lon_centers, range(Constants.point_side_lon_count)))
 
     Constants.simulation_time = (Constants.simulation_initial_parameters.time.max - Constants.simulation_initial_parameters.time.min).total_seconds()
     
-    print(move_coordinate(middle_coord_lat(top_coord), height, Move_direction.South).latitude)
-    print(down_coord, Constants.point_lat_centers[-1], move_coordinate(middle_coord_lat(down_coord), point_side_size / 2, Move_direction.North).latitude)
-
-    
-    # assert(down_coord <= Constants.point_lat_centers[-1])
-    # assert(right_coord <= Constants.point_lon_centers[-1])
-    
-    
-    
+    logger.debug(f"Simulation time: {Constants.simulation_time}s")
+ 

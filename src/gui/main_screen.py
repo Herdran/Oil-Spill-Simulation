@@ -466,8 +466,8 @@ def start_simulation(neighborhood, window):
     engine = simulation.SimulationEngine(get_data_processor(), neighborhood)
     image_array = np.array(
         [rgba_to_rgb(LAND_COLOR) if (j, i) in engine.lands else rgba_to_rgb(SEA_COLOR) for i in
-         range(const.point_side_count) for j in
-         range(const.point_side_count)]).reshape((const.point_side_count, const.point_side_count, 3)).astype(np.uint8)
+         range(const.point_side_lat_count) for j in
+         range(const.point_side_lon_count)]).reshape((const.point_side_lat_count, const.point_side_lon_count, 3)).astype(np.uint8)
 
     window.rowconfigure(0, weight=5, uniform='row')
     window.rowconfigure(1, weight=1, uniform='row')

@@ -106,7 +106,7 @@ def map_binary_lands(binary_lands: set[Coord_t]) -> set[Coord_t]:
         lon = binary_map_coordinates.latitude - top_left_binary_map_offset.latitude
         return (lat, lon) in binary_lands
        
-    product = get_cartesian_product_range(const.point_side_count, const.point_side_count)
+    product = get_cartesian_product_range(const.point_side_lon_count, const.point_side_lat_count)
     result = {coord for coord in product if is_land(coord)}
     logger.debug("FINISHED: Mapping binary lands")
     return result

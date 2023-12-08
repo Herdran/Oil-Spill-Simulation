@@ -4,7 +4,7 @@ from random import shuffle
 from typing import Dict
 
 from constatnts import Constants as const
-from simulation.point import Point, Coord_t, TopographyState
+from simulation.point import Point, Coord_t, TopographyState, is_coord_in_simulation_area
 from simulation.utilities import get_neighbour_coordinates
 
 
@@ -21,7 +21,7 @@ class SpreadingEngine:
             neighbours = get_neighbour_coordinates(x, y, self.initial_values.neighbourhood)
             shuffle(neighbours)
             for neighbour in neighbours:
-                if not (0 <= neighbour[0] < const.point_side_count and 0 <= neighbour[1] < const.point_side_count):
+                if not is_coord_in_simulation_area(neighbour):
                     continue
                 if neighbour not in self.world:
                     neighbour_point = self.new_point(neighbour, new_points)
@@ -42,7 +42,7 @@ class SpreadingEngine:
 
     def update_new_points(self, new_points: Dict[Coord_t, Point]) -> None:
         for coord, point in new_points.items():
-            if not (0 <= coord[0] < const.point_side_count and 0 <= coord[1] < const.point_side_count):
+            if not is_coord_in_simulation_area(coord):
                 continue
             self.world[coord] = point
             self.engine.points_changed.append(coord)

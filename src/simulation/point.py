@@ -37,6 +37,9 @@ class InitialValues:
         self.neighbourhood = neighbourhood
 
 
+def is_coord_in_simulation_area(coord: Coord_t) -> bool:
+        return 0 <= coord[0] < const.point_side_lon_count and 0 <= coord[1] < const.point_side_lat_count
+
 class Point:
     world = dict()
 
@@ -134,7 +137,7 @@ class Point:
 
         neighbours = get_neighbour_coordinates(x, y, self.initial_values.neighbourhood)
         for cords in neighbours:
-            if not ((0 <= cords[0] < const.point_side_count) and (0 <= cords[1] < const.point_side_count)):
+            if not is_coord_in_simulation_area(cords):
                 continue
             if cords in self.engine.lands:
                 continue
@@ -228,7 +231,7 @@ class Point:
 
     def move_oil_to_other(self, coord: Coord_t, mass: float) -> None:
         self.oil_mass -= mass
-        if not (0 <= coord[0] < const.point_side_count and 0 <= coord[1] < const.point_side_count):
+        if not is_coord_in_simulation_area(coord):
             return
         if coord not in self.world:
             self.world[coord] = Point(coord, self.initial_values, self.engine)
