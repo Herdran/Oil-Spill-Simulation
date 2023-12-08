@@ -67,7 +67,6 @@ def get_bottom_right_offset() -> CoordinatesBase[int]:
 
 
 def is_land(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], x: int, y: int) -> bool:
-    # TODO: use size from constants! one point here != one bit
     bin_x = top_left_offset.longitude + x
     bin_y = top_left_offset.latitude + y   
     index = (bin_y * BINARY_MAP_WIDTH) + bin_x
@@ -76,6 +75,7 @@ def is_land(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], x: int
 
 def get_cartesian_product_range(size_x: int, size_y: int) -> product:
      return product(range(size_x), range(size_y))
+
 
 def get_map_range(top_left_offset: CoordinatesBase[int], bottom_right_offset: CoordinatesBase[int]) -> product:
     size_x = bottom_right_offset.longitude - top_left_offset.longitude
@@ -91,6 +91,7 @@ def get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], 
             lands.add((x, y))
     logger.debug("FINISHED: Loading lands set")
     return lands
+
 
 def map_binary_lands(binary_lands: set[Coord_t]) -> set[Coord_t]:
     logger.debug("STATED: Mapping binary lands")
