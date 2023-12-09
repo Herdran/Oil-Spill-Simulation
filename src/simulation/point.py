@@ -208,7 +208,7 @@ class Point:
 
     def slick_thickness(self) -> float:
         thickness = (self.oil_mass / self.initial_values.oil_density) / (const.point_side_size ** 2)  # [m]
-        return thickness / 100  # [cm]
+        return thickness * 100  # [cm]
 
     def viscosity_change(self, delta_F: float, delta_Y: float) -> None:
         delta_viscosity = self.initial_values.c * self.viscosity_dynamic * delta_F + (
