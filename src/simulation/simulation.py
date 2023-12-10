@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Any
 
 import pandas as pd
 
@@ -58,6 +58,13 @@ class SimulationEngine:
     def update_oil_points(self):
         for coord in list(self.world.keys()):  # copy because dict changes size during iteration
             self.world[coord].update()
+
+    def add_oil_sources(self, oil_sources: List[dict[str, Any]]):
+        for oil_source in oil_sources:
+            self.add_oil_source(oil_source["coord"],
+                                oil_source["mass_per_minute"],
+                                oil_source["spill_start"],
+                                oil_source["spill_end"])
 
     def add_oil_source(self, coord: Coord_t, mass_per_minute: float, spill_start: pd.Timestamp,
                        spill_end: pd.Timestamp):

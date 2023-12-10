@@ -19,7 +19,7 @@ OIL_COLOR = rgba(0, 0, 0)
 LAND_WITH_OIL_COLOR = rgba(0, 100, 0)
 
 
-def start_simulation(neighborhood, window):
+def start_simulation(neighborhood, window, world_from_checkpoint=None, oil_sources=None):
     class ImageViewer(tk.Canvas):
         def __init__(self, parent, image_array, image_change_controller, initial_zoom_level):
             super().__init__(parent)
@@ -444,6 +444,12 @@ def start_simulation(neighborhood, window):
         return sym_data_reader.preprocess(const.simulation_initial_parameters)
 
     engine = simulation.SimulationEngine(get_data_processor(), neighborhood)
+
+    if world_from_checkpoint:
+        engine.set_world(world_from_checkpoint)
+    if oil_sources:
+        engine.add_oil_sources(oil_sources)
+
     image_array = np.array(
         [rgba_to_rgb(LAND_COLOR) if (j, i) in engine.lands else rgba_to_rgb(SEA_COLOR) for i in
          range(const.point_side_count) for j in

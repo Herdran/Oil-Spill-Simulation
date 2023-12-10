@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import filedialog
 
 from data.utilities import kelvins_to_celsius
 from simulation import simulation
@@ -78,3 +79,9 @@ def on_key_press(event, validation_function):
 
 def on_focus_out(_, validation_function):
     validation_function()
+
+
+def browse_button(target):
+    filename = filedialog.askdirectory()
+    if filename:
+        target.set(filename)

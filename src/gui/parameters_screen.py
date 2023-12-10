@@ -2,7 +2,7 @@ import os.path
 import os.path
 import re
 import tkinter as tk
-from tkinter import DISABLED, NORMAL, filedialog
+from tkinter import DISABLED, NORMAL
 
 import pandas as pd
 from PIL import Image, ImageTk
@@ -10,7 +10,7 @@ from PIL import Image, ImageTk
 from constatnts import set_simulation_coordinates_parameters
 from files import get_main_path, get_data_path
 from gui.utilities import create_frame, create_label_pack, create_label_grid, create_input_entry_grid, \
-    create_label_grid_parameter_screen
+    create_label_grid_parameter_screen, browse_button
 from gui.main_screen import start_simulation
 from simulation.utilities import Neighbourhood
 
@@ -35,6 +35,8 @@ def start_initial_menu(window):
             self.oil_density = 1
             self.correctly_set_parameters = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
             self.img = None
+            self.world_from_checkpoint = None
+            self.oil_sources = None
 
             self.main_frame = create_frame(parent, 0, 0, 1, 1, tk.N + tk.S + tk.E + tk.W, 5, 5)
 
@@ -53,7 +55,8 @@ def start_initial_menu(window):
             neighborhood_type_frame = create_frame(self.main_frame, 4, 0, 1, 1, tk.S + tk.W)
             inputs_frame = create_frame(self.main_frame, 1, 0, 3, 3, tk.N + tk.S + tk.W)
             data_path_frame = create_frame(self.main_frame, 5, 0, 1, 3, tk.S + tk.W)
-            confirm_and_start_frame = create_frame(self.main_frame, 5, 2, 1, 1, tk.S + tk.E)
+            checkpoint_path_frame = create_frame(self.main_frame, 6, 0, 1, 3, tk.S + tk.W)
+            confirm_and_start_frame = create_frame(self.main_frame, 6, 2, 1, 1, tk.S + tk.E)
 
             create_label_pack(title_frame, "Oil Spill Simulation")
 
@@ -172,7 +175,18 @@ def start_initial_menu(window):
             browse_path_label = tk.Label(data_path_frame, textvariable=self.data_path)
             browse_path_label.grid(row=1, column=1, padx=3, pady=3, sticky=tk.N + tk.S + tk.W)
 
-            data_path_browse = tk.Button(data_path_frame, text="Browse", command=self.browse_button)
+            data_path_browse = tk.Button(data_path_frame, text="Browse", command=lambda: browse_button(target=self.data_path))
+            data_path_browse.grid(row=1, column=0, padx=3, pady=3, sticky=tk.N + tk.S + tk.W)
+
+            create_label_grid(checkpoint_path_frame, "Checkpoint path:", font=("Arial", 14, "bold"), columnspan=2,
+                              sticky=tk.N + tk.S + tk.W)
+
+            self.checkpoint_path = tk.StringVar()
+
+            browse_path_label = tk.Label(checkpoint_path_frame, textvariable=self.checkpoint_path)
+            browse_path_label.grid(row=1, column=1, padx=3, pady=3, sticky=tk.N + tk.S + tk.W)
+
+            data_path_browse = tk.Button(checkpoint_path_frame, text="Browse", command=self.browse_and_load_checkpoint)
             data_path_browse.grid(row=1, column=0, padx=3, pady=3, sticky=tk.N + tk.S + tk.W)
 
             self.confirm_and_continue = tk.Button(confirm_and_start_frame, text='Confirm and continue',
@@ -441,10 +455,18 @@ def start_initial_menu(window):
                 if sum(self.correctly_set_parameters) == 14:
                     self.confirm_and_continue.config(state=NORMAL)
 
-        def browse_button(self):
-            filename = filedialog.askdirectory()
-            if filename:
-                self.data_path.set(filename)
+        def browse_and_load_checkpoint(self):
+            browse_button(self.checkpoint_path)
+            if self.checkpoint_path:
+                loaded_parameters = {}  # TODO load checkpoint here  # load_from_json(self.checkpoint_path, )
+                self.set_all_parameters_from_checkpoint(loaded_parameters)
+                self.validate_all_parameters()
+
+        def set_all_parameters_from_checkpoint(self, loaded_parameters):
+            pass
+            # self.top_coord_input.setvar(loaded_parameters["top_coord"])
+            # self.top_coord_input.config(state=DISABLED)
+            # TODO etc
 
         def confirm_and_start_simulation(self):
             set_simulation_coordinates_parameters(self.top_coord,
@@ -465,19 +487,7 @@ def start_initial_menu(window):
                                                   )
 
             start_simulation(Neighbourhood.MOORE if self.neighborhood_var.get() == 0 else Neighbourhood.VON_NEUMANN,
-                             window)
-
-        def resize_img_to_fit_frame(self, img):
-            w, h = img.size
-
-            if w >= h and h / w < 0.5:
-                w_resize = 400
-                h_resize = int(400 * (h / w))
-            else:
-                h_resize = 200
-                w_resize = int(200 * (w / h))
-
-            return img.resize((w_resize, h_resize))
+                             window, self.world_from_checkpoint, self.oil_sources)
 
         def load_and_crop_image(self):
             w, h = self.loaded_img.size
