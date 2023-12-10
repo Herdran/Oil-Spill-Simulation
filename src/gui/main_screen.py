@@ -20,7 +20,7 @@ OIL_COLOR = rgba(0, 0, 0)
 LAND_WITH_OIL_COLOR = rgba(0, 100, 0)
 
 
-def start_simulation(neighborhood, window, world_from_checkpoint=None, oil_sources=None):
+def start_simulation(window, world_from_checkpoint=None, oil_sources=None):
     class ImageViewer(tk.Canvas):
         def __init__(self, parent, image_array, image_change_controller, initial_zoom_level):
             super().__init__(parent)
@@ -132,7 +132,7 @@ def start_simulation(neighborhood, window, world_from_checkpoint=None, oil_sourc
                 coord = (x, y)
                 if coord not in engine.lands:
                     if coord not in engine.world:
-                        engine.world[coord] = simulation.Point(coord, engine.initial_values, engine)
+                        engine.world[coord] = simulation.Point(coord, engine)
                     point_clicked = engine.world[coord]
                     point_clicked.add_oil(self.image_change_controller.oil_to_add_on_click)
 
@@ -444,10 +444,10 @@ def start_simulation(neighborhood, window, world_from_checkpoint=None, oil_sourc
 
         return sym_data_reader.preprocess(const.simulation_initial_parameters)
 
-    engine = simulation.SimulationEngine(get_data_processor(), neighborhood)
+    engine = simulation.SimulationEngine(get_data_processor())
 
     if world_from_checkpoint:
-        initialize_simulation_from_checkpoint(world_from_checkpoint, engine.initial_values, engine)
+        initialize_simulation_from_checkpoint(world_from_checkpoint, engine)
     if oil_sources:
         engine.add_oil_sources(oil_sources)
 

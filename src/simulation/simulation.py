@@ -3,17 +3,15 @@ from typing import Dict, List, Any
 import pandas as pd
 
 from data.data_processor import DataProcessor
-from simulation.point import Point, Coord_t, InitialValues, TopographyState
+from simulation.point import Point, Coord_t, TopographyState
 from simulation.spreading import SpreadingEngine
-from simulation.utilities import Neighbourhood
 from simulation.topology import load_topography, project_coordinates_oil_sources
 from checkpoints import save_to_json
 from constatnts import Constants as const
 
 
 class SimulationEngine:
-    def __init__(self, data_processor: DataProcessor, neighbourhood: Neighbourhood = Neighbourhood.MOORE, checkpoint_frequency: int = 0):
-        self.initial_values = InitialValues(neighbourhood)
+    def __init__(self, data_processor: DataProcessor, checkpoint_frequency: int = 0):
         self.world: Dict[Coord_t, Point] = dict()
         self.spreading_engine = SpreadingEngine(self)
 
@@ -76,7 +74,7 @@ class SimulationEngine:
             cords, mass_per_minute, spill_start, spill_end = spill
             if spill_start <= current_timestamp <= spill_end:
                 if cords not in self.world:
-                    self.world[cords] = Point(cords, self.initial_values, self)
+                    self.world[cords] = Point(cords, self)
                     self.points_changed.append(cords)
                 self.world[cords].add_oil(mass_per_minute * self.timestep / 60)
 

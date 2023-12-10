@@ -671,6 +671,7 @@ def start_initial_menu(window):
             # TODO we should probably also set neighborhood type here
 
         def confirm_and_start_simulation(self):
+            self.confirm_and_continue.config(state=DISABLED)
             set_simulation_coordinates_parameters(self.top_coord,
                                                   self.down_coord,
                                                   self.left_coord,
@@ -685,11 +686,12 @@ def start_initial_menu(window):
                                                   self.iter_as_sec,
                                                   self.min_oil_thickness,
                                                   self.oil_viscosity,
-                                                  self.oil_density
+                                                  self.oil_density,
+                                                  Neighbourhood.MOORE if self.neighborhood_var.get() == 0
+                                                  else Neighbourhood.VON_NEUMANN
                                                   )
 
             self.read_all_from_oil_sources_listbox()
-            start_simulation(Neighbourhood.MOORE if self.neighborhood_var.get() == 0 else Neighbourhood.VON_NEUMANN,
-                             window, self.world_from_checkpoint, self.oil_sources)
+            start_simulation(window, self.world_from_checkpoint, self.oil_sources)
 
     ParametersSettingController(window)

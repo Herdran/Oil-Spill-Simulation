@@ -3,6 +3,7 @@ import pandas as pd
 from data.generic import Range
 from data.measurment_data import Coordinates
 from data.simulation_run_parameters import CellSideCount, SimulationRunParameters
+from simulation.utilities import Neighbourhood
 
 
 class Constants:
@@ -19,8 +20,18 @@ class Constants:
     simulation_initial_parameters: SimulationRunParameters = None
     simulation_time: float = None
 
-    viscosity_kinematic: float = None
-    oil_density: float = None
+    water_density = 997  # [kg/m^3]
+    oil_density = 846  # [kg/m^3]
+    emulsion_max_content_water = 0.7  # max content of water in the emulsion
+    molar_mass = 348.23  # [g/mol] mean
+    boiling_point = 609  # [K] mean
+    interfacial_tension = 30  # [dyna/cm]
+    propagation_factor = 2.5
+    c = 10  # parameter dependant of oil type, used in viscosity change
+    viscosity_kinematic = 5.3e-6  # [m^2/s]
+    viscosity_dynamic = viscosity_kinematic * oil_density
+    emulsification_rate = 0
+    neighbourhood = None
 
 
 def set_simulation_coordinates_parameters(top_coord: float,
@@ -37,7 +48,8 @@ def set_simulation_coordinates_parameters(top_coord: float,
                                           iter_as_sec: int,
                                           min_oil_thickness: float,
                                           oil_viscosity: float,
-                                          oil_density: float
+                                          oil_density: float,
+                                          neighbourhood: Neighbourhood
                                           ):
 
     Constants.simulation_initial_parameters = SimulationRunParameters(
@@ -84,5 +96,6 @@ def set_simulation_coordinates_parameters(top_coord: float,
 
     Constants.viscosity_kinematic = oil_viscosity
     Constants.oil_density = oil_density
+    Constants.neighbourhood = neighbourhood
 
     # TODO idk where to set min_oil_thickness

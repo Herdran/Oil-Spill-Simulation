@@ -2,7 +2,7 @@ import time
 
 import pandas as pd
 
-from simulation.point import Point, Coord_t, InitialValues
+from simulation.point import Point, Coord_t
 from constatnts import Constants as const
 from files import get_main_path
 from typing import Dict, Any, List, Tuple
@@ -62,11 +62,11 @@ def load_from_json(path: str) -> Dict[str, Any]:
     return data
 
 
-def initialize_simulation_from_checkpoint(data: Dict[str, Any], initial_values: InitialValues, engine):
+def initialize_simulation_from_checkpoint(data: Dict[str, Any], engine):
     world = {}
     for point_data in data["points"]:
         point_coord = tuple(point_data["coord"])
-        point = Point(point_coord, initial_values, engine)
+        point = Point(point_coord, engine)
         point.oil_mass = point_data["oil_mass"]
         point.evaporation_rate = point_data["evaporation_rate"]
         point.emulsification_rate = point_data["emulsification_rate"]
