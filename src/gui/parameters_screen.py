@@ -197,37 +197,25 @@ def start_initial_menu(window):
                                                   command=self.confirm_and_start_simulation)
             self.confirm_and_continue.pack(side=tk.RIGHT, padx=5, pady=5)
 
-
-            # oil_sources_frame.rowconfigure(0, weight=10, uniform='row')
-            # oil_sources_frame.rowconfigure(1, weight=10, uniform='row')
-            # oil_sources_frame.rowconfigure(2, weight=10, uniform='row')
-            # oil_sources_frame.rowconfigure(3, weight=1, uniform='row')
-            # # oil_sources_frame.rowconfigure(4, weight=1, uniform='row')
-            # # oil_sources_frame.rowconfigure(5, weight=1, uniform='row')
-            # # oil_sources_frame.rowconfigure(6, weight=1, uniform='row')
             oil_sources_frame.columnconfigure(0, weight=4, uniform='column')
             oil_sources_frame.columnconfigure(1, weight=4, uniform='column')
             oil_sources_frame.columnconfigure(2, weight=4, uniform='column')
             oil_sources_frame.columnconfigure(3, weight=5, uniform='column')
             oil_sources_frame.columnconfigure(4, weight=5, uniform='column')
-            # oil_sources_frame.columnconfigure(5, weight=1, uniform='column')
 
-            # create_label_grid(oil_sources_frame, "Oil sources\n[latitude, longitude, kg/m, yyyy-mm-dd hh:mm:ss, yyyy-mm-dd hh:mm:ss]", columnspan=3)
             create_label_grid(oil_sources_frame, "Oil sources", columnspan=5)
 
             self.oil_sources_listbox = tk.Listbox(oil_sources_frame, width=95, height=3)
 
-            self.oil_sources_listbox.grid(row=3, column=1, columnspan=4, sticky=tk.N + tk.S + tk.W, padx=5, pady=5)
-            # self.oil_sources_listbox.insert(END, "1")
-            # self.oil_sources_listbox.insert(END, "2")
-            # self.oil_sources_listbox.insert(END, "3")
-            # self.oil_sources_listbox.insert(END, "4")
-            # self.oil_sources_listbox.insert(END, "5")
-            # self.oil_sources_listbox.insert(END, "6")
+            self.oil_sources_listbox.grid(row=3, column=1, columnspan=3, sticky=tk.N + tk.S + tk.W, padx=5, pady=5)
 
             self.oil_sources_listbox_insert = tk.Button(oil_sources_frame, text='Add',
                                                         command=self.insert_into_oil_sources_listbox)
             self.oil_sources_listbox_insert.grid(row=2, column=0, columnspan=2, sticky=tk.N + tk.S)
+
+            scrollbar = tk.Scrollbar(oil_sources_frame, command=self.oil_sources_listbox.yview)
+            scrollbar.grid(row=3, column=4, sticky=tk.N + tk.S + tk.W, padx=5, pady=5)
+            self.oil_sources_listbox.config(yscrollcommand=scrollbar.set)
 
             self.oil_sources_listbox_delete = tk.Button(oil_sources_frame, text='Delete',
                                                         command=self.delete_from_oil_sources_listbox)
