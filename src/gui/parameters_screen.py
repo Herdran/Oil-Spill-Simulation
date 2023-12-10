@@ -10,7 +10,7 @@ from PIL import Image, ImageTk
 from constatnts import set_simulation_coordinates_parameters
 from files import get_main_path, get_data_path
 from gui.utilities import create_frame, create_label_pack, create_label_grid, create_input_entry_grid, \
-    create_label_grid_parameter_screen, browse_button
+    create_label_grid_parameter_screen, browse_button, resize_img_to_fit_frame
 from gui.main_screen import start_simulation
 from simulation.utilities import Neighbourhood
 
@@ -152,7 +152,6 @@ def start_initial_menu(window):
             self.map_view_frame = create_frame(inputs_frame, 0, 0, 4, 1, tk.N + tk.S, 3, 3)
 
             self.map_view = tk.Canvas(self.map_view_frame)
-            self.load_and_crop_image()
 
             self.map_view.grid(row=0, column=0, rowspan=3, padx=3, pady=3, sticky=tk.N + tk.S)
 
@@ -193,6 +192,9 @@ def start_initial_menu(window):
                                                   command=self.confirm_and_start_simulation)
             self.confirm_and_continue.pack(side=tk.RIGHT, padx=5, pady=5)
 
+            self.map_view_frame.update()
+            self.crop_and_resize_preview_image()
+            self.main_frame.bind("<Configure>", self.resize_preview_image)
             self.validate_all_parameters()
 
         def validate_coordinates_top(self, is_first_run=True):
@@ -451,7 +453,7 @@ def start_initial_menu(window):
 
         def check_all_parameters_validity_and_refresh_image(self, coordinate_change=False):
             if coordinate_change and sum(self.correctly_set_parameters[:4]) == 4:
-                self.load_and_crop_image()
+                self.crop_and_resize_preview_image()
                 if sum(self.correctly_set_parameters) == 14:
                     self.confirm_and_continue.config(state=NORMAL)
 
@@ -467,6 +469,9 @@ def start_initial_menu(window):
             # self.top_coord_input.setvar(loaded_parameters["top_coord"])
             # self.top_coord_input.config(state=DISABLED)
             # TODO etc
+
+        def resize_preview_image(self, event=None):
+            self.crop_and_resize_preview_image()
 
         def confirm_and_start_simulation(self):
             set_simulation_coordinates_parameters(self.top_coord,
@@ -489,26 +494,26 @@ def start_initial_menu(window):
             start_simulation(Neighbourhood.MOORE if self.neighborhood_var.get() == 0 else Neighbourhood.VON_NEUMANN,
                              window, self.world_from_checkpoint, self.oil_sources)
 
-        def load_and_crop_image(self):
-            w, h = self.loaded_img.size
+        def crop_and_resize_preview_image(self):
+            image_width, image_height = self.loaded_img.size
 
-            longitude_west_bound = int(w * (self.left_coord + 180) / 360)
-            longitude_east_bound = int(w * (self.right_coord + 180) / 360)
-            latitude_upper_bound = int(h * -(self.top_coord - 90) / 180)
-            latitude_lower_bound = int(h * -(self.down_coord - 90) / 180)
+            nw_pixel_x = int((self.left_coord + 180) * (image_width / 360))
+            nw_pixel_y = int((90 - self.top_coord) * (image_height / 180))
+
+            se_pixel_x = int((self.right_coord + 180) * (image_width / 360))
+            se_pixel_y = int((90 - self.down_coord) * (image_height / 180))
 
             # TODO Temporary measure in place for the view to actually show anything when the coordinates values are very similiar
-            if longitude_west_bound + 10 >= longitude_east_bound:
-                longitude_west_bound -= 10
-                longitude_east_bound += 10
-            if latitude_upper_bound + 10 >= latitude_lower_bound:
-                latitude_lower_bound += 10
-                latitude_upper_bound -= 10
+            if nw_pixel_x + 10 >= se_pixel_x:
+                nw_pixel_x -= 10
+                se_pixel_x += 10
+            if nw_pixel_y + 10 >= se_pixel_y:
+                nw_pixel_y -= 10
+                se_pixel_y += 10
 
-            cropped_img = self.loaded_img.crop(
-                (longitude_west_bound, latitude_upper_bound, longitude_east_bound, latitude_lower_bound))
+            cropped_image = self.loaded_img.crop((nw_pixel_x, nw_pixel_y, se_pixel_x, se_pixel_y))
 
-            resized_img = self.resize_img_to_fit_frame(cropped_img)
+            resized_img = resize_img_to_fit_frame(cropped_image, self.map_view_frame)
 
             self.img = ImageTk.PhotoImage(resized_img)
             self.map_view.create_image(0, 0, image=self.img, anchor=tk.NW)
