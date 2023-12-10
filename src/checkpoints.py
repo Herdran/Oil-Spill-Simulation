@@ -3,7 +3,7 @@ import time
 import pandas as pd
 
 from simulation.point import Point, Coord_t
-from constatnts import Constants as const
+from constatnts import InitialValues
 from files import get_main_path
 from typing import Dict, Any, List, Tuple
 import json
@@ -35,11 +35,11 @@ def save_to_json(world: Dict[Coord_t, Point], total_time: int, constant_sources:
     timestamp = time.strftime("%Y_%m_%d-%H_%M_%S")
     path = get_main_path().joinpath(f"checkpoints/checkpoint_{timestamp}.json")
     data = {
-        "top_coord": const.simulation_initial_parameters.area.max.latitude,
-        "down_coord": const.simulation_initial_parameters.area.min.latitude,
-        "left_coord": const.simulation_initial_parameters.area.min.longitude,
-        "right_coord": const.simulation_initial_parameters.area.max.longitude,
-        "timestamp": str(const.simulation_initial_parameters.time.min + pd.Timedelta(seconds=total_time)),
+        "top_coord": InitialValues.simulation_initial_parameters.area.max.latitude,
+        "down_coord": InitialValues.simulation_initial_parameters.area.min.latitude,
+        "left_coord": InitialValues.simulation_initial_parameters.area.min.longitude,
+        "right_coord": InitialValues.simulation_initial_parameters.area.max.longitude,
+        "timestamp": str(InitialValues.simulation_initial_parameters.time.min + pd.Timedelta(seconds=total_time)),
         #TODO add more parameters
         "constants_sources": [oil_source_to_dict(source) for source in constant_sources],
         "points": [point_to_dict(point) for point in world.values()]

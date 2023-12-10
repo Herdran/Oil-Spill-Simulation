@@ -9,7 +9,7 @@ from PIL import Image, ImageTk
 import simulation.simulation as simulation
 from checkpoints import initialize_simulation_from_checkpoint
 from color import rgba, blend_color, rgba_to_rgb
-from constatnts import Constants as const
+from constatnts import InitialValues
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from files import get_main_path
 from gui.utilities import get_tooltip_text, create_frame, create_label_pack, create_input_entry_pack
@@ -236,7 +236,7 @@ def start_simulation(window, world_from_checkpoint=None, oil_sources=None):
             self.sim_sec_passed = 0
             self.oil_to_add_on_click = 10000
             self.minimal_oil_to_show = 100
-            self.iter_as_sec = const.iter_as_sec
+            self.iter_as_sec = InitialValues.iter_as_sec
             self.viewer = None
             self.value_not_yet_processed = 0
             self.oil_spill_on_bool = True
@@ -442,7 +442,7 @@ def start_simulation(window, world_from_checkpoint=None, oil_sources=None):
             logging.error(f"Data validation exception: {ex}")
             exit(1)
 
-        return sym_data_reader.preprocess(const.simulation_initial_parameters)
+        return sym_data_reader.preprocess(InitialValues.simulation_initial_parameters)
 
     engine = simulation.SimulationEngine(get_data_processor())
 
@@ -453,8 +453,8 @@ def start_simulation(window, world_from_checkpoint=None, oil_sources=None):
 
     image_array = np.array(
         [rgba_to_rgb(LAND_COLOR) if (j, i) in engine.lands else rgba_to_rgb(SEA_COLOR) for i in
-         range(const.point_side_count) for j in
-         range(const.point_side_count)]).reshape((const.point_side_count, const.point_side_count, 3)).astype(np.uint8)
+         range(InitialValues.point_side_count) for j in
+         range(InitialValues.point_side_count)]).reshape((InitialValues.point_side_count, InitialValues.point_side_count, 3)).astype(np.uint8)
 
     window.rowconfigure(0, weight=5, uniform='row')
     window.rowconfigure(1, weight=1, uniform='row')

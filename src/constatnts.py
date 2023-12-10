@@ -3,13 +3,14 @@ import pandas as pd
 from data.generic import Range
 from data.measurment_data import Coordinates
 from data.simulation_run_parameters import CellSideCount, SimulationRunParameters
+from files import get_data_path
 from simulation.utilities import Neighbourhood
 
 
-class Constants:
-    point_side_size: int = None
+class InitialValues:
+    point_side_size: int = 50
     point_side_count: int = 1000  # TODO to be calculated
-    iter_as_sec: int = None
+    iter_as_sec: int = 20
 
     point_lat_size: float = None
     point_lon_size: float = None
@@ -17,8 +18,38 @@ class Constants:
     point_lat_centers: list[float] = None
     point_lon_centers: list[float] = None
 
-    simulation_initial_parameters: SimulationRunParameters = None
+    simulation_initial_parameters: SimulationRunParameters = SimulationRunParameters(
+        area=Range(
+            min=Coordinates(
+                latitude=30.19767,
+                longitude=-88.77964
+            ),
+            max=Coordinates(
+                latitude=30.24268,
+                longitude=-88.72648
+            )
+        ),
+        # we need to think about behavior of our application when sim time ends
+        time=Range(
+            min=pd.Timestamp("2010-04-01 00:00:00"),
+            max=pd.Timestamp("2010-04-02 00:00:00"),
+        ),
+        data_time_step=pd.Timedelta(minutes=30),
+        # how many point we want is how good the interpolation will be
+        # but I guess we don't need many of them as that is the only initial interpolation
+        # and making that initial interpolation is costly at app start
+        # -----
+        # and that cells count is not the same as cells count in simulation!
+        cells_side_count=CellSideCount(
+            latitude=10,
+            longitude=10
+        ),
+        path_to_data=get_data_path()
+    )
+
     simulation_time: float = None
+
+    min_oil_thickness = 1
 
     water_density = 997  # [kg/m^3]
     oil_density = 846  # [kg/m^3]
@@ -52,7 +83,7 @@ def set_simulation_coordinates_parameters(top_coord: float,
                                           neighbourhood: Neighbourhood
                                           ):
 
-    Constants.simulation_initial_parameters = SimulationRunParameters(
+    InitialValues.simulation_initial_parameters = SimulationRunParameters(
         area=Range(
             min=Coordinates(
                 latitude=down_coord,
@@ -81,21 +112,20 @@ def set_simulation_coordinates_parameters(top_coord: float,
         path_to_data=data_path
     )
 
-    Constants.point_side_size = point_side_size
+    InitialValues.point_side_size = point_side_size
 
-    Constants.point_lat_size = (top_coord - down_coord) / Constants.point_side_count
-    Constants.point_lon_size = (right_coord - left_coord) / Constants.point_side_count
+    InitialValues.point_lat_size = (top_coord - down_coord) / InitialValues.point_side_count
+    InitialValues.point_lon_size = (right_coord - left_coord) / InitialValues.point_side_count
 
-    Constants.point_lat_centers = [top_coord - Constants.point_lat_size / 2 - (Constants.point_lat_size * i) for i in
-                                   range(Constants.point_side_count)]
-    Constants.point_lon_centers = [left_coord + Constants.point_lon_size / 2 + (Constants.point_lon_size * i) for i in
-                                   range(Constants.point_side_count)]
+    InitialValues.point_lat_centers = [top_coord - InitialValues.point_lat_size / 2 - (InitialValues.point_lat_size * i) for i in
+                                       range(InitialValues.point_side_count)]
+    InitialValues.point_lon_centers = [left_coord + InitialValues.point_lon_size / 2 + (InitialValues.point_lon_size * i) for i in
+                                       range(InitialValues.point_side_count)]
 
-    Constants.simulation_time = (Constants.simulation_initial_parameters.time.max - Constants.simulation_initial_parameters.time.min).total_seconds()
-    Constants.iter_as_sec = iter_as_sec
+    InitialValues.simulation_time = (InitialValues.simulation_initial_parameters.time.max - InitialValues.simulation_initial_parameters.time.min).total_seconds()
+    InitialValues.iter_as_sec = iter_as_sec
 
-    Constants.viscosity_kinematic = oil_viscosity
-    Constants.oil_density = oil_density
-    Constants.neighbourhood = neighbourhood
-
-    # TODO idk where to set min_oil_thickness
+    InitialValues.viscosity_kinematic = oil_viscosity
+    InitialValues.oil_density = oil_density
+    InitialValues.neighbourhood = neighbourhood
+    InitialValues.min_oil_thickness = min_oil_thickness

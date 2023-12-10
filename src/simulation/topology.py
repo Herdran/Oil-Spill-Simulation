@@ -10,7 +10,7 @@ import numpy.typing as npt
 from simulation.point import Coord_t
 from data.measurment_data import Coordinates, CoordinatesBase
 from data.utilities import project_coordinates
-from constatnts import Constants as const
+from constatnts import InitialValues
 from files import get_binary_world_map_path, get_binary_world_map_zip_path, get_unzipped_world_map_dir_path
 
 
@@ -52,8 +52,8 @@ def get_binary_map_path() -> BinaryMap:
 
 def get_top_left_offset() -> CoordinatesBase[int]:
     top_left = Coordinates(
-        latitude  = const.simulation_initial_parameters.area.max.latitude,
-        longitude = const.simulation_initial_parameters.area.min.longitude
+        latitude  = InitialValues.simulation_initial_parameters.area.max.latitude,
+        longitude = InitialValues.simulation_initial_parameters.area.min.longitude
     )        
     return project_coordinates(top_left, BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
 
@@ -66,7 +66,7 @@ def is_land(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], x: int
 
 
 def get_cartesian_product_range() -> product:
-    return product(range(const.point_side_count), range(const.point_side_count))
+    return product(range(InitialValues.point_side_count), range(InitialValues.point_side_count))
 
 
 def get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int]) -> Set[Coord_t]:

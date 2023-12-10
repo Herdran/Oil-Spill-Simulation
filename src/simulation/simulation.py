@@ -7,7 +7,7 @@ from simulation.point import Point, Coord_t, TopographyState
 from simulation.spreading import SpreadingEngine
 from simulation.topology import load_topography, project_coordinates_oil_sources
 from checkpoints import save_to_json
-from constatnts import Constants as const
+from constatnts import InitialValues
 
 
 class SimulationEngine:
@@ -18,7 +18,7 @@ class SimulationEngine:
         Point.world = self.world
         self.data_processor = data_processor
         self.checkpoint_frequency = checkpoint_frequency  #TODO move to constants
-        self.timestep = const.iter_as_sec
+        self.timestep = InitialValues.iter_as_sec
         self.total_mass = 0
         self.total_land_mass = 0
         self.lands = load_topography()
@@ -27,7 +27,7 @@ class SimulationEngine:
         self._constants_sources = []  # contains tuples (coord, mass_per_minute, spill_start, spill_end)
 
     def is_finished(self) -> bool:
-        return self.total_time >= const.simulation_time
+        return self.total_time >= InitialValues.simulation_time
 
     def update(self) -> List[Coord_t]:
         self.points_changed = []
@@ -69,7 +69,7 @@ class SimulationEngine:
         self._constants_sources.append((coord, mass_per_minute, spill_start, spill_end))
 
     def pour_from_sources(self):
-        current_timestamp = const.simulation_initial_parameters.time.min + pd.Timedelta(seconds=self.total_time)
+        current_timestamp = InitialValues.simulation_initial_parameters.time.min + pd.Timedelta(seconds=self.total_time)
         for spill in self._constants_sources:
             cords, mass_per_minute, spill_start, spill_end = spill
             if spill_start <= current_timestamp <= spill_end:

@@ -5,7 +5,7 @@ from tkinter import DISABLED, NORMAL, END, ANCHOR
 import pandas as pd
 
 from checkpoints import load_from_json
-from constatnts import set_simulation_coordinates_parameters
+from constatnts import set_simulation_coordinates_parameters, InitialValues
 from files import get_data_path
 from gui.utilities import create_frame, create_label_pack, create_label_grid, create_input_entry_grid, \
     create_label_grid_parameter_screen, browse_button
@@ -17,20 +17,20 @@ def start_initial_menu(window):
     class ParametersSettingController(tk.Frame):
         def __init__(self, parent):
             super().__init__(parent)
-            self.top_coord = 30.24268
-            self.down_coord = 30.19767
-            self.left_coord = -88.77964
-            self.right_coord = -88.72648
-            self.time_range_start = "2010-04-01 00:00:00"
-            self.time_range_end = "2010-04-02 00:00:00"
-            self.data_time_step_minutes = 30
-            self.cells_side_count_latitude = 10
-            self.cells_side_count_longitude = 10
-            self.point_side_size = 50
-            self.iter_as_sec = 20
-            self.min_oil_thickness = 1
-            self.oil_viscosity = 5.3e-6
-            self.oil_density = 846
+            self.top_coord = InitialValues.simulation_initial_parameters.area.max.latitude
+            self.down_coord = InitialValues.simulation_initial_parameters.area.min.latitude
+            self.left_coord = InitialValues.simulation_initial_parameters.area.min.longitude
+            self.right_coord = InitialValues.simulation_initial_parameters.area.max.longitude
+            self.time_range_start = InitialValues.simulation_initial_parameters.time.min
+            self.time_range_end = InitialValues.simulation_initial_parameters.time.max
+            self.data_time_step_minutes = str(int(InitialValues.simulation_initial_parameters.data_time_step.total_seconds() / 60))
+            self.cells_side_count_latitude = InitialValues.simulation_initial_parameters.cells_side_count.latitude
+            self.cells_side_count_longitude = InitialValues.simulation_initial_parameters.cells_side_count.longitude
+            self.point_side_size = InitialValues.point_side_size
+            self.iter_as_sec = InitialValues.iter_as_sec
+            self.min_oil_thickness = InitialValues.min_oil_thickness
+            self.oil_viscosity = InitialValues.viscosity_kinematic
+            self.oil_density = InitialValues.oil_density
             self.correctly_set_parameters = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
             self.img = None
             self.world_from_checkpoint = None
@@ -256,7 +256,7 @@ def start_initial_menu(window):
                 self.top_coord = float(value)
                 self.top_coord_validation_label.config(text="Valid value", fg="black")
                 self.correctly_set_parameters[0] = 1
-                self.check_all_parameters_validity_and_refresh_image(is_first_run)
+                self.check_all_main_parameters_validity()
                 if is_first_run:
                     self.validate_coordinates_down(False)
                 return True
@@ -272,7 +272,7 @@ def start_initial_menu(window):
                 self.down_coord = float(value)
                 self.down_coord_validation_label.config(text="Valid value", fg="black")
                 self.correctly_set_parameters[1] = 1
-                self.check_all_parameters_validity_and_refresh_image(is_first_run)
+                self.check_all_main_parameters_validity()
                 if is_first_run:
                     self.validate_coordinates_top(False)
                 return True
@@ -288,7 +288,7 @@ def start_initial_menu(window):
                 self.left_coord = float(value)
                 self.left_coord_validation_label.config(text="Valid value", fg="black")
                 self.correctly_set_parameters[2] = 1
-                self.check_all_parameters_validity_and_refresh_image(is_first_run)
+                self.check_all_main_parameters_validity()
                 if is_first_run:
                     self.validate_coordinates_right(False)
                 return True
@@ -304,7 +304,7 @@ def start_initial_menu(window):
                 self.right_coord = float(value)
                 self.right_coord_validation_label.config(text="Valid value", fg="black")
                 self.correctly_set_parameters[3] = 1
-                self.check_all_parameters_validity_and_refresh_image(is_first_run)
+                self.check_all_main_parameters_validity()
                 if is_first_run:
                     self.validate_coordinates_left(False)
                 return True
@@ -322,7 +322,7 @@ def start_initial_menu(window):
                     self.time_range_start = value
                     self.time_range_start_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[4] = 1
-                    self.check_all_parameters_validity_and_refresh_image()
+                    self.check_all_main_parameters_validity()
                     return True
                 except ValueError:
                     pass
@@ -340,7 +340,7 @@ def start_initial_menu(window):
                     self.time_range_end = value
                     self.time_range_end_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[5] = 1
-                    self.check_all_parameters_validity_and_refresh_image()
+                    self.check_all_main_parameters_validity()
                     return True
                 except ValueError:
                     pass
@@ -357,7 +357,7 @@ def start_initial_menu(window):
                     self.data_time_step_minutes = int(value)
                     self.data_time_step_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[6] = 1
-                    self.check_all_parameters_validity_and_refresh_image()
+                    self.check_all_main_parameters_validity()
                     return True
             except ValueError:
                 pass
@@ -375,7 +375,7 @@ def start_initial_menu(window):
                     self.cells_side_count_latitude = int(value)
                     self.cells_side_count_latitude_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[7] = 1
-                    self.check_all_parameters_validity_and_refresh_image()
+                    self.check_all_main_parameters_validity()
                     return True
             except ValueError:
                 pass
@@ -393,7 +393,7 @@ def start_initial_menu(window):
                     self.cells_side_count_longitude = int(value)
                     self.cells_side_count_longitude_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[8] = 1
-                    self.check_all_parameters_validity_and_refresh_image()
+                    self.check_all_main_parameters_validity()
                     return True
             except ValueError:
                 pass
@@ -410,7 +410,7 @@ def start_initial_menu(window):
                     self.point_side_size = int(value)
                     self.point_side_size_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[9] = 1
-                    self.check_all_parameters_validity_and_refresh_image()
+                    self.check_all_main_parameters_validity()
                     return True
             except ValueError:
                 pass
@@ -427,7 +427,7 @@ def start_initial_menu(window):
                     self.iter_as_sec = int(value)
                     self.iter_as_sec_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[10] = 1
-                    self.check_all_parameters_validity_and_refresh_image()
+                    self.check_all_main_parameters_validity()
                     return True
             except ValueError:
                 pass
@@ -444,7 +444,7 @@ def start_initial_menu(window):
                     self.min_oil_thickness = float(value)
                     self.min_oil_thickness_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[11] = 1
-                    self.check_all_parameters_validity_and_refresh_image()
+                    self.check_all_main_parameters_validity()
                     return True
             except ValueError:
                 pass
@@ -461,7 +461,7 @@ def start_initial_menu(window):
                     self.oil_viscosity = float(value)
                     self.oil_viscosity_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[12] = 1
-                    self.check_all_parameters_validity_and_refresh_image()
+                    self.check_all_main_parameters_validity()
                     return True
             except ValueError:
                 pass
@@ -478,7 +478,7 @@ def start_initial_menu(window):
                     self.oil_density = float(value)
                     self.oil_density_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[13] = 1
-                    self.check_all_parameters_validity_and_refresh_image()
+                    self.check_all_main_parameters_validity()
                     return True
             except ValueError:
                 pass
@@ -591,10 +591,9 @@ def start_initial_menu(window):
             self.validate_spill_start_oil_source()
             self.validate_spill_end_oil_source()
 
-        def check_all_parameters_validity_and_refresh_image(self, coordinate_change=False):
-            if coordinate_change and sum(self.correctly_set_parameters[:4]) == 4:
-                if sum(self.correctly_set_parameters) == 14:
-                    self.confirm_and_continue.config(state=NORMAL)
+        def check_all_main_parameters_validity(self):
+            if all(self.correctly_set_parameters):
+                self.confirm_and_continue.config(state=NORMAL)
 
         def insert_into_oil_sources_listbox(self):
             self.oil_sources_listbox.insert(END, f"{self.latitude_oil_source}, "
