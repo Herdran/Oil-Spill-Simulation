@@ -8,7 +8,7 @@ from data.simulation_run_parameters import CellSideCount, SimulationRunParameter
 class Constants:
     point_side_size: int = None
     point_side_count: int = 1000  # TODO to be calculated
-    iter_as_sec: int = 20
+    iter_as_sec: int = None
 
     point_lat_size: float = None
     point_lon_size: float = None
@@ -30,7 +30,8 @@ def set_simulation_coordinates_parameters(top_coord: float,
                                           cells_side_count_latitude: int,
                                           cells_side_count_longitude: int,
                                           data_path: str,
-                                          point_side_size: int
+                                          point_side_size: int,
+                                          iter_as_sec: int,
                                           ):
 
     Constants.simulation_initial_parameters = SimulationRunParameters(
@@ -73,3 +74,4 @@ def set_simulation_coordinates_parameters(top_coord: float,
                                    range(Constants.point_side_count)]
 
     Constants.simulation_time = (Constants.simulation_initial_parameters.time.max - Constants.simulation_initial_parameters.time.min).total_seconds()
+    Constants.iter_as_sec = iter_as_sec

@@ -29,7 +29,8 @@ def start_initial_menu(window):
             self.cells_side_count_latitude = 10
             self.cells_side_count_longitude = 10
             self.point_side_size = 50
-            self.correctly_set_parameters = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            self.iter_as_sec = 20
+            self.correctly_set_parameters = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
             self.img = None
 
             self.main_frame = create_frame(parent, 0, 0, 1, 1, tk.N + tk.S + tk.E + tk.W, 5, 5)
@@ -40,6 +41,7 @@ def start_initial_menu(window):
             self.main_frame.rowconfigure(3, weight=1, uniform='row')
             self.main_frame.rowconfigure(4, weight=2, uniform='row')
             self.main_frame.rowconfigure(5, weight=2, uniform='row')
+            self.main_frame.rowconfigure(6, weight=2, uniform='row')
             self.main_frame.columnconfigure(0, weight=2, uniform='column')
             self.main_frame.columnconfigure(1, weight=3, uniform='column')
             self.main_frame.columnconfigure(2, weight=1, uniform='column')
@@ -70,7 +72,8 @@ def start_initial_menu(window):
             data_time_step_frame = create_frame(inputs_frame, 2, 3, 1, 1, tk.N + tk.S)
             cells_side_count_latitude_frame = create_frame(inputs_frame, 0, 3, 1, 1, tk.N + tk.S)
             cells_side_count_longitude_frame = create_frame(inputs_frame, 1, 3, 1, 1, tk.N + tk.S)
-            point_side_size_frame = create_frame(inputs_frame, 1, 4, 1, 1, tk.N + tk.S)
+            point_side_size_frame = create_frame(inputs_frame, 0, 4, 1, 1, tk.N + tk.S)
+            time_per_iteration_frame = create_frame(inputs_frame, 1, 4, 1, 1, tk.N + tk.S)
 
             create_label_grid(top_coord_frame, "Top coord value\n[latitude]")
             create_label_grid(down_coord_frame, "Bottom coord value\n[latitude]")
@@ -82,6 +85,7 @@ def start_initial_menu(window):
             create_label_grid(cells_side_count_latitude_frame, "Data stations count:\nlatitude")
             create_label_grid(cells_side_count_longitude_frame, "Data stations count:\nlongitude")
             create_label_grid(point_side_size_frame, "Point side size\n[m]")
+            create_label_grid(time_per_iteration_frame, "Time per iteration\n[s]")
 
             self.top_coord_input = create_input_entry_grid(top_coord_frame, 9, str(self.top_coord),
                                                            self.validate_coordinates_top)
@@ -107,6 +111,8 @@ def start_initial_menu(window):
                                                                             self.validate_cells_side_count_longitude)
             self.point_side_size_input = create_input_entry_grid(point_side_size_frame, 3, str(self.point_side_size),
                                                                  self.validate_point_side_size)
+            self.iter_as_sec_input = create_input_entry_grid(time_per_iteration_frame, 3, str(self.iter_as_sec),
+                                                             self.validate_iter_as_sec)
 
             self.top_coord_validation_label = create_label_grid_parameter_screen(top_coord_frame)
             self.down_coord_validation_label = create_label_grid_parameter_screen(down_coord_frame)
@@ -118,6 +124,7 @@ def start_initial_menu(window):
             self.cells_side_count_latitude_validation_label = create_label_grid_parameter_screen(cells_side_count_latitude_frame)
             self.cells_side_count_longitude_validation_label = create_label_grid_parameter_screen(cells_side_count_longitude_frame)
             self.point_side_size_validation_label = create_label_grid_parameter_screen(point_side_size_frame)
+            self.iter_as_sec_validation_label = create_label_grid_parameter_screen(time_per_iteration_frame)
 
             self.loaded_img = Image.open(os.path.join(get_main_path(), "data/Blue_Marble_2002.png"))
 
@@ -141,7 +148,7 @@ def start_initial_menu(window):
             self.data_path = tk.StringVar()
             self.data_path.set(get_data_path())
 
-            create_label_grid(data_path_frame, "Neighborhood type:", font=("Arial", 14, "bold"), columnspan=2,
+            create_label_grid(data_path_frame, "Data path:", font=("Arial", 14, "bold"), columnspan=2,
                               sticky=tk.N + tk.S + tk.W)
 
             browse_path_label = tk.Label(data_path_frame, textvariable=self.data_path)
@@ -164,7 +171,7 @@ def start_initial_menu(window):
                 self.top_coord = float(value)
                 self.top_coord_validation_label.config(text="Valid value", fg="black")
                 self.correctly_set_parameters[0] = 1
-                self.check_all_parameters_validity_and_refresh_image()
+                self.check_all_parameters_validity_and_refresh_image(is_first_run)
                 if is_first_run:
                     self.validate_coordinates_down(False)
                 return True
@@ -196,7 +203,7 @@ def start_initial_menu(window):
                 self.left_coord = float(value)
                 self.left_coord_validation_label.config(text="Valid value", fg="black")
                 self.correctly_set_parameters[2] = 1
-                self.check_all_parameters_validity_and_refresh_image()
+                self.check_all_parameters_validity_and_refresh_image(is_first_run)
                 if is_first_run:
                     self.validate_coordinates_right(False)
                 return True
@@ -212,7 +219,7 @@ def start_initial_menu(window):
                 self.right_coord = float(value)
                 self.right_coord_validation_label.config(text="Valid value", fg="black")
                 self.correctly_set_parameters[3] = 1
-                self.check_all_parameters_validity_and_refresh_image()
+                self.check_all_parameters_validity_and_refresh_image(is_first_run)
                 if is_first_run:
                     self.validate_coordinates_left(False)
                 return True
@@ -326,22 +333,40 @@ def start_initial_menu(window):
             self.confirm_and_continue.config(state=DISABLED)
             self.correctly_set_parameters[9] = 0
 
+        def validate_iter_as_sec(self):
+            value = self.iter_as_sec_input.get()
+            if not value:
+                return False
+            try:
+                if float(value) % 1 == 0 and float(value) > 0:
+                    self.iter_as_sec = int(value)
+                    self.iter_as_sec_validation_label.config(text="Valid value", fg="black")
+                    self.correctly_set_parameters[10] = 1
+                    self.check_all_parameters_validity_and_refresh_image()
+                    return True
+            except ValueError:
+                pass
+            self.iter_as_sec_validation_label.config(text="Invalid value", fg="red")
+            self.confirm_and_continue.config(state=DISABLED)
+            self.correctly_set_parameters[10] = 0
+
         def validate_all_parameters(self):
-            self.validate_coordinates_top()
-            self.validate_coordinates_down()
-            self.validate_coordinates_left()
-            self.validate_coordinates_right()
+            self.validate_coordinates_top(False)
+            self.validate_coordinates_down(False)
+            self.validate_coordinates_left(False)
+            self.validate_coordinates_right(False)
             self.validate_time_range_start()
             self.validate_time_range_end()
             self.validate_data_time_step()
             self.validate_cells_side_count_latitude()
             self.validate_cells_side_count_longitude()
             self.validate_point_side_size()
+            self.validate_iter_as_sec()
 
-        def check_all_parameters_validity_and_refresh_image(self):
-            if sum(self.correctly_set_parameters[:4]) == 4:
+        def check_all_parameters_validity_and_refresh_image(self, coordinate_change=False):
+            if coordinate_change and sum(self.correctly_set_parameters[:4]) == 4:
                 self.load_and_crop_image()
-                if sum(self.correctly_set_parameters) == 10:
+                if sum(self.correctly_set_parameters) == 11:
                     self.confirm_and_continue.config(state=NORMAL)
 
         def browse_button(self):
@@ -360,7 +385,8 @@ def start_initial_menu(window):
                                                   self.cells_side_count_latitude,
                                                   self.cells_side_count_longitude,
                                                   self.data_path.get(),
-                                                  self.point_side_size
+                                                  self.point_side_size,
+                                                  self.iter_as_sec,
                                                   )
 
             start_simulation(Neighbourhood.MOORE if self.neighborhood_var.get() == 0 else Neighbourhood.VON_NEUMANN,

@@ -65,8 +65,6 @@ def start_simulation(neighborhood, window):
                           int(-self.pan_x / self.zoom_level):
                           int(window_width / self.zoom_level - (self.pan_x / self.zoom_level))
                           ]
-            # TODO slicing image array has to be proportional to the original proportions of the image to retain readability
-            #  and allow for rectangle images
 
             self.img = Image.fromarray(image_array)
             self.img = self.img.resize((min(window_width, self.zoomed_width),
@@ -252,13 +250,11 @@ def start_simulation(neighborhood, window):
             self.options_frame.columnconfigure(5, weight=1)
 
             interval_frame = create_frame(self.options_frame, 0, 0, 1, 1, tk.N + tk.S, 5, 5)
-            iter_as_sec_frame = create_frame(self.options_frame, 0, 1, 1, 1, tk.N + tk.S, 5, 5)
             oil_added_frame = create_frame(self.options_frame, 0, 2, 1, 1, tk.N + tk.S, 5, 5)
             minimal_oil_value_to_show_frame = create_frame(self.options_frame, 0, 3, 1, 1, tk.N + tk.S, 5, 5)
             start_stop_frame = create_frame(self.options_frame, 0, 4, 1, 2, tk.N + tk.S, 5, 5)
 
             create_label_pack(interval_frame, "Interval of changes [s]")
-            create_label_pack(iter_as_sec_frame, "Time per iteration [s]")
             create_label_pack(oil_added_frame, "Oil added on click [kg]")
 
             self.oil_spill_on_var = tk.IntVar()
@@ -278,8 +274,6 @@ def start_simulation(neighborhood, window):
 
             self.text_interval = create_input_entry_pack(interval_frame, 10, str(self.interval / 1000),
                                                          self.validate_interval)
-            self.text_iter_as_sec = create_input_entry_pack(iter_as_sec_frame, 10, str(self.iter_as_sec),
-                                                            self.validate_iter_as_sec)
             self.text_oil_added = create_input_entry_pack(oil_added_frame, 10, str(self.oil_to_add_on_click),
                                                           self.validate_oil_to_add)
             self.text_minimal_oil_show = create_input_entry_pack(minimal_oil_value_to_show_frame, 10,
@@ -323,20 +317,6 @@ def start_simulation(neighborhood, window):
                 self.interval = int(interval * 1000)
                 self.text_interval.delete(0, tk.END)
                 self.text_interval.insert(tk.END, str(interval))
-                if self.is_running:
-                    self.after_cancel(self.job_id)
-                    self.job_id = self.after(self.interval, threading.Thread(target=self.update_image_array).start())
-            except ValueError:
-                pass
-
-        def validate_iter_as_sec(self):
-            new_value = self.text_iter_as_sec.get()
-            try:
-                iter_as_sec = int(new_value)
-                iter_as_sec = max(1, iter_as_sec)
-                self.iter_as_sec = iter_as_sec
-                self.text_iter_as_sec.delete(0, tk.END)
-                self.text_iter_as_sec.insert(tk.END, str(iter_as_sec))
                 if self.is_running:
                     self.after_cancel(self.job_id)
                     self.job_id = self.after(self.interval, threading.Thread(target=self.update_image_array).start())
