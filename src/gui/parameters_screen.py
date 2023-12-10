@@ -2,7 +2,7 @@ import os.path
 import os.path
 import re
 import tkinter as tk
-from tkinter import DISABLED, NORMAL
+from tkinter import DISABLED, NORMAL, END, ANCHOR
 
 import pandas as pd
 from PIL import Image, ImageTk
@@ -36,27 +36,36 @@ def start_initial_menu(window):
             self.correctly_set_parameters = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
             self.img = None
             self.world_from_checkpoint = None
-            self.oil_sources = None
+            self.oil_sources = []
+            self.longitude_oil_source = 0.0
+            self.latitude_oil_source = 0.0
+            self.mass_per_minute_oil_source = 0.0
+            self.spill_start_oil_source = "2010-04-01 00:00:00"
+            self.spill_end_oil_source = "2010-04-02 00:00:00"
+            self.correctly_set_parameters_oil_sources = [1, 1, 0, 1, 1]
 
             self.main_frame = create_frame(parent, 0, 0, 1, 1, tk.N + tk.S + tk.E + tk.W, 5, 5)
 
-            self.main_frame.rowconfigure(0, weight=2, uniform='row')
+            self.main_frame.rowconfigure(0, weight=1, uniform='row')
             self.main_frame.rowconfigure(1, weight=1, uniform='row')
             self.main_frame.rowconfigure(2, weight=1, uniform='row')
             self.main_frame.rowconfigure(3, weight=1, uniform='row')
             self.main_frame.rowconfigure(4, weight=2, uniform='row')
             self.main_frame.rowconfigure(5, weight=2, uniform='row')
             self.main_frame.rowconfigure(6, weight=2, uniform='row')
+            self.main_frame.rowconfigure(6, weight=1, uniform='row')
             self.main_frame.columnconfigure(0, weight=2, uniform='column')
-            self.main_frame.columnconfigure(1, weight=3, uniform='column')
-            self.main_frame.columnconfigure(2, weight=1, uniform='column')
+            self.main_frame.columnconfigure(1, weight=2, uniform='column')
+            self.main_frame.columnconfigure(2, weight=8, uniform='column')
+            self.main_frame.columnconfigure(3, weight=1, uniform='column')
 
-            title_frame = create_frame(self.main_frame, 0, 0, 1, 3, tk.N + tk.S)
+            title_frame = create_frame(self.main_frame, 0, 0, 1, 4, tk.N + tk.S)
             neighborhood_type_frame = create_frame(self.main_frame, 4, 0, 1, 1, tk.S + tk.W)
-            inputs_frame = create_frame(self.main_frame, 1, 0, 3, 3, tk.N + tk.S + tk.W)
-            data_path_frame = create_frame(self.main_frame, 5, 0, 1, 3, tk.S + tk.W)
-            checkpoint_path_frame = create_frame(self.main_frame, 6, 0, 1, 3, tk.S + tk.W)
-            confirm_and_start_frame = create_frame(self.main_frame, 6, 2, 1, 1, tk.S + tk.E)
+            inputs_frame = create_frame(self.main_frame, 1, 0, 3, 4, tk.N + tk.S + tk.W)
+            data_path_frame = create_frame(self.main_frame, 5, 0, 1, 2, tk.S + tk.W)
+            checkpoint_path_frame = create_frame(self.main_frame, 6, 0, 2, 2, tk.S + tk.W)
+            confirm_and_start_frame = create_frame(self.main_frame, 7, 2, 1, 2, tk.S + tk.E)
+            oil_sources_frame = create_frame(self.main_frame, 4, 1, 3, 2, tk.N + tk.S + tk.W)
 
             create_label_pack(title_frame, "Oil Spill Simulation")
 
@@ -192,10 +201,71 @@ def start_initial_menu(window):
                                                   command=self.confirm_and_start_simulation)
             self.confirm_and_continue.pack(side=tk.RIGHT, padx=5, pady=5)
 
+
+            # oil_sources_frame.rowconfigure(0, weight=1, uniform='row')
+            # oil_sources_frame.rowconfigure(1, weight=4, uniform='row')
+            # oil_sources_frame.rowconfigure(2, weight=1, uniform='row')
+            # oil_sources_frame.rowconfigure(3, weight=5, uniform='row')
+            # # oil_sources_frame.rowconfigure(4, weight=1, uniform='row')
+            # # oil_sources_frame.rowconfigure(5, weight=1, uniform='row')
+            # # oil_sources_frame.rowconfigure(6, weight=1, uniform='row')
+            oil_sources_frame.columnconfigure(0, weight=1, uniform='column')
+            oil_sources_frame.columnconfigure(1, weight=1, uniform='column')
+            oil_sources_frame.columnconfigure(2, weight=1, uniform='column')
+            oil_sources_frame.columnconfigure(3, weight=1, uniform='column')
+            oil_sources_frame.columnconfigure(4, weight=1, uniform='column')
+            # oil_sources_frame.columnconfigure(5, weight=1, uniform='column')
+
+            # create_label_grid(oil_sources_frame, "Oil sources\n[latitude, longitude, kg/m, yyyy-mm-dd hh:mm:ss, yyyy-mm-dd hh:mm:ss]", columnspan=3)
+            create_label_grid(oil_sources_frame, "Oil sources", columnspan=5)
+
+            self.oil_sources_listbox = tk.Listbox(oil_sources_frame, width=100, height=7)
+
+            self.oil_sources_listbox.grid(row=3, column=0, columnspan=5, sticky=tk.N + tk.S)
+            # self.oil_sources_listbox.insert(END, "1")
+            # self.oil_sources_listbox.insert(END, "2")
+            # self.oil_sources_listbox.insert(END, "3")
+            # self.oil_sources_listbox.insert(END, "4")
+            # self.oil_sources_listbox.insert(END, "5")
+            # self.oil_sources_listbox.insert(END, "6")
+
+            self.oil_sources_listbox_insert = tk.Button(oil_sources_frame, text='Add',
+                                                        command=self.insert_into_oil_sources_listbox)
+            self.oil_sources_listbox_insert.grid(row=2, column=0, columnspan=2, sticky=tk.N + tk.S)
+
+            self.oil_sources_listbox_delete = tk.Button(oil_sources_frame, text='Delete',
+                                                        command=self.delete_from_oil_sources_listbox)
+            self.oil_sources_listbox_delete.grid(row=2, column=3, columnspan=2, sticky=tk.N + tk.S)
+
+            longitude_oil_source_frame = create_frame(oil_sources_frame, 1, 1, 1, 1, tk.N + tk.S)
+            latitude_oil_source_frame = create_frame(oil_sources_frame, 1, 0, 1, 1, tk.N + tk.S)
+            mass_per_minute_oil_source_frame = create_frame(oil_sources_frame, 1, 2, 1, 1, tk.N + tk.S)
+            spill_start_oil_source_frame = create_frame(oil_sources_frame, 1, 3, 1, 1, tk.N + tk.S)
+            spill_end_oil_source_frame = create_frame(oil_sources_frame, 1, 4, 1, 1, tk.N + tk.S)
+
+            create_label_grid(longitude_oil_source_frame, "Latitude coord")
+            create_label_grid(latitude_oil_source_frame, "Longitude coord")
+            create_label_grid(mass_per_minute_oil_source_frame, "Mass per minute\n[idk, kg/m?]")  # TODO
+            create_label_grid(spill_start_oil_source_frame, "Spill start\n[yyyy-mm-dd hh:mm:ss]")
+            create_label_grid(spill_end_oil_source_frame, "Spill end\n[yyyy-mm-dd hh:mm:ss]")
+
+            self.longitude_oil_source_input = create_input_entry_grid(longitude_oil_source_frame, 3, str(self.longitude_oil_source), self.validate_longitude_oil_source)
+            self.latitude_oil_source_input = create_input_entry_grid(latitude_oil_source_frame, 3, str(self.latitude_oil_source), self.validate_latitude_oil_source)
+            self.mass_per_minute_oil_source_input = create_input_entry_grid(mass_per_minute_oil_source_frame, 3, str(self.mass_per_minute_oil_source), self.validate_mass_per_minute_oil_source)
+            self.spill_start_oil_source_input = create_input_entry_grid(spill_start_oil_source_frame, 17, self.spill_start_oil_source, self.validate_spill_start_oil_source)
+            self.spill_end_oil_source_input = create_input_entry_grid(spill_end_oil_source_frame, 17, self.spill_end_oil_source, self.validate_spill_end_oil_source)
+
+            self.longitude_oil_source_validation_label = create_label_grid_parameter_screen(longitude_oil_source_frame)
+            self.latitude_oil_source_validation_label = create_label_grid_parameter_screen(latitude_oil_source_frame)
+            self.mass_per_minute_oil_source_validation_label = create_label_grid_parameter_screen(mass_per_minute_oil_source_frame)
+            self.spill_start_oil_source_validation_label = create_label_grid_parameter_screen(spill_start_oil_source_frame)
+            self.spill_end_oil_source_validation_label = create_label_grid_parameter_screen(spill_end_oil_source_frame)
+
             self.map_view_frame.update()
             self.crop_and_resize_preview_image()
             self.main_frame.bind("<Configure>", self.resize_preview_image)
             self.validate_all_parameters()
+            self.validate_all_parameters_oil_sources_listbox()
 
         def validate_coordinates_top(self, is_first_run=True):
             value = self.top_coord_input.get()
@@ -435,6 +505,88 @@ def start_initial_menu(window):
             self.confirm_and_continue.config(state=DISABLED)
             self.correctly_set_parameters[13] = 0
 
+        def validate_longitude_oil_source(self):
+            value = self.longitude_oil_source_input.get()
+            if not value:
+                return False
+            if -180 <= float(value) <= 180:
+                self.longitude_oil_source = float(value)
+                self.longitude_oil_source_validation_label.config(text="Valid value", fg="black")
+                self.correctly_set_parameters_oil_sources[0] = 1
+                self.check_all_parameters_validity_oil_sources()
+                return True
+            self.longitude_oil_source_validation_label.config(text="Invalid value", fg="red")
+            self.oil_sources_listbox_insert.config(state=DISABLED)
+            self.correctly_set_parameters_oil_sources[0] = 0
+
+        def validate_latitude_oil_source(self):
+            value = self.latitude_oil_source_input.get()
+            if not value:
+                return False
+            if -90 <= float(value) <= 90:
+                self.latitude_oil_source = float(value)
+                self.latitude_oil_source_validation_label.config(text="Valid value", fg="black")
+                self.correctly_set_parameters_oil_sources[1] = 1
+                self.check_all_parameters_validity_oil_sources()
+                return True
+            self.latitude_oil_source_validation_label.config(text="Invalid value", fg="red")
+            self.oil_sources_listbox_insert.config(state=DISABLED)
+            self.correctly_set_parameters_oil_sources[1] = 0
+
+        def validate_mass_per_minute_oil_source(self):
+            value = self.mass_per_minute_oil_source_input.get()
+            if not value:
+                return False
+            if float(value) > 0:
+                self.mass_per_minute_oil_source = float(value)
+                self.mass_per_minute_oil_source_validation_label.config(text="Valid value", fg="black")
+                self.correctly_set_parameters_oil_sources[2] = 1
+                self.check_all_parameters_validity_oil_sources()
+                return True
+            self.mass_per_minute_oil_source_validation_label.config(text="Invalid value", fg="red")
+            self.oil_sources_listbox_insert.config(state=DISABLED)
+            self.correctly_set_parameters_oil_sources[2] = 0
+
+        def validate_spill_start_oil_source(self):
+            value = self.spill_start_oil_source_input.get()
+            if not value:
+                return False
+            if re.match('\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', value):
+                try:
+                    pd.Timestamp(value)
+                    self.spill_start_oil_source = value
+                    self.spill_start_oil_source_validation_label.config(text="Valid value", fg="black")
+                    self.correctly_set_parameters_oil_sources[3] = 1
+                    self.check_all_parameters_validity_oil_sources()
+                    return True
+                except ValueError:
+                    pass
+            self.spill_start_oil_source_validation_label.config(text="Invalid value", fg="red")
+            self.oil_sources_listbox_insert.config(state=DISABLED)
+            self.correctly_set_parameters_oil_sources[3] = 0
+
+        def validate_spill_end_oil_source(self):
+            value = self.spill_end_oil_source_input.get()
+            if not value:
+                return False
+            if re.match('\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', value):
+                try:
+                    pd.Timestamp(value)
+                    self.spill_end_oil_source = value
+                    self.spill_end_oil_source_validation_label.config(text="Valid value", fg="black")
+                    self.correctly_set_parameters_oil_sources[4] = 1
+                    self.check_all_parameters_validity_oil_sources()
+                    return True
+                except ValueError:
+                    pass
+            self.spill_end_oil_source_validation_label.config(text="Invalid value", fg="red")
+            self.oil_sources_listbox_insert.config(state=DISABLED)
+            self.correctly_set_parameters_oil_sources[4] = 0
+
+        def check_all_parameters_validity_oil_sources(self):
+            if sum(self.correctly_set_parameters_oil_sources) == 5:
+                self.oil_sources_listbox_insert.config(state=NORMAL)
+
         def validate_all_parameters(self):
             self.validate_coordinates_top(False)
             self.validate_coordinates_down(False)
@@ -451,11 +603,37 @@ def start_initial_menu(window):
             self.validate_oil_viscosity()
             self.validate_oil_density()
 
+        def validate_all_parameters_oil_sources_listbox(self):
+            self.validate_latitude_oil_source()
+            self.validate_longitude_oil_source()
+            self.validate_mass_per_minute_oil_source()
+            self.validate_spill_start_oil_source()
+            self.validate_spill_end_oil_source()
+
         def check_all_parameters_validity_and_refresh_image(self, coordinate_change=False):
             if coordinate_change and sum(self.correctly_set_parameters[:4]) == 4:
                 self.crop_and_resize_preview_image()
                 if sum(self.correctly_set_parameters) == 14:
                     self.confirm_and_continue.config(state=NORMAL)
+
+        def insert_into_oil_sources_listbox(self):
+            self.oil_sources_listbox.insert(END, f"{self.latitude_oil_source}, "
+                                                 f"{self.longitude_oil_source}, "
+                                                 f"{self.mass_per_minute_oil_source}, "
+                                                 f"{self.spill_start_oil_source}, "
+                                                 f"{self.spill_end_oil_source}")
+
+        def delete_from_oil_sources_listbox(self):
+            self.oil_sources_listbox.delete(ANCHOR)
+
+        def read_all_from_oil_sources_listbox(self):
+            values = self.oil_sources_listbox.get(0, tk.END)
+            for value in values:
+                split_values = value.split(", ")
+                self.oil_sources.append({"coord": (float(split_values[0]), float(split_values[1])),  #  TODO those values are not correct as they have geographical coordinates
+                                       "mass_per_minute": float(split_values[2]),
+                                       "spill_start": pd.Timestamp(split_values[3]),
+                                       "spill_end": pd.Timestamp(split_values[4])})
 
         def browse_and_load_checkpoint(self):
             browse_button(self.checkpoint_path)
@@ -491,6 +669,7 @@ def start_initial_menu(window):
                                                   self.oil_density
                                                   )
 
+            self.read_all_from_oil_sources_listbox()
             start_simulation(Neighbourhood.MOORE if self.neighborhood_var.get() == 0 else Neighbourhood.VON_NEUMANN,
                              window, self.world_from_checkpoint, self.oil_sources)
 

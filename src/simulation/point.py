@@ -7,7 +7,7 @@ from numpy import exp, log, sqrt
 
 from constatnts import Constants as const
 from data.measurment_data import Coordinates
-from simulation.utilities import get_neighbour_coordinates, Neighbourhood
+from simulation.utilities import get_neighbour_coordinates, Neighbourhood, sign
 
 DEFAULT_WAVE_VELOCITY = np.array([0.0, 0.0])  # [m/s]
 DEFAULT_WIND_VELOCITY = np.array([0.0, 0.0])  # [m/s]
