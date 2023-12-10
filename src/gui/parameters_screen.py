@@ -30,7 +30,10 @@ def start_initial_menu(window):
             self.cells_side_count_longitude = 10
             self.point_side_size = 50
             self.iter_as_sec = 20
-            self.correctly_set_parameters = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            self.min_oil_thickness = 1
+            self.oil_viscosity = 1
+            self.oil_density = 1
+            self.correctly_set_parameters = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
             self.img = None
 
             self.main_frame = create_frame(parent, 0, 0, 1, 1, tk.N + tk.S + tk.E + tk.W, 5, 5)
@@ -74,6 +77,9 @@ def start_initial_menu(window):
             cells_side_count_longitude_frame = create_frame(inputs_frame, 1, 3, 1, 1, tk.N + tk.S)
             point_side_size_frame = create_frame(inputs_frame, 0, 4, 1, 1, tk.N + tk.S)
             time_per_iteration_frame = create_frame(inputs_frame, 1, 4, 1, 1, tk.N + tk.S)
+            min_oil_thickness_frame = create_frame(inputs_frame, 2, 4, 1, 1, tk.N + tk.S)
+            oil_viscosity_frame = create_frame(inputs_frame, 0, 5, 1, 1, tk.N + tk.S)
+            oil_density_frame = create_frame(inputs_frame, 1, 5, 1, 1, tk.N + tk.S)
 
             create_label_grid(top_coord_frame, "Top coord value\n[latitude]")
             create_label_grid(down_coord_frame, "Bottom coord value\n[latitude]")
@@ -86,6 +92,9 @@ def start_initial_menu(window):
             create_label_grid(cells_side_count_longitude_frame, "Data stations count:\nlongitude")
             create_label_grid(point_side_size_frame, "Point side size\n[m]")
             create_label_grid(time_per_iteration_frame, "Time per iteration\n[s]")
+            create_label_grid(min_oil_thickness_frame, "Minimum oil thickness\n[idk]")
+            create_label_grid(oil_viscosity_frame, "Oil viscosity\n[idk]")
+            create_label_grid(oil_density_frame, "Oil density\n[idk]")
 
             self.top_coord_input = create_input_entry_grid(top_coord_frame, 9, str(self.top_coord),
                                                            self.validate_coordinates_top)
@@ -113,6 +122,12 @@ def start_initial_menu(window):
                                                                  self.validate_point_side_size)
             self.iter_as_sec_input = create_input_entry_grid(time_per_iteration_frame, 3, str(self.iter_as_sec),
                                                              self.validate_iter_as_sec)
+            self.min_oil_thickness_input = create_input_entry_grid(min_oil_thickness_frame, 3, str(self.min_oil_thickness),
+                                                             self.validate_min_oil_thickness)
+            self.oil_viscosity_input = create_input_entry_grid(oil_viscosity_frame, 3, str(self.oil_viscosity),
+                                                             self.validate_oil_viscosity)
+            self.oil_density_input = create_input_entry_grid(oil_density_frame, 3, str(self.oil_density),
+                                                             self.validate_oil_density)
 
             self.top_coord_validation_label = create_label_grid_parameter_screen(top_coord_frame)
             self.down_coord_validation_label = create_label_grid_parameter_screen(down_coord_frame)
@@ -125,6 +140,9 @@ def start_initial_menu(window):
             self.cells_side_count_longitude_validation_label = create_label_grid_parameter_screen(cells_side_count_longitude_frame)
             self.point_side_size_validation_label = create_label_grid_parameter_screen(point_side_size_frame)
             self.iter_as_sec_validation_label = create_label_grid_parameter_screen(time_per_iteration_frame)
+            self.min_oil_thickness_validation_label = create_label_grid_parameter_screen(min_oil_thickness_frame)
+            self.oil_viscosity_validation_label = create_label_grid_parameter_screen(oil_viscosity_frame)
+            self.oil_density_validation_label = create_label_grid_parameter_screen(oil_density_frame)
 
             self.loaded_img = Image.open(os.path.join(get_main_path(), "data/Blue_Marble_2002.png"))
 
@@ -187,7 +205,7 @@ def start_initial_menu(window):
                 self.down_coord = float(value)
                 self.down_coord_validation_label.config(text="Valid value", fg="black")
                 self.correctly_set_parameters[1] = 1
-                self.check_all_parameters_validity_and_refresh_image()
+                self.check_all_parameters_validity_and_refresh_image(is_first_run)
                 if is_first_run:
                     self.validate_coordinates_top(False)
                 return True
@@ -350,6 +368,57 @@ def start_initial_menu(window):
             self.confirm_and_continue.config(state=DISABLED)
             self.correctly_set_parameters[10] = 0
 
+        def validate_min_oil_thickness(self):
+            value = self.min_oil_thickness_input.get()
+            if not value:
+                return False
+            try:
+                if float(value) % 1 == 0 and float(value) > 0:  # TODO idk how to validate this value
+                    self.iter_as_sec = int(value)
+                    self.min_oil_thickness_validation_label.config(text="Valid value", fg="black")
+                    self.correctly_set_parameters[11] = 1
+                    self.check_all_parameters_validity_and_refresh_image()
+                    return True
+            except ValueError:
+                pass
+            self.min_oil_thickness_validation_label.config(text="Invalid value", fg="red")
+            self.confirm_and_continue.config(state=DISABLED)
+            self.correctly_set_parameters[11] = 0
+
+        def validate_oil_viscosity(self):
+            value = self.oil_viscosity_input.get()
+            if not value:
+                return False
+            try:
+                if float(value) % 1 == 0 and float(value) > 0:  # TODO idk how to validate this value
+                    self.iter_as_sec = int(value)
+                    self.oil_viscosity_validation_label.config(text="Valid value", fg="black")
+                    self.correctly_set_parameters[12] = 1
+                    self.check_all_parameters_validity_and_refresh_image()
+                    return True
+            except ValueError:
+                pass
+            self.oil_viscosity_validation_label.config(text="Invalid value", fg="red")
+            self.confirm_and_continue.config(state=DISABLED)
+            self.correctly_set_parameters[12] = 0
+
+        def validate_oil_density(self):
+            value = self.oil_density_input.get()
+            if not value:
+                return False
+            try:
+                if float(value) % 1 == 0 and float(value) > 0:  # TODO idk how to validate this value
+                    self.iter_as_sec = int(value)
+                    self.oil_density_validation_label.config(text="Valid value", fg="black")
+                    self.correctly_set_parameters[13] = 1
+                    self.check_all_parameters_validity_and_refresh_image()
+                    return True
+            except ValueError:
+                pass
+            self.oil_density_validation_label.config(text="Invalid value", fg="red")
+            self.confirm_and_continue.config(state=DISABLED)
+            self.correctly_set_parameters[13] = 0
+
         def validate_all_parameters(self):
             self.validate_coordinates_top(False)
             self.validate_coordinates_down(False)
@@ -362,11 +431,14 @@ def start_initial_menu(window):
             self.validate_cells_side_count_longitude()
             self.validate_point_side_size()
             self.validate_iter_as_sec()
+            self.validate_min_oil_thickness()
+            self.validate_oil_viscosity()
+            self.validate_oil_density()
 
         def check_all_parameters_validity_and_refresh_image(self, coordinate_change=False):
             if coordinate_change and sum(self.correctly_set_parameters[:4]) == 4:
                 self.load_and_crop_image()
-                if sum(self.correctly_set_parameters) == 11:
+                if sum(self.correctly_set_parameters) == 14:
                     self.confirm_and_continue.config(state=NORMAL)
 
         def browse_button(self):
@@ -387,6 +459,9 @@ def start_initial_menu(window):
                                                   self.data_path.get(),
                                                   self.point_side_size,
                                                   self.iter_as_sec,
+                                                  self.min_oil_thickness,
+                                                  self.oil_viscosity,
+                                                  self.oil_density
                                                   )
 
             start_simulation(Neighbourhood.MOORE if self.neighborhood_var.get() == 0 else Neighbourhood.VON_NEUMANN,

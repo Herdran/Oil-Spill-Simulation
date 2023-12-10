@@ -32,6 +32,9 @@ def set_simulation_coordinates_parameters(top_coord: float,
                                           data_path: str,
                                           point_side_size: int,
                                           iter_as_sec: int,
+                                          min_oil_thickness,
+                                          oil_viscosity,
+                                          oil_density
                                           ):
 
     Constants.simulation_initial_parameters = SimulationRunParameters(
@@ -75,3 +78,5 @@ def set_simulation_coordinates_parameters(top_coord: float,
 
     Constants.simulation_time = (Constants.simulation_initial_parameters.time.max - Constants.simulation_initial_parameters.time.min).total_seconds()
     Constants.iter_as_sec = iter_as_sec
+
+    # TODO idk where to set min_oil_thickness, oil_viscosity and oil_density and what typehints to set up for them
