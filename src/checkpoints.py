@@ -2,7 +2,7 @@ import time
 
 import pandas as pd
 
-from simulation.point import Point, Coord_t
+from simulation.point import Point, Coord_t, InitialValues
 from constatnts import Constants as const
 from files import get_main_path
 from typing import Dict, Any, List, Tuple
@@ -47,10 +47,22 @@ def save_to_json(world: Dict[Coord_t, Point], total_time: int, constant_sources:
     with open(path, "w") as file:
         json.dump(data, file, indent=4)
 
-def load_from_json(name: str, initial_values, engine) -> Dict[str, Any]:
-    path = get_main_path().joinpath(f"checkpoints/{name}")
+
+def load_from_json(path: str) -> Dict[str, Any]:
     with open(path, "r") as file:
         data = json.load(file)
+    constants_sources = []
+    for source in data.get("constants_sources", []):
+        coord = tuple(source["coord"])
+        mass_per_minute = source["mass_per_minute"]
+        spill_start = pd.Timestamp(source["spill_start"])
+        spill_end = pd.Timestamp(source["spill_end"])
+        constants_sources.append((coord, mass_per_minute, spill_start, spill_end))
+    data["constants_sources"] = constants_sources
+    return data
+
+
+def initialize_simulation_from_checkpoint(data: Dict[str, Any], initial_values: InitialValues, engine):
     world = {}
     for point_data in data["points"]:
         point_coord = tuple(point_data["coord"])
@@ -60,14 +72,5 @@ def load_from_json(name: str, initial_values, engine) -> Dict[str, Any]:
         point.emulsification_rate = point_data["emulsification_rate"]
         point.viscosity_dynamic = point_data["viscosity_dynamic"]
         world[point_coord] = point
-    constants_sources = []
-    for source in data.get("constants_sources", []):
-        coord = tuple(source["coord"])
-        mass_per_minute = source["mass_per_minute"]
-        spill_start = pd.Timestamp(source["spill_start"])
-        spill_end = pd.Timestamp(source["spill_end"])
-        constants_sources.append((coord, mass_per_minute, spill_start, spill_end))
-    data["constants_sources"] = constants_sources
-    del data["points"]
-    data["world"] = world
-    return data
+
+    engine.set_world(world)

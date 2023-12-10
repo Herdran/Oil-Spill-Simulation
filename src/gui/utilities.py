@@ -16,8 +16,8 @@ Temperature: {kelvins_to_celsius(point.temperature): .2f}°C"""
 
 
 def create_frame(parent: tk.Frame, row: int, column: int, rowspan: int = 1, columnspan: int = 1,
-                 sticky: str = tk.N + tk.S, padx: int = 0, pady: int = 0) -> tk.Frame:
-    frame = tk.Frame(parent)
+                 sticky: str = tk.N + tk.S, padx: int = 0, pady: int = 0, relief_style=tk.FLAT) -> tk.Frame:
+    frame = tk.Frame(parent, relief=relief_style, borderwidth=1)
     frame.grid(row=row, column=column, padx=padx, pady=pady, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
     return frame
 
@@ -85,17 +85,3 @@ def browse_button(target):
     filename = filedialog.askdirectory()
     if filename:
         target.set(filename)
-
-
-def resize_img_to_fit_frame(img, frame):
-    w, h = img.size
-    w_frame, h_frame = frame.winfo_width(), frame.winfo_height()
-
-    if w / w_frame > h / h_frame:
-        w_resize = w_frame
-        h_resize = int(w_frame * (h / w))
-    else:
-        h_resize = h_frame
-        w_resize = int(h_frame * (w / h))
-
-    return img.resize((w_resize, h_resize))

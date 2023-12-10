@@ -1,16 +1,14 @@
-import os.path
-import os.path
 import re
 import tkinter as tk
 from tkinter import DISABLED, NORMAL, END, ANCHOR
 
 import pandas as pd
-from PIL import Image, ImageTk
 
+from checkpoints import load_from_json
 from constatnts import set_simulation_coordinates_parameters
-from files import get_main_path, get_data_path
+from files import get_data_path
 from gui.utilities import create_frame, create_label_pack, create_label_grid, create_input_entry_grid, \
-    create_label_grid_parameter_screen, browse_button, resize_img_to_fit_frame
+    create_label_grid_parameter_screen, browse_button
 from gui.main_screen import start_simulation
 from simulation.utilities import Neighbourhood
 
@@ -31,8 +29,8 @@ def start_initial_menu(window):
             self.point_side_size = 50
             self.iter_as_sec = 20
             self.min_oil_thickness = 1
-            self.oil_viscosity = 1
-            self.oil_density = 1
+            self.oil_viscosity = 5.3e-6
+            self.oil_density = 846
             self.correctly_set_parameters = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
             self.img = None
             self.world_from_checkpoint = None
@@ -47,51 +45,57 @@ def start_initial_menu(window):
             self.main_frame = create_frame(parent, 0, 0, 1, 1, tk.N + tk.S + tk.E + tk.W, 5, 5)
 
             self.main_frame.rowconfigure(0, weight=1, uniform='row')
-            self.main_frame.rowconfigure(1, weight=1, uniform='row')
-            self.main_frame.rowconfigure(2, weight=1, uniform='row')
-            self.main_frame.rowconfigure(3, weight=1, uniform='row')
-            self.main_frame.rowconfigure(4, weight=2, uniform='row')
+            self.main_frame.rowconfigure(1, weight=2, uniform='row')
+            self.main_frame.rowconfigure(2, weight=2, uniform='row')
+            self.main_frame.rowconfigure(3, weight=2, uniform='row')
+            self.main_frame.rowconfigure(4, weight=3, uniform='row')
             self.main_frame.rowconfigure(5, weight=2, uniform='row')
             self.main_frame.rowconfigure(6, weight=2, uniform='row')
             self.main_frame.rowconfigure(6, weight=1, uniform='row')
-            self.main_frame.columnconfigure(0, weight=2, uniform='column')
+            self.main_frame.columnconfigure(0, weight=3, uniform='column')
             self.main_frame.columnconfigure(1, weight=2, uniform='column')
             self.main_frame.columnconfigure(2, weight=8, uniform='column')
             self.main_frame.columnconfigure(3, weight=1, uniform='column')
 
             title_frame = create_frame(self.main_frame, 0, 0, 1, 4, tk.N + tk.S)
-            neighborhood_type_frame = create_frame(self.main_frame, 4, 0, 1, 1, tk.S + tk.W)
-            inputs_frame = create_frame(self.main_frame, 1, 0, 3, 4, tk.N + tk.S + tk.W)
-            data_path_frame = create_frame(self.main_frame, 5, 0, 1, 2, tk.S + tk.W)
-            checkpoint_path_frame = create_frame(self.main_frame, 6, 0, 2, 2, tk.S + tk.W)
+            neighborhood_type_frame = create_frame(self.main_frame, 4, 0, 1, 1, tk.S + tk.W, relief_style=tk.RAISED, padx=5, pady=5)
+            inputs_frame = create_frame(self.main_frame, 1, 0, 3, 4, tk.N + tk.S, padx=5, pady=5)
+            data_path_frame = create_frame(self.main_frame, 5, 0, 1, 2, tk.S + tk.W, relief_style=tk.RAISED, padx=3, pady=3)
+            checkpoint_path_frame = create_frame(self.main_frame, 6, 0, 2, 2, tk.S + tk.W, relief_style=tk.RAISED, padx=3, pady=3)
             confirm_and_start_frame = create_frame(self.main_frame, 7, 2, 1, 2, tk.S + tk.E)
-            oil_sources_frame = create_frame(self.main_frame, 4, 1, 3, 2, tk.N + tk.S + tk.W)
+            oil_sources_frame = create_frame(self.main_frame, 4, 1, 3, 2, tk.N + tk.S + tk.W, relief_style=tk.RAISED)
 
             create_label_pack(title_frame, "Oil Spill Simulation")
 
             inputs_frame.rowconfigure(0, weight=1, uniform='row')
             inputs_frame.rowconfigure(1, weight=1, uniform='row')
             inputs_frame.rowconfigure(2, weight=1, uniform='row')
-            inputs_frame.columnconfigure(0, weight=5, uniform='column')
-            inputs_frame.columnconfigure(1, weight=3, uniform='column')
-            inputs_frame.columnconfigure(2, weight=3, uniform='column')
-            inputs_frame.columnconfigure(3, weight=3, uniform='column')
-            inputs_frame.columnconfigure(4, weight=3, uniform='column')
+            inputs_frame.columnconfigure(0, weight=1, uniform='column')
+            inputs_frame.columnconfigure(1, weight=1, uniform='column')
+            inputs_frame.columnconfigure(2, weight=1, uniform='column')
+            inputs_frame.columnconfigure(3, weight=1, uniform='column')
+            inputs_frame.columnconfigure(4, weight=1, uniform='column')
 
-            top_coord_frame = create_frame(inputs_frame, 0, 1, 1, 1, tk.N + tk.S)
-            down_coord_frame = create_frame(inputs_frame, 1, 1, 1, 1, tk.N + tk.S)
-            left_coord_frame = create_frame(inputs_frame, 0, 2, 1, 1, tk.N + tk.S)
-            right_coord_frame = create_frame(inputs_frame, 1, 2, 1, 1, tk.N + tk.S)
-            time_range_start_frame = create_frame(inputs_frame, 2, 1, 1, 1, tk.N + tk.S)
-            time_range_end_frame = create_frame(inputs_frame, 2, 2, 1, 1, tk.N + tk.S)
-            data_time_step_frame = create_frame(inputs_frame, 2, 3, 1, 1, tk.N + tk.S)
-            cells_side_count_latitude_frame = create_frame(inputs_frame, 0, 3, 1, 1, tk.N + tk.S)
-            cells_side_count_longitude_frame = create_frame(inputs_frame, 1, 3, 1, 1, tk.N + tk.S)
-            point_side_size_frame = create_frame(inputs_frame, 0, 4, 1, 1, tk.N + tk.S)
-            time_per_iteration_frame = create_frame(inputs_frame, 1, 4, 1, 1, tk.N + tk.S)
-            min_oil_thickness_frame = create_frame(inputs_frame, 2, 4, 1, 1, tk.N + tk.S)
-            oil_viscosity_frame = create_frame(inputs_frame, 0, 5, 1, 1, tk.N + tk.S)
-            oil_density_frame = create_frame(inputs_frame, 1, 5, 1, 1, tk.N + tk.S)
+            coord_and_time_range_frame = create_frame(inputs_frame, 0, 0, 3, 2, tk.N + tk.S, padx=3, pady=3)
+            coord_frame = create_frame(coord_and_time_range_frame, 0, 0, 2, 2, tk.N + tk.S, relief_style=tk.RAISED)
+            time_range_frame = create_frame(coord_and_time_range_frame, 2, 0, 1, 2, tk.N + tk.S, relief_style=tk.RAISED)
+            data_processor_parameters_frame = create_frame(inputs_frame, 0, 2, 3, 1, tk.N + tk.S, relief_style=tk.RAISED, padx=3, pady=3)
+            other_parameters_frame = create_frame(inputs_frame, 0, 3, 3, 2, tk.N + tk.S, relief_style=tk.RAISED, padx=3, pady=3)
+
+            top_coord_frame = create_frame(coord_frame, 0, 0, 1, 1, tk.N + tk.S)
+            down_coord_frame = create_frame(coord_frame, 1, 0, 1, 1, tk.N + tk.S)
+            left_coord_frame = create_frame(coord_frame, 0, 1, 1, 1, tk.N + tk.S)
+            right_coord_frame = create_frame(coord_frame, 1, 1, 1, 1, tk.N + tk.S)
+            time_range_start_frame = create_frame(time_range_frame, 0, 0, 1, 1, tk.N + tk.S)
+            time_range_end_frame = create_frame(time_range_frame, 0, 1, 1, 1, tk.N + tk.S)
+            data_time_step_frame = create_frame(data_processor_parameters_frame, 2, 0, 1, 1, tk.N + tk.S)
+            cells_side_count_latitude_frame = create_frame(data_processor_parameters_frame, 0, 0, 1, 1, tk.N + tk.S)
+            cells_side_count_longitude_frame = create_frame(data_processor_parameters_frame, 1, 0, 1, 1, tk.N + tk.S)
+            point_side_size_frame = create_frame(other_parameters_frame, 0, 0, 1, 1, tk.N + tk.S)
+            time_per_iteration_frame = create_frame(other_parameters_frame, 1, 0, 1, 1, tk.N + tk.S)
+            min_oil_thickness_frame = create_frame(other_parameters_frame, 2, 0, 1, 1, tk.N + tk.S)
+            oil_viscosity_frame = create_frame(other_parameters_frame, 0, 1, 1, 1, tk.N + tk.S)
+            oil_density_frame = create_frame(other_parameters_frame, 1, 1, 1, 1, tk.N + tk.S)
 
             create_label_grid(top_coord_frame, "Top coord value\n[latitude]")
             create_label_grid(down_coord_frame, "Bottom coord value\n[latitude]")
@@ -104,9 +108,9 @@ def start_initial_menu(window):
             create_label_grid(cells_side_count_longitude_frame, "Data stations count:\nlongitude")
             create_label_grid(point_side_size_frame, "Point side size\n[m]")
             create_label_grid(time_per_iteration_frame, "Time per iteration\n[s]")
-            create_label_grid(min_oil_thickness_frame, "Minimum oil thickness\n[idk]")
-            create_label_grid(oil_viscosity_frame, "Oil viscosity\n[idk]")
-            create_label_grid(oil_density_frame, "Oil density\n[idk]")
+            create_label_grid(min_oil_thickness_frame, "Minimum oil thickness\n[μm]")
+            create_label_grid(oil_viscosity_frame, "Oil kinematic viscosity\n[m^2/s]")
+            create_label_grid(oil_density_frame, "Oil density\n[kg/m^3]")
 
             self.top_coord_input = create_input_entry_grid(top_coord_frame, 9, str(self.top_coord),
                                                            self.validate_coordinates_top)
@@ -136,9 +140,9 @@ def start_initial_menu(window):
                                                              self.validate_iter_as_sec)
             self.min_oil_thickness_input = create_input_entry_grid(min_oil_thickness_frame, 3, str(self.min_oil_thickness),
                                                              self.validate_min_oil_thickness)
-            self.oil_viscosity_input = create_input_entry_grid(oil_viscosity_frame, 3, str(self.oil_viscosity),
+            self.oil_viscosity_input = create_input_entry_grid(oil_viscosity_frame, 7, str(self.oil_viscosity),
                                                              self.validate_oil_viscosity)
-            self.oil_density_input = create_input_entry_grid(oil_density_frame, 3, str(self.oil_density),
+            self.oil_density_input = create_input_entry_grid(oil_density_frame, 7, str(self.oil_density),
                                                              self.validate_oil_density)
 
             self.top_coord_validation_label = create_label_grid_parameter_screen(top_coord_frame)
@@ -155,14 +159,6 @@ def start_initial_menu(window):
             self.min_oil_thickness_validation_label = create_label_grid_parameter_screen(min_oil_thickness_frame)
             self.oil_viscosity_validation_label = create_label_grid_parameter_screen(oil_viscosity_frame)
             self.oil_density_validation_label = create_label_grid_parameter_screen(oil_density_frame)
-
-            self.loaded_img = Image.open(os.path.join(get_main_path(), "data/Blue_Marble_2002.png"))
-
-            self.map_view_frame = create_frame(inputs_frame, 0, 0, 4, 1, tk.N + tk.S, 3, 3)
-
-            self.map_view = tk.Canvas(self.map_view_frame)
-
-            self.map_view.grid(row=0, column=0, rowspan=3, padx=3, pady=3, sticky=tk.N + tk.S)
 
             create_label_grid(neighborhood_type_frame, "Neighborhood type:", font=("Arial", 14, "bold"))
 
@@ -202,26 +198,26 @@ def start_initial_menu(window):
             self.confirm_and_continue.pack(side=tk.RIGHT, padx=5, pady=5)
 
 
-            # oil_sources_frame.rowconfigure(0, weight=1, uniform='row')
-            # oil_sources_frame.rowconfigure(1, weight=4, uniform='row')
-            # oil_sources_frame.rowconfigure(2, weight=1, uniform='row')
-            # oil_sources_frame.rowconfigure(3, weight=5, uniform='row')
+            # oil_sources_frame.rowconfigure(0, weight=10, uniform='row')
+            # oil_sources_frame.rowconfigure(1, weight=10, uniform='row')
+            # oil_sources_frame.rowconfigure(2, weight=10, uniform='row')
+            # oil_sources_frame.rowconfigure(3, weight=1, uniform='row')
             # # oil_sources_frame.rowconfigure(4, weight=1, uniform='row')
             # # oil_sources_frame.rowconfigure(5, weight=1, uniform='row')
             # # oil_sources_frame.rowconfigure(6, weight=1, uniform='row')
-            oil_sources_frame.columnconfigure(0, weight=1, uniform='column')
-            oil_sources_frame.columnconfigure(1, weight=1, uniform='column')
-            oil_sources_frame.columnconfigure(2, weight=1, uniform='column')
-            oil_sources_frame.columnconfigure(3, weight=1, uniform='column')
-            oil_sources_frame.columnconfigure(4, weight=1, uniform='column')
+            oil_sources_frame.columnconfigure(0, weight=4, uniform='column')
+            oil_sources_frame.columnconfigure(1, weight=4, uniform='column')
+            oil_sources_frame.columnconfigure(2, weight=4, uniform='column')
+            oil_sources_frame.columnconfigure(3, weight=5, uniform='column')
+            oil_sources_frame.columnconfigure(4, weight=5, uniform='column')
             # oil_sources_frame.columnconfigure(5, weight=1, uniform='column')
 
             # create_label_grid(oil_sources_frame, "Oil sources\n[latitude, longitude, kg/m, yyyy-mm-dd hh:mm:ss, yyyy-mm-dd hh:mm:ss]", columnspan=3)
             create_label_grid(oil_sources_frame, "Oil sources", columnspan=5)
 
-            self.oil_sources_listbox = tk.Listbox(oil_sources_frame, width=100, height=7)
+            self.oil_sources_listbox = tk.Listbox(oil_sources_frame, width=95, height=3)
 
-            self.oil_sources_listbox.grid(row=3, column=0, columnspan=5, sticky=tk.N + tk.S)
+            self.oil_sources_listbox.grid(row=3, column=1, columnspan=4, sticky=tk.N + tk.S + tk.W, padx=5, pady=5)
             # self.oil_sources_listbox.insert(END, "1")
             # self.oil_sources_listbox.insert(END, "2")
             # self.oil_sources_listbox.insert(END, "3")
@@ -243,15 +239,15 @@ def start_initial_menu(window):
             spill_start_oil_source_frame = create_frame(oil_sources_frame, 1, 3, 1, 1, tk.N + tk.S)
             spill_end_oil_source_frame = create_frame(oil_sources_frame, 1, 4, 1, 1, tk.N + tk.S)
 
-            create_label_grid(longitude_oil_source_frame, "Latitude coord")
-            create_label_grid(latitude_oil_source_frame, "Longitude coord")
-            create_label_grid(mass_per_minute_oil_source_frame, "Mass per minute\n[idk, kg/m?]")  # TODO
+            create_label_grid(longitude_oil_source_frame, "Longitude coord\n")
+            create_label_grid(latitude_oil_source_frame, "Latitude coord\n")
+            create_label_grid(mass_per_minute_oil_source_frame, "Mass per minute\n[kg/min]")
             create_label_grid(spill_start_oil_source_frame, "Spill start\n[yyyy-mm-dd hh:mm:ss]")
             create_label_grid(spill_end_oil_source_frame, "Spill end\n[yyyy-mm-dd hh:mm:ss]")
 
-            self.longitude_oil_source_input = create_input_entry_grid(longitude_oil_source_frame, 3, str(self.longitude_oil_source), self.validate_longitude_oil_source)
-            self.latitude_oil_source_input = create_input_entry_grid(latitude_oil_source_frame, 3, str(self.latitude_oil_source), self.validate_latitude_oil_source)
-            self.mass_per_minute_oil_source_input = create_input_entry_grid(mass_per_minute_oil_source_frame, 3, str(self.mass_per_minute_oil_source), self.validate_mass_per_minute_oil_source)
+            self.longitude_oil_source_input = create_input_entry_grid(longitude_oil_source_frame, 9, str(self.longitude_oil_source), self.validate_longitude_oil_source)
+            self.latitude_oil_source_input = create_input_entry_grid(latitude_oil_source_frame, 9, str(self.latitude_oil_source), self.validate_latitude_oil_source)
+            self.mass_per_minute_oil_source_input = create_input_entry_grid(mass_per_minute_oil_source_frame, 7, str(self.mass_per_minute_oil_source), self.validate_mass_per_minute_oil_source)
             self.spill_start_oil_source_input = create_input_entry_grid(spill_start_oil_source_frame, 17, self.spill_start_oil_source, self.validate_spill_start_oil_source)
             self.spill_end_oil_source_input = create_input_entry_grid(spill_end_oil_source_frame, 17, self.spill_end_oil_source, self.validate_spill_end_oil_source)
 
@@ -261,9 +257,6 @@ def start_initial_menu(window):
             self.spill_start_oil_source_validation_label = create_label_grid_parameter_screen(spill_start_oil_source_frame)
             self.spill_end_oil_source_validation_label = create_label_grid_parameter_screen(spill_end_oil_source_frame)
 
-            self.map_view_frame.update()
-            self.crop_and_resize_preview_image()
-            self.main_frame.bind("<Configure>", self.resize_preview_image)
             self.validate_all_parameters()
             self.validate_all_parameters_oil_sources_listbox()
 
@@ -459,8 +452,8 @@ def start_initial_menu(window):
             if not value:
                 return False
             try:
-                if float(value) % 1 == 0 and float(value) > 0:  # TODO idk how to validate this value
-                    self.iter_as_sec = int(value)
+                if float(value) > 0:
+                    self.min_oil_thickness = float(value)
                     self.min_oil_thickness_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[11] = 1
                     self.check_all_parameters_validity_and_refresh_image()
@@ -476,8 +469,8 @@ def start_initial_menu(window):
             if not value:
                 return False
             try:
-                if float(value) % 1 == 0 and float(value) > 0:  # TODO idk how to validate this value
-                    self.iter_as_sec = int(value)
+                if float(value) > 0:
+                    self.oil_viscosity = float(value)
                     self.oil_viscosity_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[12] = 1
                     self.check_all_parameters_validity_and_refresh_image()
@@ -493,8 +486,8 @@ def start_initial_menu(window):
             if not value:
                 return False
             try:
-                if float(value) % 1 == 0 and float(value) > 0:  # TODO idk how to validate this value
-                    self.iter_as_sec = int(value)
+                if float(value) > 0:
+                    self.oil_density = float(value)
                     self.oil_density_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[13] = 1
                     self.check_all_parameters_validity_and_refresh_image()
@@ -612,7 +605,6 @@ def start_initial_menu(window):
 
         def check_all_parameters_validity_and_refresh_image(self, coordinate_change=False):
             if coordinate_change and sum(self.correctly_set_parameters[:4]) == 4:
-                self.crop_and_resize_preview_image()
                 if sum(self.correctly_set_parameters) == 14:
                     self.confirm_and_continue.config(state=NORMAL)
 
@@ -630,26 +622,65 @@ def start_initial_menu(window):
             values = self.oil_sources_listbox.get(0, tk.END)
             for value in values:
                 split_values = value.split(", ")
-                self.oil_sources.append({"coord": (float(split_values[0]), float(split_values[1])),  #  TODO those values are not correct as they have geographical coordinates
-                                       "mass_per_minute": float(split_values[2]),
-                                       "spill_start": pd.Timestamp(split_values[3]),
-                                       "spill_end": pd.Timestamp(split_values[4])})
+                self.oil_sources.append({"coord": (float(split_values[0]), float(split_values[1])),
+                                         "mass_per_minute": float(split_values[2]),
+                                         "spill_start": pd.Timestamp(split_values[3]),
+                                         "spill_end": pd.Timestamp(split_values[4])})
 
         def browse_and_load_checkpoint(self):
             browse_button(self.checkpoint_path)
             if self.checkpoint_path:
-                loaded_parameters = {}  # TODO load checkpoint here  # load_from_json(self.checkpoint_path, )
+                loaded_parameters = load_from_json(self.checkpoint_path.get())
                 self.set_all_parameters_from_checkpoint(loaded_parameters)
                 self.validate_all_parameters()
 
         def set_all_parameters_from_checkpoint(self, loaded_parameters):
-            pass
-            # self.top_coord_input.setvar(loaded_parameters["top_coord"])
-            # self.top_coord_input.config(state=DISABLED)
-            # TODO etc
+            self.top_coord_input.setvar(loaded_parameters["top_coord"])
+            self.top_coord_input.config(state=DISABLED)
+            self.down_coord_input.setvar(loaded_parameters["down_coord"])
+            self.down_coord_input.config(state=DISABLED)
+            self.left_coord_input.setvar(loaded_parameters["left_coord"])
+            self.left_coord_input.config(state=DISABLED)
+            self.right_coord_input.setvar(loaded_parameters["right_coord"])
+            self.right_coord_input.config(state=DISABLED)
+            self.time_range_start_input.setvar(loaded_parameters["time_range_start"])
+            self.time_range_start_input.config(state=DISABLED)
+            self.time_range_end_input.setvar(loaded_parameters["time_range_end"])
+            self.time_range_end_input.config(state=DISABLED)
+            self.data_time_step_input.setvar(loaded_parameters["data_time_step"])
+            self.data_time_step_input.config(state=DISABLED)
+            self.cells_side_count_latitude_input.setvar(loaded_parameters["cells_side_count_latitude"])
+            self.cells_side_count_latitude_input.config(state=DISABLED)
+            self.cells_side_count_longitude_input.setvar(loaded_parameters["cells_side_count_longitude"])
+            self.cells_side_count_longitude_input.config(state=DISABLED)
+            self.point_side_size_input.setvar(loaded_parameters["point_side_size"])
+            self.point_side_size_input.config(state=DISABLED)
+            self.iter_as_sec_input.setvar(loaded_parameters["iter_as_sec"])
+            self.iter_as_sec_input.config(state=DISABLED)
+            self.min_oil_thickness_input.setvar(loaded_parameters["min_oil_thickness"])
+            self.min_oil_thickness_input.config(state=DISABLED)
+            self.oil_viscosity_input.setvar(loaded_parameters["oil_viscosity"])
+            self.oil_viscosity_input.config(state=DISABLED)
+            self.oil_density_input.setvar(loaded_parameters["oil_density"])
+            self.oil_density_input.config(state=DISABLED)
 
-        def resize_preview_image(self, event=None):
-            self.crop_and_resize_preview_image()
+            self.oil_sources = loaded_parameters["constants_sources"]
+
+            for oil_source in self.oil_sources:
+                self.oil_sources_listbox.insert(END, f"{oil_source['coord']}, "
+                                                     f"{oil_source['mass_per_minute']}, "
+                                                     f"{oil_source['spill_start']}, "
+                                                     f"{oil_source['spill_end']}")
+
+            self.longitude_oil_source_input.config(state=DISABLED)
+            self.latitude_oil_source_input.config(state=DISABLED)
+            self.mass_per_minute_oil_source_input.config(state=DISABLED)
+            self.spill_start_oil_source_input.config(state=DISABLED)
+            self.spill_end_oil_source_input.config(state=DISABLED)
+            self.oil_sources_listbox_insert.config(state=DISABLED)
+            self.oil_sources_listbox_delete.config(state=DISABLED)
+
+            # TODO we should probably also set neighborhood type here
 
         def confirm_and_start_simulation(self):
             set_simulation_coordinates_parameters(self.top_coord,
@@ -672,29 +703,5 @@ def start_initial_menu(window):
             self.read_all_from_oil_sources_listbox()
             start_simulation(Neighbourhood.MOORE if self.neighborhood_var.get() == 0 else Neighbourhood.VON_NEUMANN,
                              window, self.world_from_checkpoint, self.oil_sources)
-
-        def crop_and_resize_preview_image(self):
-            image_width, image_height = self.loaded_img.size
-
-            nw_pixel_x = int((self.left_coord + 180) * (image_width / 360))
-            nw_pixel_y = int((90 - self.top_coord) * (image_height / 180))
-
-            se_pixel_x = int((self.right_coord + 180) * (image_width / 360))
-            se_pixel_y = int((90 - self.down_coord) * (image_height / 180))
-
-            # TODO Temporary measure in place for the view to actually show anything when the coordinates values are very similiar
-            if nw_pixel_x + 10 >= se_pixel_x:
-                nw_pixel_x -= 10
-                se_pixel_x += 10
-            if nw_pixel_y + 10 >= se_pixel_y:
-                nw_pixel_y -= 10
-                se_pixel_y += 10
-
-            cropped_image = self.loaded_img.crop((nw_pixel_x, nw_pixel_y, se_pixel_x, se_pixel_y))
-
-            resized_img = resize_img_to_fit_frame(cropped_image, self.map_view_frame)
-
-            self.img = ImageTk.PhotoImage(resized_img)
-            self.map_view.create_image(0, 0, image=self.img, anchor=tk.NW)
 
     ParametersSettingController(window)

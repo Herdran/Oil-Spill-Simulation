@@ -7,6 +7,7 @@ import numpy as np
 from PIL import Image, ImageTk
 
 import simulation.simulation as simulation
+from checkpoints import initialize_simulation_from_checkpoint
 from color import rgba, blend_color, rgba_to_rgb
 from constatnts import Constants as const
 from data.data_processor import DataProcessor, DataReader, DataValidationException
@@ -446,7 +447,7 @@ def start_simulation(neighborhood, window, world_from_checkpoint=None, oil_sourc
     engine = simulation.SimulationEngine(get_data_processor(), neighborhood)
 
     if world_from_checkpoint:
-        engine.set_world(world_from_checkpoint)
+        initialize_simulation_from_checkpoint(world_from_checkpoint, engine.initial_values, engine)
     if oil_sources:
         engine.add_oil_sources(oil_sources)
 

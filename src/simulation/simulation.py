@@ -6,7 +6,7 @@ from data.data_processor import DataProcessor
 from simulation.point import Point, Coord_t, InitialValues, TopographyState
 from simulation.spreading import SpreadingEngine
 from simulation.utilities import Neighbourhood
-from simulation.topology import load_topography
+from simulation.topology import load_topography, project_coordinates_oil_sources
 from checkpoints import save_to_json
 from constatnts import Constants as const
 
@@ -61,7 +61,7 @@ class SimulationEngine:
 
     def add_oil_sources(self, oil_sources: List[dict[str, Any]]):
         for oil_source in oil_sources:
-            self.add_oil_source(oil_source["coord"],
+            self.add_oil_source(project_coordinates_oil_sources(oil_source["coord"]),
                                 oil_source["mass_per_minute"],
                                 oil_source["spill_start"],
                                 oil_source["spill_end"])

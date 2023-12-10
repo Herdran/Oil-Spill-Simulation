@@ -81,3 +81,25 @@ def get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int]) 
 
 def load_topography() -> Set[Coord_t]:        
     return get_lands_set(get_binary_map_path(), get_top_left_offset())
+
+
+def project_coordinates_oil_sources(coord):
+    coord = Coordinates(
+        latitude=coord[0],
+        longitude=coord[1]
+    )
+
+    LONGITUDE_OFFSET = 180.0
+    LATITUDE_OFFSET = 90.0
+    LONGITUDE_RANGE = 360.0
+    LATITUDE_RANGE = 180.0
+
+    lon = (coord.longitude + LONGITUDE_OFFSET) * (BINARY_MAP_WIDTH / LONGITUDE_RANGE)
+    lat = (-coord.latitude + LATITUDE_OFFSET) * (BINARY_MAP_HEIGHT / LATITUDE_RANGE)
+
+    top_left_offset = get_top_left_offset()
+
+    lon_top_left, lat_top_left = top_left_offset.longitude, top_left_offset.latitude
+
+    return int(lat) - int(lat_top_left), int(lon) - int(lon_top_left)
+    # TODO finish after merging with points_count

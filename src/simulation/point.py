@@ -24,14 +24,14 @@ class TopographyState(Enum):
 class InitialValues:
     def __init__(self, neighbourhood: Neighbourhood = Neighbourhood.MOORE):
         self.water_density = 997  # [kg/m^3]
-        self.oil_density = 846  # [kg/m^3]
+        self.oil_density = const.oil_density  # [kg/m^3]
         self.emulsion_max_content_water = 0.7  # max content of water in the emulsion
         self.molar_mass = 348.23  # [g/mol] mean
         self.boiling_point = 609  # [K] mean
         self.interfacial_tension = 30  # [dyna/cm]
         self.propagation_factor = 2.5
         self.c = 10  # parameter dependant of oil type, used in viscosity change
-        self.viscosity_kinematic = 5.3e-6  # [m^2/s]
+        self.viscosity_kinematic = const.viscosity_kinematic  # [m^2/s]
         self.viscosity_dynamic = self.viscosity_kinematic * self.oil_density
         self.emulsification_rate = 0
         self.neighbourhood = neighbourhood
@@ -205,7 +205,7 @@ class Point:
 
     def slick_thickness(self) -> float:
         thickness = (self.oil_mass / self.initial_values.oil_density) / (const.point_side_size ** 2)  # [m]
-        return thickness / 100  # [cm]
+        return thickness * 100  # [cm]
 
     def viscosity_change(self, delta_F: float, delta_Y: float) -> None:
         delta_viscosity = self.initial_values.c * self.viscosity_dynamic * delta_F + (
