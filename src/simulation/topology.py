@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import Set
+from typing import Set, List
 from os import PathLike, path
 from itertools import product
 from zipfile import ZipFile
@@ -83,19 +83,15 @@ def load_topography() -> Set[Coord_t]:
     return get_lands_set(get_binary_map_path(), get_top_left_offset())
 
 
-def project_coordinates_oil_sources(coord):
+def project_coordinates_oil_sources(coord: List[float]):
     coord = Coordinates(
         latitude=coord[0],
         longitude=coord[1]
     )
+    coordinates = project_coordinates(coord, BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
 
-    LONGITUDE_OFFSET = 180.0
-    LATITUDE_OFFSET = 90.0
-    LONGITUDE_RANGE = 360.0
-    LATITUDE_RANGE = 180.0
-
-    lon = (coord.longitude + LONGITUDE_OFFSET) * (BINARY_MAP_WIDTH / LONGITUDE_RANGE)
-    lat = (-coord.latitude + LATITUDE_OFFSET) * (BINARY_MAP_HEIGHT / LATITUDE_RANGE)
+    lon = coordinates.longitude
+    lat = coordinates.latitude
 
     top_left_offset = get_top_left_offset()
 
