@@ -29,17 +29,11 @@ class InitialValues:
                 longitude=-88.72648
             )
         ),
-        # we need to think about behavior of our application when sim time ends
         time=Range(
             min=pd.Timestamp("2010-04-01 00:00:00"),
             max=pd.Timestamp("2010-04-02 00:00:00"),
         ),
         data_time_step=pd.Timedelta(minutes=30),
-        # how many point we want is how good the interpolation will be
-        # but I guess we don't need many of them as that is the only initial interpolation
-        # and making that initial interpolation is costly at app start
-        # -----
-        # and that cells count is not the same as cells count in simulation!
         cells_side_count=CellSideCount(
             latitude=10,
             longitude=10

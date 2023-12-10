@@ -38,8 +38,8 @@ def start_initial_menu(window):
             self.longitude_oil_source = 0.0
             self.latitude_oil_source = 0.0
             self.mass_per_minute_oil_source = 0.0
-            self.spill_start_oil_source = "2010-04-01 00:00:00"
-            self.spill_end_oil_source = "2010-04-02 00:00:00"
+            self.spill_start_oil_source = InitialValues.simulation_initial_parameters.time.min
+            self.spill_end_oil_source = InitialValues.simulation_initial_parameters.time.max
             self.correctly_set_parameters_oil_sources = [1, 1, 0, 1, 1]
 
             self.main_frame = create_frame(parent, 0, 0, 1, 1, tk.N + tk.S + tk.E + tk.W, 5, 5)
@@ -252,14 +252,17 @@ def start_initial_menu(window):
             value = self.top_coord_input.get()
             if not value:
                 return False
-            if -90 <= float(value) <= 90 and float(value) > self.down_coord:
-                self.top_coord = float(value)
-                self.top_coord_validation_label.config(text="Valid value", fg="black")
-                self.correctly_set_parameters[0] = 1
-                self.check_all_main_parameters_validity()
-                if is_first_run:
-                    self.validate_coordinates_down(False)
-                return True
+            try:
+                if -90 <= float(value) <= 90 and float(value) > self.down_coord:
+                    self.top_coord = float(value)
+                    self.top_coord_validation_label.config(text="Valid value", fg="black")
+                    self.correctly_set_parameters[0] = 1
+                    self.check_all_main_parameters_validity()
+                    if is_first_run:
+                        self.validate_coordinates_down(False)
+                    return True
+            except ValueError:
+                pass
             self.top_coord_validation_label.config(text="Invalid value", fg="red")
             self.confirm_and_continue.config(state=DISABLED)
             self.correctly_set_parameters[0] = 0
@@ -268,14 +271,17 @@ def start_initial_menu(window):
             value = self.down_coord_input.get()
             if not value:
                 return False
-            if -90 <= float(value) <= 90 and float(value) < self.top_coord:
-                self.down_coord = float(value)
-                self.down_coord_validation_label.config(text="Valid value", fg="black")
-                self.correctly_set_parameters[1] = 1
-                self.check_all_main_parameters_validity()
-                if is_first_run:
-                    self.validate_coordinates_top(False)
-                return True
+            try:
+                if -90 <= float(value) <= 90 and float(value) < self.top_coord:
+                    self.down_coord = float(value)
+                    self.down_coord_validation_label.config(text="Valid value", fg="black")
+                    self.correctly_set_parameters[1] = 1
+                    self.check_all_main_parameters_validity()
+                    if is_first_run:
+                        self.validate_coordinates_top(False)
+                    return True
+            except ValueError:
+                pass
             self.down_coord_validation_label.config(text="Invalid value", fg="red")
             self.confirm_and_continue.config(state=DISABLED)
             self.correctly_set_parameters[1] = 0
@@ -284,14 +290,17 @@ def start_initial_menu(window):
             value = self.left_coord_input.get()
             if not value:
                 return False
-            if -180 <= float(value) <= 180 and float(value) < self.right_coord:
-                self.left_coord = float(value)
-                self.left_coord_validation_label.config(text="Valid value", fg="black")
-                self.correctly_set_parameters[2] = 1
-                self.check_all_main_parameters_validity()
-                if is_first_run:
-                    self.validate_coordinates_right(False)
-                return True
+            try:
+                if -180 <= float(value) <= 180 and float(value) < self.right_coord:
+                    self.left_coord = float(value)
+                    self.left_coord_validation_label.config(text="Valid value", fg="black")
+                    self.correctly_set_parameters[2] = 1
+                    self.check_all_main_parameters_validity()
+                    if is_first_run:
+                        self.validate_coordinates_right(False)
+                    return True
+            except ValueError:
+                pass
             self.left_coord_validation_label.config(text="Invalid value", fg="red")
             self.confirm_and_continue.config(state=DISABLED)
             self.correctly_set_parameters[2] = 0
@@ -300,14 +309,17 @@ def start_initial_menu(window):
             value = self.right_coord_input.get()
             if not value:
                 return False
-            if -180 <= float(value) <= 180 and float(value) > self.left_coord:
-                self.right_coord = float(value)
-                self.right_coord_validation_label.config(text="Valid value", fg="black")
-                self.correctly_set_parameters[3] = 1
-                self.check_all_main_parameters_validity()
-                if is_first_run:
-                    self.validate_coordinates_left(False)
-                return True
+            try:
+                if -180 <= float(value) <= 180 and float(value) > self.left_coord:
+                    self.right_coord = float(value)
+                    self.right_coord_validation_label.config(text="Valid value", fg="black")
+                    self.correctly_set_parameters[3] = 1
+                    self.check_all_main_parameters_validity()
+                    if is_first_run:
+                        self.validate_coordinates_left(False)
+                    return True
+            except ValueError:
+                pass
             self.right_coord_validation_label.config(text="Invalid value", fg="red")
             self.confirm_and_continue.config(state=DISABLED)
             self.correctly_set_parameters[3] = 0
@@ -490,12 +502,15 @@ def start_initial_menu(window):
             value = self.longitude_oil_source_input.get()
             if not value:
                 return False
-            if -180 <= float(value) <= 180:
-                self.longitude_oil_source = float(value)
-                self.longitude_oil_source_validation_label.config(text="Valid value", fg="black")
-                self.correctly_set_parameters_oil_sources[0] = 1
-                self.check_all_parameters_validity_oil_sources()
-                return True
+            try:
+                if -180 <= float(value) <= 180:
+                    self.longitude_oil_source = float(value)
+                    self.longitude_oil_source_validation_label.config(text="Valid value", fg="black")
+                    self.correctly_set_parameters_oil_sources[0] = 1
+                    self.check_all_parameters_validity_oil_sources()
+                    return True
+            except ValueError:
+                pass
             self.longitude_oil_source_validation_label.config(text="Invalid value", fg="red")
             self.oil_sources_listbox_insert.config(state=DISABLED)
             self.correctly_set_parameters_oil_sources[0] = 0
@@ -504,12 +519,15 @@ def start_initial_menu(window):
             value = self.latitude_oil_source_input.get()
             if not value:
                 return False
-            if -90 <= float(value) <= 90:
-                self.latitude_oil_source = float(value)
-                self.latitude_oil_source_validation_label.config(text="Valid value", fg="black")
-                self.correctly_set_parameters_oil_sources[1] = 1
-                self.check_all_parameters_validity_oil_sources()
-                return True
+            try:
+                if -90 <= float(value) <= 90:
+                    self.latitude_oil_source = float(value)
+                    self.latitude_oil_source_validation_label.config(text="Valid value", fg="black")
+                    self.correctly_set_parameters_oil_sources[1] = 1
+                    self.check_all_parameters_validity_oil_sources()
+                    return True
+            except ValueError:
+                pass
             self.latitude_oil_source_validation_label.config(text="Invalid value", fg="red")
             self.oil_sources_listbox_insert.config(state=DISABLED)
             self.correctly_set_parameters_oil_sources[1] = 0
@@ -518,12 +536,15 @@ def start_initial_menu(window):
             value = self.mass_per_minute_oil_source_input.get()
             if not value:
                 return False
-            if float(value) > 0:
-                self.mass_per_minute_oil_source = float(value)
-                self.mass_per_minute_oil_source_validation_label.config(text="Valid value", fg="black")
-                self.correctly_set_parameters_oil_sources[2] = 1
-                self.check_all_parameters_validity_oil_sources()
-                return True
+            try:
+                if float(value) > 0:
+                    self.mass_per_minute_oil_source = float(value)
+                    self.mass_per_minute_oil_source_validation_label.config(text="Valid value", fg="black")
+                    self.correctly_set_parameters_oil_sources[2] = 1
+                    self.check_all_parameters_validity_oil_sources()
+                    return True
+            except ValueError:
+                pass
             self.mass_per_minute_oil_source_validation_label.config(text="Invalid value", fg="red")
             self.oil_sources_listbox_insert.config(state=DISABLED)
             self.correctly_set_parameters_oil_sources[2] = 0
@@ -565,7 +586,7 @@ def start_initial_menu(window):
             self.correctly_set_parameters_oil_sources[4] = 0
 
         def check_all_parameters_validity_oil_sources(self):
-            if sum(self.correctly_set_parameters_oil_sources) == 5:
+            if all(self.correctly_set_parameters_oil_sources):
                 self.oil_sources_listbox_insert.config(state=NORMAL)
 
         def validate_all_parameters(self):
