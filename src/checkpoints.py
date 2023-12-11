@@ -35,7 +35,7 @@ def oil_source_to_dict(source: Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]) 
 
 def save_to_json(world: Dict[Coord_t, Point], total_time: int, curr_iter: int, constant_sources: List[Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]]) -> None:
     timestamp = time.strftime("%Y_%m_%d-%H_%M_%S")
-    path = get_main_path().joinpath(f"checkpoints/checkpoint_{timestamp}.json")
+    path = get_main_path().joinpath(f"checkpoints/checkpoint_{timestamp}_iteration{curr_iter}.json")
     data = {
         "top_coord": InitialValues.simulation_initial_parameters.area.max.latitude,
         "down_coord": InitialValues.simulation_initial_parameters.area.min.latitude,
@@ -55,6 +55,7 @@ def save_to_json(world: Dict[Coord_t, Point], total_time: int, curr_iter: int, c
         "checkpoint_frequency": InitialValues.checkpoint_frequency,
         "total_simulation_time": total_time,
         "curr_iter": curr_iter,
+        "data_path": InitialValues.simulation_initial_parameters.path_to_data,
 
         "constants_sources": [oil_source_to_dict(source) for source in constant_sources],
         "points": [point_to_dict(point) for point in world.values()]

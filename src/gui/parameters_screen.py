@@ -705,6 +705,8 @@ def start_initial_menu(window):
             self.points_from_checkpoint = loaded_parameters["points"]
             self.checkpoint_frequency = loaded_parameters["checkpoint_frequency"]
 
+            self.data_path.set(loaded_parameters["data_path"])
+
             self.nm.config(state=DISABLED)
             self.nvm.config(state=DISABLED)
 
