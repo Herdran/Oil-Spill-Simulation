@@ -5,7 +5,7 @@ from tkinter import DISABLED, NORMAL, END, ANCHOR
 import pandas as pd
 
 from checkpoints import load_from_json
-from constatnts import set_simulation_coordinates_parameters, InitialValues
+from initial_values import set_simulation_coordinates_parameters, InitialValues
 from files import get_data_path
 from gui.utilities import create_frame, create_label_pack, create_label_grid, create_input_entry_grid, \
     create_label_grid_parameter_screen, browse_button

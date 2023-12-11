@@ -10,7 +10,7 @@ import numpy.typing as npt
 from simulation.point import Coord_t
 from data.measurment_data import Coordinates, CoordinatesBase
 from data.utilities import project_coordinates
-from constatnts import InitialValues
+from initial_values import InitialValues
 from files import get_binary_world_map_path, get_binary_world_map_zip_path, get_unzipped_world_map_dir_path
 
 

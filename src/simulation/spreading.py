@@ -3,7 +3,7 @@ from random import random as rand
 from random import shuffle
 from typing import Dict
 
-from constatnts import InitialValues
+from initial_values import InitialValues
 from simulation.point import Point, Coord_t, TopographyState
 from simulation.utilities import get_neighbour_coordinates
 

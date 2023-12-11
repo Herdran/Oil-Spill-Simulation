@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from numpy import exp, log, sqrt
 
-from constatnts import InitialValues
+from initial_values import InitialValues
 from data.measurment_data import Coordinates
 from simulation.utilities import get_neighbour_coordinates, Neighbourhood, sign
 
@@ -43,8 +43,7 @@ class Point:
         self.evaporation_rate = 0
 
     def contain_oil(self) -> bool:
-        # TODO dynamic value based on point area
-        return self.oil_mass > 1
+        return self.slick_thickness() > InitialValues.min_oil_thickness
 
     def add_oil(self, mass: float) -> None:
         # maybe initial emulsification rate will be changed

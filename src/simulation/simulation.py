@@ -7,7 +7,7 @@ from simulation.point import Point, Coord_t, TopographyState
 from simulation.spreading import SpreadingEngine
 from simulation.topology import load_topography, project_coordinates_oil_sources
 from checkpoints import save_to_json
-from constatnts import InitialValues
+from initial_values import InitialValues
 
 
 class SimulationEngine:

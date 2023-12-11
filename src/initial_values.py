@@ -43,7 +43,7 @@ class InitialValues:
 
     simulation_time: float = None
 
-    min_oil_thickness = 1
+    min_oil_thickness = 5e-5
 
     water_density = 997  # [kg/m^3]
     oil_density = 846  # [kg/m^3]

@@ -3,7 +3,7 @@ import time
 import pandas as pd
 
 from simulation.point import Point, Coord_t
-from constatnts import InitialValues
+from initial_values import InitialValues
 from files import get_main_path
 from typing import Dict, Any, List, Tuple
 import json

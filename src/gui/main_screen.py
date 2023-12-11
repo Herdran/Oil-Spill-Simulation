@@ -9,7 +9,7 @@ from PIL import Image, ImageTk
 import simulation.simulation as simulation
 from checkpoints import initialize_simulation_from_checkpoint
 from color import rgba, blend_color, rgba_to_rgb
-from constatnts import InitialValues
+from initial_values import InitialValues
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from files import get_main_path
 from gui.utilities import get_tooltip_text, create_frame, create_label_pack, create_input_entry_pack
