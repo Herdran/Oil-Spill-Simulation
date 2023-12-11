@@ -1,10 +1,9 @@
 from math import acos, cos, radians, sin
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple
 from data.measurment_data import CoordinatesBase, Coordinates, Temperature
 import pandas as pd
 import numpy as np
 
-from data.measurment_data import Coordinates
     
 def minutes(time_delta: pd.Timedelta) -> float:
     SECONDS_IN_MINUTE = 60
@@ -19,7 +18,7 @@ def great_circle_distance(first: Coordinates, second: Coordinates) -> float:
         acos(sin(lat1) * sin(lat2) + cos(lat1)
              * cos(lat2) * cos(lon1 - lon2))
     )
-    
+
 def dataframe_replace_applay(dataframe: pd.DataFrame, result_columns: list[str], function: Callable, columns: list[str]):
     def is_any_nan(row: pd.Series) -> bool:
         return any([pd.isna(row[column]) for column in columns])
@@ -61,14 +60,23 @@ def kelvins_to_celsius(kelvins: Temperature) -> float:
 def round_values(arr: np.array):
     DATA_FLOAT_PRECISSION = 5
     return np.round(arr, DATA_FLOAT_PRECISSION)
-    
-def project_coordinates(coordinates: Coordinates, width: int, height: int) -> CoordinatesBase[int]:
-    LONGITUDE_OFFSET = 180.0
-    LATITUDE_OFFSET = 90.0
-    LONGITUDE_RANGE = 360.0
-    LATITUDE_RANGE = 180.0
 
+
+LONGITUDE_OFFSET = 180.0
+LATITUDE_OFFSET = 90.0
+LONGITUDE_RANGE = 360.0
+LATITUDE_RANGE = 180.0
+
+
+def project_coordinates(coordinates: Coordinates, width: int, height: int) -> CoordinatesBase[int]:
     lon = (coordinates.longitude + LONGITUDE_OFFSET) * (width / LONGITUDE_RANGE)
     lat = (-coordinates.latitude + LATITUDE_OFFSET) * (height / LATITUDE_RANGE)
     
     return CoordinatesBase[int](int(lat), int(lon))
+
+
+def project_coordinates_reverse(coordinates: Tuple[float, float], width: int, height: int) -> Tuple[float, float]:
+    lon = coordinates[1] / (width / LONGITUDE_RANGE) - LONGITUDE_OFFSET
+    lat = -(coordinates[0] / (height / LATITUDE_RANGE) - LATITUDE_OFFSET)
+
+    return lat, lon

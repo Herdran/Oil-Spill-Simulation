@@ -5,31 +5,31 @@ import pandas as pd
 from data.data_processor import DataProcessor
 from simulation.point import Point, Coord_t, TopographyState
 from simulation.spreading import SpreadingEngine
-from simulation.topology import load_topography, project_coordinates_oil_sources
+from simulation.topology import load_topography, project_coordinates_oil_sources_to_simulation
 from checkpoints import save_to_json
 from initial_values import InitialValues
 
 
 class SimulationEngine:
-    def __init__(self, data_processor: DataProcessor, checkpoint_frequency: int = 0):
+    def __init__(self, data_processor: DataProcessor):
         self.world: Dict[Coord_t, Point] = dict()
         self.spreading_engine = SpreadingEngine(self)
 
         Point.world = self.world
         self.data_processor = data_processor
-        self.checkpoint_frequency = checkpoint_frequency  #TODO move to constants
+        self.checkpoint_frequency = InitialValues.checkpoint_frequency
         self.timestep = InitialValues.iter_as_sec
         self.total_mass = 0
         self.total_land_mass = 0
         self.lands = load_topography()
-        self.total_time = 0
+        self.total_time = InitialValues.total_simulation_time
         self.points_changed = []
         self._constants_sources = []  # contains tuples (coord, mass_per_minute, spill_start, spill_end)
 
     def is_finished(self) -> bool:
         return self.total_time >= InitialValues.simulation_time
 
-    def update(self) -> List[Coord_t]:
+    def update(self, curr_iter: int) -> List[Coord_t]:
         self.points_changed = []
         self.pour_from_sources()
         self.update_oil_points()
@@ -50,7 +50,7 @@ class SimulationEngine:
             deleted.append(point)
             self.points_changed.append(point)
         self.total_time += self.timestep
-        self._save_checkpoint()
+        self._save_checkpoint(curr_iter)
         return deleted
 
     def update_oil_points(self):
@@ -59,7 +59,7 @@ class SimulationEngine:
 
     def add_oil_sources(self, oil_sources: List[dict[str, Any]]):
         for oil_source in oil_sources:
-            self.add_oil_source(project_coordinates_oil_sources(oil_source["coord"]),
+            self.add_oil_source(project_coordinates_oil_sources_to_simulation(oil_source["coord"]),
                                 oil_source["mass_per_minute"],
                                 oil_source["spill_start"],
                                 oil_source["spill_end"])
@@ -73,7 +73,7 @@ class SimulationEngine:
         for spill in self._constants_sources:
             cords, mass_per_minute, spill_start, spill_end = spill
             if spill_start <= current_timestamp <= spill_end:
-                if cords not in self.world:
+                if cords not in self.world and 0 <= cords[0] < InitialValues.point_side_count and 0 <= cords[1] < InitialValues.point_side_count:
                     self.world[cords] = Point(cords, self)
                     self.points_changed.append(cords)
                 self.world[cords].add_oil(mass_per_minute * self.timestep / 60)
@@ -86,9 +86,9 @@ class SimulationEngine:
     def get_oil_amounts(self):
         return self.total_mass - self.total_land_mass, self.total_land_mass
 
-    def _save_checkpoint(self):
+    def _save_checkpoint(self, curr_iter: int):
         if self.checkpoint_frequency > 0 and (self.total_time / self.timestep) % self.checkpoint_frequency == 0:
-            save_to_json(self.world, self.total_time, self._constants_sources)
+            save_to_json(self.world, self.total_time, curr_iter, self._constants_sources)
 
     def set_world(self, world: Dict[Coord_t, Point]):
         self.world = world

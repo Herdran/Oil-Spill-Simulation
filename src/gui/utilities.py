@@ -82,6 +82,6 @@ def on_focus_out(_, validation_function):
 
 
 def browse_button(target):
-    filename = filedialog.askdirectory()
+    filename = filedialog.askopenfilename()
     if filename:
         target.set(filename)

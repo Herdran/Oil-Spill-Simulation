@@ -56,7 +56,10 @@ class InitialValues:
     viscosity_kinematic = 5.3e-6  # [m^2/s]
     viscosity_dynamic = viscosity_kinematic * oil_density
     emulsification_rate = 0
-    neighbourhood = None
+    neighbourhood: Neighbourhood = None
+    checkpoint_frequency: int = 0
+    total_simulation_time: int = 0
+    curr_iter: int = 0
 
 
 def set_simulation_coordinates_parameters(top_coord: float,
@@ -74,7 +77,10 @@ def set_simulation_coordinates_parameters(top_coord: float,
                                           min_oil_thickness: float,
                                           oil_viscosity: float,
                                           oil_density: float,
-                                          neighbourhood: Neighbourhood
+                                          neighbourhood: Neighbourhood,
+                                          checkpoint_frequency: int,
+                                          total_simulation_time: int,
+                                          curr_iter: int
                                           ):
 
     InitialValues.simulation_initial_parameters = SimulationRunParameters(
@@ -123,3 +129,6 @@ def set_simulation_coordinates_parameters(top_coord: float,
     InitialValues.oil_density = oil_density
     InitialValues.neighbourhood = neighbourhood
     InitialValues.min_oil_thickness = min_oil_thickness
+    InitialValues.checkpoint_frequency = checkpoint_frequency
+    InitialValues.total_simulation_time = total_simulation_time
+    InitialValues.curr_iter = curr_iter

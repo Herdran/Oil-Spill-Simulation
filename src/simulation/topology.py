@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import Set, List
+from typing import Set, List, Tuple
 from os import PathLike, path
 from itertools import product
 from zipfile import ZipFile
@@ -9,7 +9,7 @@ import numpy.typing as npt
 
 from simulation.point import Coord_t
 from data.measurment_data import Coordinates, CoordinatesBase
-from data.utilities import project_coordinates
+from data.utilities import project_coordinates, project_coordinates_reverse
 from initial_values import InitialValues
 from files import get_binary_world_map_path, get_binary_world_map_zip_path, get_unzipped_world_map_dir_path
 
@@ -83,7 +83,7 @@ def load_topography() -> Set[Coord_t]:
     return get_lands_set(get_binary_map_path(), get_top_left_offset())
 
 
-def project_coordinates_oil_sources(coord: List[float]):
+def project_coordinates_oil_sources_to_simulation(coord: List[float]):
     coord = Coordinates(
         latitude=coord[0],
         longitude=coord[1]
@@ -99,3 +99,18 @@ def project_coordinates_oil_sources(coord: List[float]):
 
     return int(lat) - int(lat_top_left), int(lon) - int(lon_top_left)
     # TODO finish after merging with points_count
+
+
+def project_coordinates_oil_sources_from_simulation(coord: Tuple[int, int]):
+    lat, lon = coord[0], coord[1]
+
+    top_left_offset = get_top_left_offset()
+
+    lon_top_left, lat_top_left = top_left_offset.longitude, top_left_offset.latitude
+
+    lat += lat_top_left
+    lon += lon_top_left
+
+    coordinates = project_coordinates_reverse((lat, lon), BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
+
+    return round(coordinates[0], 4), round(coordinates[1], 4)

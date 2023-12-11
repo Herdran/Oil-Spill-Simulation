@@ -21,9 +21,9 @@ def start_initial_menu(window):
             self.down_coord = InitialValues.simulation_initial_parameters.area.min.latitude
             self.left_coord = InitialValues.simulation_initial_parameters.area.min.longitude
             self.right_coord = InitialValues.simulation_initial_parameters.area.max.longitude
-            self.time_range_start = InitialValues.simulation_initial_parameters.time.min
-            self.time_range_end = InitialValues.simulation_initial_parameters.time.max
-            self.data_time_step_minutes = str(int(InitialValues.simulation_initial_parameters.data_time_step.total_seconds() / 60))
+            self.time_range_start = str(InitialValues.simulation_initial_parameters.time.min)
+            self.time_range_end = str(InitialValues.simulation_initial_parameters.time.max)
+            self.data_time_step_minutes = int(InitialValues.simulation_initial_parameters.data_time_step.total_seconds() / 60)
             self.cells_side_count_latitude = InitialValues.simulation_initial_parameters.cells_side_count.latitude
             self.cells_side_count_longitude = InitialValues.simulation_initial_parameters.cells_side_count.longitude
             self.point_side_size = InitialValues.point_side_size
@@ -31,16 +31,19 @@ def start_initial_menu(window):
             self.min_oil_thickness = InitialValues.min_oil_thickness
             self.oil_viscosity = InitialValues.viscosity_kinematic
             self.oil_density = InitialValues.oil_density
-            self.correctly_set_parameters = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            self.checkpoint_frequency = InitialValues.checkpoint_frequency
+            self.total_simulation_time = InitialValues.total_simulation_time
+            self.curr_iter = InitialValues.curr_iter
+            self.correctly_set_parameters = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
             self.img = None
-            self.world_from_checkpoint = None
+            self.points_from_checkpoint = None
             self.oil_sources = []
             self.longitude_oil_source = 0.0
             self.latitude_oil_source = 0.0
             self.mass_per_minute_oil_source = 0.0
-            self.spill_start_oil_source = InitialValues.simulation_initial_parameters.time.min
-            self.spill_end_oil_source = InitialValues.simulation_initial_parameters.time.max
-            self.correctly_set_parameters_oil_sources = [1, 1, 0, 1, 1]
+            self.spill_start_oil_source = str(InitialValues.simulation_initial_parameters.time.min)
+            self.spill_end_oil_source = str(InitialValues.simulation_initial_parameters.time.max)
+            self.correctly_set_parameters_oil_sources = [1, 1, 1, 1, 1]
 
             self.main_frame = create_frame(parent, 0, 0, 1, 1, tk.N + tk.S + tk.E + tk.W, 5, 5)
 
@@ -93,9 +96,10 @@ def start_initial_menu(window):
             cells_side_count_longitude_frame = create_frame(data_processor_parameters_frame, 1, 0, 1, 1, tk.N + tk.S)
             point_side_size_frame = create_frame(other_parameters_frame, 0, 0, 1, 1, tk.N + tk.S)
             time_per_iteration_frame = create_frame(other_parameters_frame, 1, 0, 1, 1, tk.N + tk.S)
-            min_oil_thickness_frame = create_frame(other_parameters_frame, 2, 0, 1, 1, tk.N + tk.S)
+            min_oil_thickness_frame = create_frame(other_parameters_frame, 2, 1, 1, 1, tk.N + tk.S)
             oil_viscosity_frame = create_frame(other_parameters_frame, 0, 1, 1, 1, tk.N + tk.S)
             oil_density_frame = create_frame(other_parameters_frame, 1, 1, 1, 1, tk.N + tk.S)
+            checkpoint_frequency_frame = create_frame(other_parameters_frame, 2, 0, 1, 1, tk.N + tk.S)
 
             create_label_grid(top_coord_frame, "Top coord value\n[latitude]")
             create_label_grid(down_coord_frame, "Bottom coord value\n[latitude]")
@@ -111,6 +115,7 @@ def start_initial_menu(window):
             create_label_grid(min_oil_thickness_frame, "Minimum oil thickness\n[μm]")
             create_label_grid(oil_viscosity_frame, "Oil kinematic viscosity\n[m^2/s]")
             create_label_grid(oil_density_frame, "Oil density\n[kg/m^3]")
+            create_label_grid(checkpoint_frequency_frame, "Checkpoint frequency\n[per iterations]")
 
             self.top_coord_input = create_input_entry_grid(top_coord_frame, 9, str(self.top_coord),
                                                            self.validate_coordinates_top)
@@ -138,12 +143,14 @@ def start_initial_menu(window):
                                                                  self.validate_point_side_size)
             self.iter_as_sec_input = create_input_entry_grid(time_per_iteration_frame, 3, str(self.iter_as_sec),
                                                              self.validate_iter_as_sec)
-            self.min_oil_thickness_input = create_input_entry_grid(min_oil_thickness_frame, 3, str(self.min_oil_thickness),
-                                                             self.validate_min_oil_thickness)
+            self.min_oil_thickness_input = create_input_entry_grid(min_oil_thickness_frame, 7, str(self.min_oil_thickness),
+                                                                   self.validate_min_oil_thickness)
             self.oil_viscosity_input = create_input_entry_grid(oil_viscosity_frame, 7, str(self.oil_viscosity),
-                                                             self.validate_oil_viscosity)
+                                                               self.validate_oil_viscosity)
             self.oil_density_input = create_input_entry_grid(oil_density_frame, 7, str(self.oil_density),
                                                              self.validate_oil_density)
+            self.checkpoint_frequency_input = create_input_entry_grid(checkpoint_frequency_frame, 7, str(self.checkpoint_frequency),
+                                                                      self.validate_checkpoint_frequency)
 
             self.top_coord_validation_label = create_label_grid_parameter_screen(top_coord_frame)
             self.down_coord_validation_label = create_label_grid_parameter_screen(down_coord_frame)
@@ -159,16 +166,17 @@ def start_initial_menu(window):
             self.min_oil_thickness_validation_label = create_label_grid_parameter_screen(min_oil_thickness_frame)
             self.oil_viscosity_validation_label = create_label_grid_parameter_screen(oil_viscosity_frame)
             self.oil_density_validation_label = create_label_grid_parameter_screen(oil_density_frame)
+            self.checkpoint_frequency_validation_label = create_label_grid_parameter_screen(checkpoint_frequency_frame)
 
             create_label_grid(neighborhood_type_frame, "Neighborhood type:", font=("Arial", 14, "bold"))
 
             self.neighborhood_var = tk.IntVar()
-            nm = tk.Radiobutton(neighborhood_type_frame, text="Moore", variable=self.neighborhood_var, value=0)
-            nvm = tk.Radiobutton(neighborhood_type_frame, text="Von Neumann", variable=self.neighborhood_var, value=1)
-            nm.select()
+            self.nm = tk.Radiobutton(neighborhood_type_frame, text="Moore", variable=self.neighborhood_var, value=0)
+            self.nvm = tk.Radiobutton(neighborhood_type_frame, text="Von Neumann", variable=self.neighborhood_var, value=1)
+            self.nm.select()
 
-            nm.grid(row=1, column=0, rowspan=1, padx=3, pady=3, sticky=tk.N + tk.S)
-            nvm.grid(row=2, column=0, rowspan=1, padx=3, pady=3, sticky=tk.N + tk.S)
+            self.nm.grid(row=1, column=0, rowspan=1, padx=3, pady=3, sticky=tk.N + tk.S)
+            self.nvm.grid(row=2, column=0, rowspan=1, padx=3, pady=3, sticky=tk.N + tk.S)
 
             self.data_path = tk.StringVar()
             self.data_path.set(get_data_path())
@@ -221,20 +229,20 @@ def start_initial_menu(window):
                                                         command=self.delete_from_oil_sources_listbox)
             self.oil_sources_listbox_delete.grid(row=2, column=3, columnspan=2, sticky=tk.N + tk.S)
 
-            longitude_oil_source_frame = create_frame(oil_sources_frame, 1, 1, 1, 1, tk.N + tk.S)
             latitude_oil_source_frame = create_frame(oil_sources_frame, 1, 0, 1, 1, tk.N + tk.S)
+            longitude_oil_source_frame = create_frame(oil_sources_frame, 1, 1, 1, 1, tk.N + tk.S)
             mass_per_minute_oil_source_frame = create_frame(oil_sources_frame, 1, 2, 1, 1, tk.N + tk.S)
             spill_start_oil_source_frame = create_frame(oil_sources_frame, 1, 3, 1, 1, tk.N + tk.S)
             spill_end_oil_source_frame = create_frame(oil_sources_frame, 1, 4, 1, 1, tk.N + tk.S)
 
-            create_label_grid(longitude_oil_source_frame, "Longitude coord\n")
             create_label_grid(latitude_oil_source_frame, "Latitude coord\n")
+            create_label_grid(longitude_oil_source_frame, "Longitude coord\n")
             create_label_grid(mass_per_minute_oil_source_frame, "Mass per minute\n[kg/min]")
             create_label_grid(spill_start_oil_source_frame, "Spill start\n[yyyy-mm-dd hh:mm:ss]")
             create_label_grid(spill_end_oil_source_frame, "Spill end\n[yyyy-mm-dd hh:mm:ss]")
 
-            self.longitude_oil_source_input = create_input_entry_grid(longitude_oil_source_frame, 9, str(self.longitude_oil_source), self.validate_longitude_oil_source)
             self.latitude_oil_source_input = create_input_entry_grid(latitude_oil_source_frame, 9, str(self.latitude_oil_source), self.validate_latitude_oil_source)
+            self.longitude_oil_source_input = create_input_entry_grid(longitude_oil_source_frame, 9, str(self.longitude_oil_source), self.validate_longitude_oil_source)
             self.mass_per_minute_oil_source_input = create_input_entry_grid(mass_per_minute_oil_source_frame, 7, str(self.mass_per_minute_oil_source), self.validate_mass_per_minute_oil_source)
             self.spill_start_oil_source_input = create_input_entry_grid(spill_start_oil_source_frame, 17, self.spill_start_oil_source, self.validate_spill_start_oil_source)
             self.spill_end_oil_source_input = create_input_entry_grid(spill_end_oil_source_frame, 17, self.spill_end_oil_source, self.validate_spill_end_oil_source)
@@ -498,12 +506,29 @@ def start_initial_menu(window):
             self.confirm_and_continue.config(state=DISABLED)
             self.correctly_set_parameters[13] = 0
 
+        def validate_checkpoint_frequency(self):
+            value = self.checkpoint_frequency_input.get()
+            if not value:
+                return False
+            try:
+                if float(value) % 1 == 0 and float(value) >= 0:
+                    self.checkpoint_frequency = int(value)
+                    self.checkpoint_frequency_validation_label.config(text="Valid value", fg="black")
+                    self.correctly_set_parameters[14] = 1
+                    self.check_all_main_parameters_validity()
+                    return True
+            except ValueError:
+                pass
+            self.checkpoint_frequency_validation_label.config(text="Invalid value", fg="red")
+            self.confirm_and_continue.config(state=DISABLED)
+            self.correctly_set_parameters[14] = 0
+
         def validate_longitude_oil_source(self):
             value = self.longitude_oil_source_input.get()
             if not value:
                 return False
             try:
-                if -180 <= float(value) <= 180:
+                if self.left_coord <= float(value) <= self.right_coord:
                     self.longitude_oil_source = float(value)
                     self.longitude_oil_source_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters_oil_sources[0] = 1
@@ -520,7 +545,7 @@ def start_initial_menu(window):
             if not value:
                 return False
             try:
-                if -90 <= float(value) <= 90:
+                if self.down_coord <= float(value) <= self.top_coord:
                     self.latitude_oil_source = float(value)
                     self.latitude_oil_source_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters_oil_sources[1] = 1
@@ -604,6 +629,7 @@ def start_initial_menu(window):
             self.validate_min_oil_thickness()
             self.validate_oil_viscosity()
             self.validate_oil_density()
+            self.validate_checkpoint_frequency()
 
         def validate_all_parameters_oil_sources_listbox(self):
             self.validate_latitude_oil_source()
@@ -637,48 +663,64 @@ def start_initial_menu(window):
 
         def browse_and_load_checkpoint(self):
             browse_button(self.checkpoint_path)
-            if self.checkpoint_path:
+            if self.checkpoint_path.get():
                 loaded_parameters = load_from_json(self.checkpoint_path.get())
                 self.set_all_parameters_from_checkpoint(loaded_parameters)
                 self.validate_all_parameters()
 
         def set_all_parameters_from_checkpoint(self, loaded_parameters):
-            self.top_coord_input.setvar(loaded_parameters["top_coord"])
+            self.top_coord_input.setvar(str(loaded_parameters["top_coord"]))
             self.top_coord_input.config(state=DISABLED)
-            self.down_coord_input.setvar(loaded_parameters["down_coord"])
+            self.down_coord_input.setvar(str(loaded_parameters["down_coord"]))
             self.down_coord_input.config(state=DISABLED)
-            self.left_coord_input.setvar(loaded_parameters["left_coord"])
+            self.left_coord_input.setvar(str(loaded_parameters["left_coord"]))
             self.left_coord_input.config(state=DISABLED)
-            self.right_coord_input.setvar(loaded_parameters["right_coord"])
+            self.right_coord_input.setvar(str(loaded_parameters["right_coord"]))
             self.right_coord_input.config(state=DISABLED)
-            self.time_range_start_input.setvar(loaded_parameters["time_range_start"])
+            self.time_range_start_input.setvar(str(loaded_parameters["time_range_start"]))
             self.time_range_start_input.config(state=DISABLED)
-            self.time_range_end_input.setvar(loaded_parameters["time_range_end"])
+            self.time_range_end_input.setvar(str(loaded_parameters["time_range_end"]))
             self.time_range_end_input.config(state=DISABLED)
-            self.data_time_step_input.setvar(loaded_parameters["data_time_step"])
+            self.data_time_step_input.setvar(str(loaded_parameters["data_time_step"]))
             self.data_time_step_input.config(state=DISABLED)
-            self.cells_side_count_latitude_input.setvar(loaded_parameters["cells_side_count_latitude"])
+            self.cells_side_count_latitude_input.setvar(str(loaded_parameters["cells_side_count_latitude"]))
             self.cells_side_count_latitude_input.config(state=DISABLED)
-            self.cells_side_count_longitude_input.setvar(loaded_parameters["cells_side_count_longitude"])
+            self.cells_side_count_longitude_input.setvar(str(loaded_parameters["cells_side_count_longitude"]))
             self.cells_side_count_longitude_input.config(state=DISABLED)
-            self.point_side_size_input.setvar(loaded_parameters["point_side_size"])
+            self.point_side_size_input.setvar(str(loaded_parameters["point_side_size"]))
             self.point_side_size_input.config(state=DISABLED)
-            self.iter_as_sec_input.setvar(loaded_parameters["iter_as_sec"])
+            self.iter_as_sec_input.setvar(str(loaded_parameters["iter_as_sec"]))
             self.iter_as_sec_input.config(state=DISABLED)
-            self.min_oil_thickness_input.setvar(loaded_parameters["min_oil_thickness"])
+            self.min_oil_thickness_input.setvar(str(loaded_parameters["min_oil_thickness"]))
             self.min_oil_thickness_input.config(state=DISABLED)
-            self.oil_viscosity_input.setvar(loaded_parameters["oil_viscosity"])
+            self.oil_viscosity_input.setvar(str(loaded_parameters["oil_viscosity"]))
             self.oil_viscosity_input.config(state=DISABLED)
-            self.oil_density_input.setvar(loaded_parameters["oil_density"])
+            self.oil_density_input.setvar(str(loaded_parameters["oil_density"]))
             self.oil_density_input.config(state=DISABLED)
+            self.checkpoint_frequency_input.setvar(str(loaded_parameters["checkpoint_frequency"]))
+            self.checkpoint_frequency_input.config(state=DISABLED)
 
-            self.oil_sources = loaded_parameters["constants_sources"]
+            self.total_simulation_time = loaded_parameters["total_simulation_time"]
+            self.curr_iter = loaded_parameters["curr_iter"]
+            self.points_from_checkpoint = loaded_parameters["points"]
+            self.checkpoint_frequency = loaded_parameters["checkpoint_frequency"]
 
-            for oil_source in self.oil_sources:
-                self.oil_sources_listbox.insert(END, f"{oil_source['coord']}, "
-                                                     f"{oil_source['mass_per_minute']}, "
-                                                     f"{oil_source['spill_start']}, "
-                                                     f"{oil_source['spill_end']}")
+            self.nm.config(state=DISABLED)
+            self.nvm.config(state=DISABLED)
+
+            if loaded_parameters["neighborhood"] == "Neighbourhood.MOORE":
+                self.nm.select()
+                self.neighborhood_var.set(0)
+            else:
+                self.nvm.select()
+                self.neighborhood_var.set(1)
+
+            for oil_source in loaded_parameters["constants_sources"]:
+                self.oil_sources_listbox.insert(END, f"{oil_source[0][0]}, "
+                                                     f"{oil_source[0][1]}, "
+                                                     f"{oil_source[1]}, "
+                                                     f"{oil_source[2]}, "
+                                                     f"{oil_source[3]}")
 
             self.longitude_oil_source_input.config(state=DISABLED)
             self.latitude_oil_source_input.config(state=DISABLED)
@@ -687,8 +729,6 @@ def start_initial_menu(window):
             self.spill_end_oil_source_input.config(state=DISABLED)
             self.oil_sources_listbox_insert.config(state=DISABLED)
             self.oil_sources_listbox_delete.config(state=DISABLED)
-
-            # TODO we should probably also set neighborhood type here
 
         def confirm_and_start_simulation(self):
             self.confirm_and_continue.config(state=DISABLED)
@@ -708,10 +748,13 @@ def start_initial_menu(window):
                                                   self.oil_viscosity,
                                                   self.oil_density,
                                                   Neighbourhood.MOORE if self.neighborhood_var.get() == 0
-                                                  else Neighbourhood.VON_NEUMANN
+                                                  else Neighbourhood.VON_NEUMANN,
+                                                  self.checkpoint_frequency,
+                                                  self.total_simulation_time,
+                                                  self.curr_iter
                                                   )
 
             self.read_all_from_oil_sources_listbox()
-            start_simulation(window, self.world_from_checkpoint, self.oil_sources)
+            start_simulation(window, self.points_from_checkpoint, self.oil_sources)
 
     ParametersSettingController(window)

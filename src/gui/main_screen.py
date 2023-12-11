@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image, ImageTk
 
 import simulation.simulation as simulation
-from checkpoints import initialize_simulation_from_checkpoint
+from checkpoints import initialize_points_from_checkpoint
 from color import rgba, blend_color, rgba_to_rgb
 from initial_values import InitialValues
 from data.data_processor import DataProcessor, DataReader, DataValidationException
@@ -20,7 +20,7 @@ OIL_COLOR = rgba(0, 0, 0)
 LAND_WITH_OIL_COLOR = rgba(0, 100, 0)
 
 
-def start_simulation(window, world_from_checkpoint=None, oil_sources=None):
+def start_simulation(window, points=None, oil_sources=None):
     class ImageViewer(tk.Canvas):
         def __init__(self, parent, image_array, image_change_controller, initial_zoom_level):
             super().__init__(parent)
@@ -232,7 +232,7 @@ def start_simulation(window, world_from_checkpoint=None, oil_sources=None):
             self.interval = 10
             self.job_id = None
             self.is_updating = False
-            self.curr_iter = 0
+            self.curr_iter = InitialValues.curr_iter
             self.sim_sec_passed = 0
             self.oil_to_add_on_click = 10000
             self.minimal_oil_to_show = 100
@@ -377,7 +377,7 @@ def start_simulation(window, world_from_checkpoint=None, oil_sources=None):
                 self.bottom_frame.grid()
 
             if self.is_running:
-                deleted = engine.update()
+                deleted = engine.update(self.curr_iter)
                 for coords in deleted:
                     self.image_array[coords[1]][coords[0]] = rgba_to_rgb(
                         LAND_COLOR) if coords in engine.lands else rgba_to_rgb(SEA_COLOR)
@@ -446,8 +446,8 @@ def start_simulation(window, world_from_checkpoint=None, oil_sources=None):
 
     engine = simulation.SimulationEngine(get_data_processor())
 
-    if world_from_checkpoint:
-        initialize_simulation_from_checkpoint(world_from_checkpoint, engine)
+    if points:
+        initialize_points_from_checkpoint(points, engine)
     if oil_sources:
         engine.add_oil_sources(oil_sources)
 
