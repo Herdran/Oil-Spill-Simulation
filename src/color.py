@@ -6,10 +6,6 @@ def rgba(r, g, b, a=255):
     return [into_color_range(x) for x in [r, g, b, a]]
 
 
-def rgba_to_rgb(rgba):
-    return rgba[0] * 255, rgba[1] * 255, rgba[2] * 255
-
-
 def blend_color(color1, color2, ratio, rgb=False):
     ratio = min(ratio, 1)
     if rgb:

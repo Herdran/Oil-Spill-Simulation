@@ -181,8 +181,6 @@ def start_initial_menu(window):
 
             self.loaded_img = Image.fromarray(self.loaded_img)
 
-            self.loaded_img.save('output_image.png')
-
             self.map_view_frame = create_frame(inputs_frame, 0, 0, 3, 1, tk.N + tk.S, 3, 3)
 
             self.map_view = tk.Canvas(self.map_view_frame)

@@ -8,7 +8,7 @@ from PIL import Image, ImageTk
 
 import simulation.simulation as simulation
 from checkpoints import initialize_points_from_checkpoint
-from color import blend_color, rgba_to_rgb
+from color import blend_color
 from initial_values import InitialValues
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from files import get_main_path
@@ -374,8 +374,7 @@ def start_simulation(window, points=None, oil_sources=None):
             if self.is_running:
                 deleted = engine.update(self.curr_iter)
                 for coords in deleted:
-                    self.image_array[coords[1]][coords[0]] = rgba_to_rgb(
-                        InitialValues.LAND_COLOR_RGBA) if coords in engine.lands else rgba_to_rgb(InitialValues.SEA_COLOR_RGBA)
+                    self.image_array[coords[1]][coords[0]] = InitialValues.LAND_COLOR if coords in engine.lands else InitialValues.SEA_COLOR
                 self.value_not_yet_processed = 0
 
             new_oil_mass_sea = 0
@@ -447,7 +446,7 @@ def start_simulation(window, points=None, oil_sources=None):
         engine.add_oil_sources(oil_sources)
 
     image_array = np.array(
-        [rgba_to_rgb(InitialValues.LAND_COLOR_RGBA) if (j, i) in engine.lands else rgba_to_rgb(InitialValues.SEA_COLOR_RGBA) for i in
+        [InitialValues.LAND_COLOR if (j, i) in engine.lands else InitialValues.SEA_COLOR for i in
          range(InitialValues.point_side_count) for j in
          range(InitialValues.point_side_count)]).reshape((InitialValues.point_side_count, InitialValues.point_side_count, 3)).astype(np.uint8)
 
