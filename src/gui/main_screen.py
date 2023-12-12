@@ -8,16 +8,11 @@ from PIL import Image, ImageTk
 
 import simulation.simulation as simulation
 from checkpoints import initialize_points_from_checkpoint
-from color import rgba, blend_color, rgba_to_rgb
+from color import blend_color, rgba_to_rgb
 from initial_values import InitialValues
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from files import get_main_path
 from gui.utilities import get_tooltip_text, create_frame, create_label_pack, create_input_entry_pack
-
-SEA_COLOR = rgba(15, 10, 222)
-LAND_COLOR = rgba(38, 166, 91)
-OIL_COLOR = rgba(0, 0, 0)
-LAND_WITH_OIL_COLOR = rgba(0, 100, 0)
 
 
 def start_simulation(window, points=None, oil_sources=None):
@@ -136,7 +131,7 @@ def start_simulation(window, points=None, oil_sources=None):
                     point_clicked = engine.world[coord]
                     point_clicked.add_oil(self.image_change_controller.oil_to_add_on_click)
 
-                    var = blend_color(OIL_COLOR, SEA_COLOR,
+                    var = blend_color(InitialValues.OIL_COLOR_RGBA, InitialValues.SEA_COLOR_RGBA,
                                       point_clicked.oil_mass / self.image_change_controller.minimal_oil_to_show,
                                       True)
                     self.image_change_controller.update_infobox()
@@ -380,19 +375,19 @@ def start_simulation(window, points=None, oil_sources=None):
                 deleted = engine.update(self.curr_iter)
                 for coords in deleted:
                     self.image_array[coords[1]][coords[0]] = rgba_to_rgb(
-                        LAND_COLOR) if coords in engine.lands else rgba_to_rgb(SEA_COLOR)
+                        InitialValues.LAND_COLOR_RGBA) if coords in engine.lands else rgba_to_rgb(InitialValues.SEA_COLOR_RGBA)
                 self.value_not_yet_processed = 0
 
             new_oil_mass_sea = 0
             new_oil_mass_land = 0
             for coords, point in engine.world.items():
                 if point.topography == simulation.TopographyState.LAND:
-                    var = blend_color(LAND_WITH_OIL_COLOR, LAND_COLOR,
+                    var = blend_color(InitialValues.LAND_WITH_OIL_COLOR_RGBA, InitialValues.LAND_COLOR_RGBA,
                                       point.oil_mass / self.minimal_oil_to_show,
                                       True)
                     new_oil_mass_land += point.oil_mass
                 else:
-                    var = blend_color(OIL_COLOR, SEA_COLOR, point.oil_mass / self.minimal_oil_to_show,
+                    var = blend_color(InitialValues.OIL_COLOR_RGBA, InitialValues.SEA_COLOR_RGBA, point.oil_mass / self.minimal_oil_to_show,
                                       True)
                     new_oil_mass_sea += point.oil_mass
                 self.image_array[coords[1]][coords[0]] = var[:3]
@@ -452,7 +447,7 @@ def start_simulation(window, points=None, oil_sources=None):
         engine.add_oil_sources(oil_sources)
 
     image_array = np.array(
-        [rgba_to_rgb(LAND_COLOR) if (j, i) in engine.lands else rgba_to_rgb(SEA_COLOR) for i in
+        [rgba_to_rgb(InitialValues.LAND_COLOR_RGBA) if (j, i) in engine.lands else rgba_to_rgb(InitialValues.SEA_COLOR_RGBA) for i in
          range(InitialValues.point_side_count) for j in
          range(InitialValues.point_side_count)]).reshape((InitialValues.point_side_count, InitialValues.point_side_count, 3)).astype(np.uint8)
 

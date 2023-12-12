@@ -85,3 +85,17 @@ def browse_button(target):
     filename = filedialog.askopenfilename()
     if filename:
         target.set(filename)
+
+
+def resize_img_to_fit_frame(img, frame):
+    w, h = img.size
+    w_frame, h_frame = frame.winfo_width(), frame.winfo_height()
+
+    if w / w_frame > h / h_frame:
+        w_resize = w_frame
+        h_resize = int(w_frame * (h / w))
+    else:
+        h_resize = h_frame
+        w_resize = int(h_frame * (w / h))
+
+    return img.resize((w_resize, h_resize))

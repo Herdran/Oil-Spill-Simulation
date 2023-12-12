@@ -11,15 +11,10 @@ from simulation.point import Coord_t
 from data.measurment_data import Coordinates, CoordinatesBase
 from data.utilities import project_coordinates, project_coordinates_reverse
 from initial_values import InitialValues
-from files import get_binary_world_map_path, get_binary_world_map_zip_path, get_unzipped_world_map_dir_path
-
+from files import get_binary_world_map_path, get_binary_world_map_zip_path, get_unzipped_world_map_dir_path, \
+    get_binary_world_scaled_map_path
 
 BinaryMap = npt.ArrayLike
-
-
-BINARY_MAP_WIDTH = 86400
-BINARY_MAP_HEIGHT = 43200
-
 
 logger = getLogger("topology")
 
@@ -43,10 +38,17 @@ def unzip_world_map():
     logger.info("World map has been unzipped successfully and saved to %s", output_dir)
 
 
-def get_binary_map_path() -> BinaryMap:
+def get_binary_map() -> BinaryMap:
     binary_map_path = get_binary_world_map_path()
     if not path.exists(binary_map_path):
         unzip_world_map()    
+    return load_binary_from_file(binary_map_path)
+
+
+def get_binary_scaled_map() -> BinaryMap:
+    binary_map_path = get_binary_world_scaled_map_path()
+    if not path.exists(binary_map_path):
+        unzip_world_map()
     return load_binary_from_file(binary_map_path)
 
 
@@ -55,13 +57,13 @@ def get_top_left_offset() -> CoordinatesBase[int]:
         latitude  = InitialValues.simulation_initial_parameters.area.max.latitude,
         longitude = InitialValues.simulation_initial_parameters.area.min.longitude
     )        
-    return project_coordinates(top_left, BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
+    return project_coordinates(top_left, InitialValues.BINARY_MAP_WIDTH, InitialValues.BINARY_MAP_HEIGHT)
 
 
 def is_land(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], x: int, y: int) -> bool:
     bin_x = top_left_offset.longitude + x
     bin_y = top_left_offset.latitude + y   
-    index = (bin_y * BINARY_MAP_WIDTH) + bin_x
+    index = (bin_y * InitialValues.BINARY_MAP_WIDTH) + bin_x
     return binary_map[index] == 0
 
 
@@ -80,7 +82,7 @@ def get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int]) 
 
 
 def load_topography() -> Set[Coord_t]:        
-    return get_lands_set(get_binary_map_path(), get_top_left_offset())
+    return get_lands_set(get_binary_map(), get_top_left_offset())
 
 
 def project_coordinates_oil_sources_to_simulation(coord: List[float]):
@@ -88,7 +90,7 @@ def project_coordinates_oil_sources_to_simulation(coord: List[float]):
         latitude=coord[0],
         longitude=coord[1]
     )
-    coordinates = project_coordinates(coord, BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
+    coordinates = project_coordinates(coord, InitialValues.BINARY_MAP_WIDTH, InitialValues.BINARY_MAP_HEIGHT)
 
     lon = coordinates.longitude
     lat = coordinates.latitude
@@ -111,6 +113,6 @@ def project_coordinates_oil_sources_from_simulation(coord: Tuple[int, int]):
     lat += lat_top_left
     lon += lon_top_left
 
-    coordinates = project_coordinates_reverse((lat, lon), BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
+    coordinates = project_coordinates_reverse((lat, lon), InitialValues.BINARY_MAP_WIDTH, InitialValues.BINARY_MAP_HEIGHT)
 
     return round(coordinates[0], 4), round(coordinates[1], 4)

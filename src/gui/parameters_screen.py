@@ -2,14 +2,16 @@ import re
 import tkinter as tk
 from tkinter import DISABLED, NORMAL, END, ANCHOR
 
+import numpy as np
 import pandas as pd
-
+from PIL import Image, ImageTk
 from checkpoints import load_from_json
 from initial_values import set_simulation_coordinates_parameters, InitialValues
 from files import get_data_path
 from gui.utilities import create_frame, create_label_pack, create_label_grid, create_input_entry_grid, \
-    create_label_grid_parameter_screen, browse_button
+    create_label_grid_parameter_screen, browse_button, resize_img_to_fit_frame
 from gui.main_screen import start_simulation
+from simulation.topology import get_binary_scaled_map
 from simulation.utilities import Neighbourhood
 
 
@@ -78,12 +80,13 @@ def start_initial_menu(window):
             inputs_frame.columnconfigure(2, weight=1, uniform='column')
             inputs_frame.columnconfigure(3, weight=1, uniform='column')
             inputs_frame.columnconfigure(4, weight=1, uniform='column')
+            inputs_frame.columnconfigure(5, weight=1, uniform='column')
 
-            coord_and_time_range_frame = create_frame(inputs_frame, 0, 0, 3, 2, tk.N + tk.S, padx=3, pady=3)
-            coord_frame = create_frame(coord_and_time_range_frame, 0, 0, 2, 2, tk.N + tk.S, relief_style=tk.RAISED)
-            time_range_frame = create_frame(coord_and_time_range_frame, 2, 0, 1, 2, tk.N + tk.S, relief_style=tk.RAISED)
-            data_processor_parameters_frame = create_frame(inputs_frame, 0, 2, 3, 1, tk.N + tk.S, relief_style=tk.RAISED, padx=3, pady=3)
-            other_parameters_frame = create_frame(inputs_frame, 0, 3, 3, 2, tk.N + tk.S, relief_style=tk.RAISED, padx=3, pady=3)
+            coord_and_time_range_frame = create_frame(inputs_frame, 0, 1, 3, 2, tk.N + tk.S, padx=3, pady=3)
+            coord_frame = create_frame(coord_and_time_range_frame, 0, 1, 2, 2, tk.N + tk.S, relief_style=tk.RAISED)
+            time_range_frame = create_frame(coord_and_time_range_frame, 2, 1, 1, 2, tk.N + tk.S, relief_style=tk.RAISED)
+            data_processor_parameters_frame = create_frame(inputs_frame, 0, 3, 3, 1, tk.N + tk.S, relief_style=tk.RAISED, padx=3, pady=3)
+            other_parameters_frame = create_frame(inputs_frame, 0, 4, 3, 2, tk.N + tk.S, relief_style=tk.RAISED, padx=3, pady=3)
 
             top_coord_frame = create_frame(coord_frame, 0, 0, 1, 1, tk.N + tk.S)
             down_coord_frame = create_frame(coord_frame, 1, 0, 1, 1, tk.N + tk.S)
@@ -167,6 +170,24 @@ def start_initial_menu(window):
             self.oil_viscosity_validation_label = create_label_grid_parameter_screen(oil_viscosity_frame)
             self.oil_density_validation_label = create_label_grid_parameter_screen(oil_density_frame)
             self.checkpoint_frequency_validation_label = create_label_grid_parameter_screen(checkpoint_frequency_frame)
+
+            binary_map = np.array(get_binary_scaled_map()).reshape(
+                InitialValues.BINARY_MAP_HEIGHT // InitialValues.PREVIEW_MAP_SCALE,
+                InitialValues.BINARY_MAP_WIDTH // InitialValues.PREVIEW_MAP_SCALE)
+
+            sea_color = np.array(InitialValues.SEA_COLOR, dtype=np.uint8)
+            land_color = np.array(InitialValues.LAND_COLOR, dtype=np.uint8)
+            self.loaded_img = np.where(binary_map[:, :, None] == 1, sea_color, land_color)
+
+            self.loaded_img = Image.fromarray(self.loaded_img)
+
+            self.loaded_img.save('output_image.png')
+
+            self.map_view_frame = create_frame(inputs_frame, 0, 0, 3, 1, tk.N + tk.S, 3, 3)
+
+            self.map_view = tk.Canvas(self.map_view_frame)
+
+            self.map_view.grid(row=0, column=0, rowspan=3, padx=3, pady=3, sticky=tk.N + tk.S)
 
             create_label_grid(neighborhood_type_frame, "Neighborhood type:", font=("Arial", 14, "bold"))
 
@@ -253,6 +274,9 @@ def start_initial_menu(window):
             self.spill_start_oil_source_validation_label = create_label_grid_parameter_screen(spill_start_oil_source_frame)
             self.spill_end_oil_source_validation_label = create_label_grid_parameter_screen(spill_end_oil_source_frame)
 
+            self.map_view_frame.update()
+            self.crop_and_resize_preview_image()
+            self.main_frame.bind("<Configure>", self.crop_and_resize_preview_image)
             self.validate_all_parameters()
             self.validate_all_parameters_oil_sources_listbox()
 
@@ -265,7 +289,7 @@ def start_initial_menu(window):
                     self.top_coord = float(value)
                     self.top_coord_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[0] = 1
-                    self.check_all_main_parameters_validity()
+                    self.check_all_main_parameters_validity(is_first_run)
                     if is_first_run:
                         self.validate_coordinates_down(False)
                     return True
@@ -284,7 +308,7 @@ def start_initial_menu(window):
                     self.down_coord = float(value)
                     self.down_coord_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[1] = 1
-                    self.check_all_main_parameters_validity()
+                    self.check_all_main_parameters_validity(is_first_run)
                     if is_first_run:
                         self.validate_coordinates_top(False)
                     return True
@@ -303,7 +327,7 @@ def start_initial_menu(window):
                     self.left_coord = float(value)
                     self.left_coord_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[2] = 1
-                    self.check_all_main_parameters_validity()
+                    self.check_all_main_parameters_validity(is_first_run)
                     if is_first_run:
                         self.validate_coordinates_right(False)
                     return True
@@ -322,7 +346,7 @@ def start_initial_menu(window):
                     self.right_coord = float(value)
                     self.right_coord_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[3] = 1
-                    self.check_all_main_parameters_validity()
+                    self.check_all_main_parameters_validity(is_first_run)
                     if is_first_run:
                         self.validate_coordinates_left(False)
                     return True
@@ -532,7 +556,7 @@ def start_initial_menu(window):
                     self.longitude_oil_source = float(value)
                     self.longitude_oil_source_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters_oil_sources[0] = 1
-                    self.check_all_parameters_validity_oil_sources()
+                    self.check_all_oil_sources_parameters_validity()
                     return True
             except ValueError:
                 pass
@@ -549,7 +573,7 @@ def start_initial_menu(window):
                     self.latitude_oil_source = float(value)
                     self.latitude_oil_source_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters_oil_sources[1] = 1
-                    self.check_all_parameters_validity_oil_sources()
+                    self.check_all_oil_sources_parameters_validity()
                     return True
             except ValueError:
                 pass
@@ -566,7 +590,7 @@ def start_initial_menu(window):
                     self.mass_per_minute_oil_source = float(value)
                     self.mass_per_minute_oil_source_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters_oil_sources[2] = 1
-                    self.check_all_parameters_validity_oil_sources()
+                    self.check_all_oil_sources_parameters_validity()
                     return True
             except ValueError:
                 pass
@@ -584,7 +608,7 @@ def start_initial_menu(window):
                     self.spill_start_oil_source = value
                     self.spill_start_oil_source_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters_oil_sources[3] = 1
-                    self.check_all_parameters_validity_oil_sources()
+                    self.check_all_oil_sources_parameters_validity()
                     return True
                 except ValueError:
                     pass
@@ -602,7 +626,7 @@ def start_initial_menu(window):
                     self.spill_end_oil_source = value
                     self.spill_end_oil_source_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters_oil_sources[4] = 1
-                    self.check_all_parameters_validity_oil_sources()
+                    self.check_all_oil_sources_parameters_validity()
                     return True
                 except ValueError:
                     pass
@@ -610,7 +634,7 @@ def start_initial_menu(window):
             self.oil_sources_listbox_insert.config(state=DISABLED)
             self.correctly_set_parameters_oil_sources[4] = 0
 
-        def check_all_parameters_validity_oil_sources(self):
+        def check_all_oil_sources_parameters_validity(self):
             if all(self.correctly_set_parameters_oil_sources):
                 self.oil_sources_listbox_insert.config(state=NORMAL)
 
@@ -638,9 +662,11 @@ def start_initial_menu(window):
             self.validate_spill_start_oil_source()
             self.validate_spill_end_oil_source()
 
-        def check_all_main_parameters_validity(self):
-            if all(self.correctly_set_parameters):
-                self.confirm_and_continue.config(state=NORMAL)
+        def check_all_main_parameters_validity(self, coordinate_change=False):
+            if coordinate_change and sum(self.correctly_set_parameters[:4]) == 4:
+                self.crop_and_resize_preview_image()
+                if all(self.correctly_set_parameters):
+                    self.confirm_and_continue.config(state=NORMAL)
 
         def insert_into_oil_sources_listbox(self):
             self.oil_sources_listbox.insert(END, f"{self.latitude_oil_source}, "
@@ -731,6 +757,22 @@ def start_initial_menu(window):
             self.spill_end_oil_source_input.config(state=DISABLED)
             self.oil_sources_listbox_insert.config(state=DISABLED)
             self.oil_sources_listbox_delete.config(state=DISABLED)
+
+        def crop_and_resize_preview_image(self, event=None):
+            image_width, image_height = self.loaded_img.size
+
+            nw_pixel_x = int((self.left_coord + 180) * (image_width / 360))
+            nw_pixel_y = int((90 - self.top_coord) * (image_height / 180))
+
+            se_pixel_x = int((self.right_coord + 180) * (image_width / 360))
+            se_pixel_y = int((90 - self.down_coord) * (image_height / 180))
+
+            cropped_image = self.loaded_img.crop((nw_pixel_x, nw_pixel_y, se_pixel_x, se_pixel_y))
+
+            resized_img = resize_img_to_fit_frame(cropped_image, self.map_view_frame)
+
+            self.img = ImageTk.PhotoImage(resized_img)
+            self.map_view.create_image(0, 0, image=self.img, anchor=tk.NW)
 
         def confirm_and_start_simulation(self):
             self.confirm_and_continue.config(state=DISABLED)
