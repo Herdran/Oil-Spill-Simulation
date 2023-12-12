@@ -12,84 +12,93 @@ from initial_values import InitialValues
 
 class SimulationEngine:
     def __init__(self, data_processor: DataProcessor):
-        self.world: Dict[Coord_t, Point] = dict()
+        self._world: Dict[Coord_t, Point] = dict()
         self.spreading_engine = SpreadingEngine(self)
 
-        Point.world = self.world
+        Point.world = self._world
         self.data_processor = data_processor
         self.checkpoint_frequency = InitialValues.checkpoint_frequency
         self.timestep = InitialValues.iter_as_sec
-        self.total_mass = 0
-        self.total_land_mass = 0
-        self.lands = load_topography()
-        self.total_time = InitialValues.total_simulation_time
+        self._total_mass = 0
+        self._total_land_mass = 0
+        self._lands = load_topography()
+        self._total_time = InitialValues.total_simulation_time
         self.points_changed = []
         self._constants_sources = []  # contains tuples (coord, mass_per_minute, spill_start, spill_end)
 
     def is_finished(self) -> bool:
-        return self.total_time >= InitialValues.simulation_time
+        return self._total_time >= InitialValues.simulation_time
 
     def update(self, curr_iter: int) -> List[Coord_t]:
         self.points_changed = []
-        self.pour_from_sources()
-        self.update_oil_points()
+        self._pour_from_sources()
+        self._update_oil_points()
 
-        self.total_mass = 0
-        self.total_land_mass = 0
-        for point in self.world.values():
+        self._total_mass = 0
+        self._total_land_mass = 0
+        for point in self._world.values():
             point.pour_from_buffer()
-            self.total_mass += point.oil_mass
+            self._total_mass += point.oil_mass
             if point.topography == TopographyState.LAND:
-                self.total_land_mass += point.oil_mass
+                self._total_land_mass += point.oil_mass
 
-        self.spreading_engine.spread_oil_points(self.total_mass)
-        empty_points = [coord for coord, point in self.world.items() if not point.contain_oil()]
+        self.spreading_engine.spread_oil_points(self._total_mass)
+        empty_points = [coord for coord, point in self._world.items() if not point.contain_oil()]
         deleted = []
         for point in empty_points:
-            del self.world[point]
+            del self._world[point]
             deleted.append(point)
             self.points_changed.append(point)
-        self.total_time += self.timestep
+        self._total_time += self.timestep
         self._save_checkpoint(curr_iter)
         return deleted
 
-    def update_oil_points(self):
-        for coord in list(self.world.keys()):  # copy because dict changes size during iteration
-            self.world[coord].update()
+    def _update_oil_points(self):
+        for coord in list(self._world.keys()):  # copy because dict changes size during iteration
+            self._world[coord].update()
 
     def add_oil_sources(self, oil_sources: List[dict[str, Any]]):
         for oil_source in oil_sources:
-            self.add_oil_source(project_coordinates_oil_sources_to_simulation(oil_source["coord"]),
-                                oil_source["mass_per_minute"],
-                                oil_source["spill_start"],
-                                oil_source["spill_end"])
+            self._add_oil_source(project_coordinates_oil_sources_to_simulation(oil_source["coord"]),
+                                 oil_source["mass_per_minute"],
+                                 oil_source["spill_start"],
+                                 oil_source["spill_end"])
 
-    def add_oil_source(self, coord: Coord_t, mass_per_minute: float, spill_start: pd.Timestamp,
-                       spill_end: pd.Timestamp):
+    def _add_oil_source(self, coord: Coord_t, mass_per_minute: float, spill_start: pd.Timestamp,
+                        spill_end: pd.Timestamp):
         self._constants_sources.append((coord, mass_per_minute, spill_start, spill_end))
 
-    def pour_from_sources(self):
-        current_timestamp = InitialValues.simulation_initial_parameters.time.min + pd.Timedelta(seconds=self.total_time)
+    def _pour_from_sources(self):
+        current_timestamp = InitialValues.simulation_initial_parameters.time.min + pd.Timedelta(seconds=self._total_time)
         for spill in self._constants_sources:
             cords, mass_per_minute, spill_start, spill_end = spill
             if spill_start <= current_timestamp <= spill_end:
-                if cords not in self.world and 0 <= cords[0] < InitialValues.point_side_count and 0 <= cords[1] < InitialValues.point_side_count:
-                    self.world[cords] = Point(cords, self)
+                if cords not in self._world and 0 <= cords[0] < InitialValues.point_side_count and 0 <= cords[1] < InitialValues.point_side_count:
+                    self._world[cords] = Point(cords, self)
                     self.points_changed.append(cords)
-                self.world[cords].add_oil(mass_per_minute * self.timestep / 60)
+                self._world[cords].add_oil(mass_per_minute * self.timestep / 60)
 
     def get_topography(self, coord: Coord_t) -> TopographyState:
-        if coord in self.lands:
+        if coord in self._lands:
             return TopographyState.LAND
         return TopographyState.SEA
 
     def get_oil_amounts(self):
-        return self.total_mass - self.total_land_mass, self.total_land_mass
+        return self._total_mass - self._total_land_mass, self._total_land_mass
 
     def _save_checkpoint(self, curr_iter: int):
-        if self.checkpoint_frequency > 0 and (self.total_time / self.timestep) % self.checkpoint_frequency == 0:
-            save_to_json(self.world, self.total_time, curr_iter, self._constants_sources)
+        if self.checkpoint_frequency > 0 and (self._total_time / self.timestep) % self.checkpoint_frequency == 0:
+            save_to_json(self._world, self._total_time, curr_iter, self._constants_sources)
 
-    def set_world(self, world: Dict[Coord_t, Point]):
-        self.world = world
+    @property
+    def world(self):
+        return self._world
+
+    @world.setter
+    def world(self, world: Dict[Coord_t, Point]):
+        self._world = world
         Point.world = world
+
+    @property
+    def total_time(self):
+        return self._total_time

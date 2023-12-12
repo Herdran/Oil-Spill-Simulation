@@ -125,7 +125,7 @@ def start_simulation(window, points=None, oil_sources=None):
             y = int((event.y - self.pan_y - max((window_height - self.zoomed_height) // 2, 0)) / self.zoom_level)
             if 0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]:
                 coord = (x, y)
-                if coord not in engine.lands:
+                if engine.get_topography(coord) == simulation.TopographyState.SEA:
                     if coord not in engine.world:
                         engine.world[coord] = simulation.Point(coord, engine)
                     point_clicked = engine.world[coord]
@@ -374,7 +374,7 @@ def start_simulation(window, points=None, oil_sources=None):
             if self.is_running:
                 deleted = engine.update(self.curr_iter)
                 for coords in deleted:
-                    self.image_array[coords[1]][coords[0]] = InitialValues.LAND_COLOR if coords in engine.lands else InitialValues.SEA_COLOR
+                    self.image_array[coords[1]][coords[0]] = InitialValues.LAND_COLOR if engine.get_topography(coords) == simulation.TopographyState.LAND else InitialValues.SEA_COLOR
                 self.value_not_yet_processed = 0
 
             new_oil_mass_sea = 0
@@ -446,7 +446,7 @@ def start_simulation(window, points=None, oil_sources=None):
         engine.add_oil_sources(oil_sources)
 
     image_array = np.array(
-        [InitialValues.LAND_COLOR if (j, i) in engine.lands else InitialValues.SEA_COLOR for i in
+        [InitialValues.LAND_COLOR if engine.get_topography((j, i)) == simulation.TopographyState.LAND else InitialValues.SEA_COLOR for i in
          range(InitialValues.point_side_count) for j in
          range(InitialValues.point_side_count)]).reshape((InitialValues.point_side_count, InitialValues.point_side_count, 3)).astype(np.uint8)
 

@@ -10,7 +10,7 @@ from simulation.point import Point, Coord_t
 from simulation.topology import project_coordinates_oil_sources_from_simulation
 
 
-def point_to_dict(point: Point) -> Dict[str, any]:
+def _point_to_dict(point: Point) -> Dict[str, any]:
     return {
         "coord": point.coord,
         "coordinates": {
@@ -24,7 +24,7 @@ def point_to_dict(point: Point) -> Dict[str, any]:
     }
 
 
-def oil_source_to_dict(source: Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]) -> Dict[str, any]:
+def _oil_source_to_dict(source: Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]) -> Dict[str, any]:
     return {
         "coord": project_coordinates_oil_sources_from_simulation(source[0]),
         "mass_per_minute": source[1],
@@ -57,8 +57,8 @@ def save_to_json(world: Dict[Coord_t, Point], total_time: int, curr_iter: int, c
         "curr_iter": curr_iter,
         "data_path": InitialValues.simulation_initial_parameters.path_to_data,
 
-        "constants_sources": [oil_source_to_dict(source) for source in constant_sources],
-        "points": [point_to_dict(point) for point in world.values()]
+        "constants_sources": [_oil_source_to_dict(source) for source in constant_sources],
+        "points": [_point_to_dict(point) for point in world.values()]
     }
     with open(path, "w") as file:
         json.dump(data, file, indent=4)
@@ -89,4 +89,4 @@ def initialize_points_from_checkpoint(points: List[Any], engine):
         point.viscosity_dynamic = point_data["viscosity_dynamic"]
         world[point_coord] = point
 
-    engine.set_world(world)
+    engine.world = world
