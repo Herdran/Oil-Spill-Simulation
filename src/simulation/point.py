@@ -8,6 +8,7 @@ from numpy import exp, log, sqrt
 from constatnts import Constants as const
 from data.measurment_data import Coordinates
 from simulation.utilities import get_neighbour_coordinates, Neighbourhood, sign
+from data.utilities import get_coordinate_from_xy
 
 DEFAULT_WAVE_VELOCITY = np.array([0.0, 0.0])  # [m/s]
 DEFAULT_WIND_VELOCITY = np.array([0.0, 0.0])  # [m/s]
@@ -40,6 +41,12 @@ class InitialValues:
 def is_coord_in_simulation_area(coord: Coord_t) -> bool:
         return 0 <= coord[0] < const.point_side_lon_count and 0 <= coord[1] < const.point_side_lat_count
 
+mapped_coordinates = dict()
+def get_coordinate(coord: Coord_t) -> Coordinates:
+    if coord not in mapped_coordinates:
+        mapped_coordinates[coord] = get_coordinate_from_xy(const.top_left_coord, coord[0], coord[1], const.point_side_size)
+    return mapped_coordinates[coord]
+
 class Point:
     world = dict()
 
@@ -48,8 +55,7 @@ class Point:
         self.engine = engine
         self.coord = coord
         x, y = coord
-        self.coordinates = Coordinates(latitude=const.point_lat_centers[y], longitude=const.point_lon_centers[x])
-        self.weather_station_coordinates = engine.data_processor.weather_station_coordinates(self.coordinates)
+        self.weather_station_coordinates = engine.data_processor.weather_station_coordinates(get_coordinate(coord))
         self.wind_velocity = DEFAULT_WIND_VELOCITY
         self.wave_velocity = DEFAULT_WAVE_VELOCITY
         self.temperature = DEFAULT_TEMPERATURE
@@ -84,7 +90,7 @@ class Point:
         time_delta = pd.Timedelta(seconds=int(self.engine.total_time))
         if self.should_update_weather_data(time_delta):
             time_stamp = const.simulation_initial_parameters.time.min + time_delta
-            measurment = self.data_processor.get_measurment(self.coordinates, self.weather_station_coordinates,
+            measurment = self.data_processor.get_measurment(get_coordinate(self.coord), self.weather_station_coordinates,
                                                             time_stamp)
             self.wave_velocity = measurment.current.to_numpy()
             self.wind_velocity = measurment.wind.to_numpy()

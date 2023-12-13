@@ -3,3 +3,4 @@ pandas==2.0.1
 Pillow~=9.2.0
 scipy==1.11.1
 geopy==2.4.1
+pyproj==3.6.1
