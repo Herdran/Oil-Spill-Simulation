@@ -19,7 +19,7 @@ def great_circle_distance(first: Coordinates, second: Coordinates) -> float:
              * cos(lat2) * cos(lon1 - lon2))
     )
 
-def dataframe_replace_applay(dataframe: pd.DataFrame, result_columns: list[str], function: Callable, columns: list[str]):
+def dataframe_replace_apply(dataframe: pd.DataFrame, result_columns: list[str], function: Callable, columns: list[str]):
     def is_any_nan(row: pd.Series) -> bool:
         return any([pd.isna(row[column]) for column in columns])
 
@@ -49,13 +49,13 @@ def or_default(value: Optional[object], default: object) -> object:
         return default
     return value
 
-KELVIN_CONSTATNT = 273.15
+KELVIN_CONSTANT = 273.15
 
 def celcius_to_kelvins(celcius: float) -> Temperature:
-    return celcius + KELVIN_CONSTATNT
+    return celcius + KELVIN_CONSTANT
 
 def kelvins_to_celsius(kelvins: Temperature) -> float:
-    return kelvins - KELVIN_CONSTATNT
+    return kelvins - KELVIN_CONSTANT
 
 def round_values(arr: np.array):
     DATA_FLOAT_PRECISSION = 5
