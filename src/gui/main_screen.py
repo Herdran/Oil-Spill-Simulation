@@ -13,10 +13,10 @@ from data.data_processor import DataProcessor, DataReader, DataValidationExcepti
 from files import get_main_path
 from gui.utilities import get_tooltip_text, create_frame, create_label_pack, create_input_entry_pack
 
-SEA_COLOR = rgba(15, 10, 222)
-LAND_COLOR = rgba(38, 166, 91)
-OIL_COLOR = rgba(0, 0, 0)
-LAND_WITH_OIL_COLOR = rgba(0, 100, 0)
+SEA_COLOR = (15, 10, 222)
+LAND_COLOR = (38, 166, 91)
+OIL_COLOR = (0, 0, 0)
+LAND_WITH_OIL_COLOR = (0, 100, 0)
 
 
 def start_simulation(neighborhood, window):

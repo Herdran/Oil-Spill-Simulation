@@ -21,9 +21,11 @@ class SimulationEngine:
         self.total_mass = 0
         self.total_land_mass = 0
         self.lands = load_topography()
+        print("Loaded topography")
         self.total_time = 0
         self.points_changed = []
         self._constants_sources = []
+        print("Simulation engine initialized")
 
     def is_finished(self) -> bool:
         return self.total_time >= const.simulation_time

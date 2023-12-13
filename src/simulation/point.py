@@ -8,6 +8,7 @@ from numpy import exp, log, sqrt
 from constatnts import Constants as const
 from data.measurment_data import Coordinates
 from simulation.utilities import get_neighbour_coordinates, Neighbourhood, sign
+from data.utilities import get_coordinate_from_xy
 
 DEFAULT_WAVE_VELOCITY = np.array([0.0, 0.0])  # [m/s]
 DEFAULT_WIND_VELOCITY = np.array([0.0, 0.0])  # [m/s]
@@ -48,7 +49,7 @@ class Point:
         self.engine = engine
         self.coord = coord
         x, y = coord
-        self.coordinates = Coordinates(latitude=const.point_lat_centers[y], longitude=const.point_lon_centers[x])
+        self.coordinates = get_coordinate_from_xy(const.top_left_coord, x, y, const.point_side_size)
         self.weather_station_coordinates = engine.data_processor.weather_station_coordinates(self.coordinates)
         self.wind_velocity = DEFAULT_WIND_VELOCITY
         self.wave_velocity = DEFAULT_WAVE_VELOCITY

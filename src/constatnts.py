@@ -18,9 +18,9 @@ class Constants:
 
     point_lat_centers: list[float] = None
     point_lon_centers: list[float] = None
-    
-    point_lat_side_count: int = None
-    point_lon_side_count: int = None
+
+    top_left_coord: Coordinates = None
+    bottom_right_coord: Coordinates = None
 
     simulation_initial_parameters: SimulationRunParameters = None
     simulation_time: float = None
@@ -78,15 +78,18 @@ def set_simulation_coordinates_parameters(top_coord: float,
     
     logger.debug(f"Points count: {Constants.point_side_lat_count} x {Constants.point_side_lon_count}")
 
-    def get_center(first, direction, index) -> float:
-        center_offset = 0.5 + index
-        return move_coordinate(first, Constants.point_side_size * center_offset, direction)
+    # def get_center(first, direction, index) -> float:
+    #     center_offset = 0.5 + index
+    #     return move_coordinate(first, Constants.point_side_size * center_offset, direction)
 
-    get_lat_centers = lambda i: get_center(middle_coord_lat(top_coord), Move_direction.South, i).latitude 
-    get_lon_centers = lambda i: get_center(middle_coord_lon(left_coord), Move_direction.East, i).longitude
+    # get_lat_centers = lambda i: get_center(middle_coord_lat(top_coord), Move_direction.South, i).latitude 
+    # get_lon_centers = lambda i: get_center(middle_coord_lon(left_coord), Move_direction.East, i).longitude
 
-    Constants.point_lat_centers = list(map(get_lat_centers, range(Constants.point_side_lat_count)))
-    Constants.point_lon_centers = list(map(get_lon_centers, range(Constants.point_side_lon_count)))
+    # Constants.point_lat_centers = list(map(get_lat_centers, range(Constants.point_side_lat_count)))
+    # Constants.point_lon_centers = list(map(get_lon_centers, range(Constants.point_side_lon_count)))
+    
+    Constants.top_left_coord = Coordinates(latitude=top_coord, longitude=left_coord)
+    Constants.bottom_right_coord = Coordinates(latitude=down_coord, longitude=right_coord)
 
     Constants.simulation_time = (Constants.simulation_initial_parameters.time.max - Constants.simulation_initial_parameters.time.min).total_seconds()
     
