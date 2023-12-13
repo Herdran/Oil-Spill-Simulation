@@ -116,8 +116,7 @@ def map_binary_lands(binary_lands: set[Coord_t]):
             projected_to_coords[(x, y)] = project_to_coordinates_raw(x, y, BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
         return projected_to_coords[(x, y)]
     
-    
-        
+       
     result = set()
     x_indices = []
     y_indices = []
