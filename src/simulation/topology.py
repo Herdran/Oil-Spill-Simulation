@@ -21,7 +21,6 @@ BinaryMap = npt.ArrayLike
 BINARY_MAP_WIDTH = 86400
 BINARY_MAP_HEIGHT = 43200
 
-
 logger = getLogger("topology")
 
 
@@ -64,7 +63,9 @@ def get_bottom_right_offset() -> CoordinatesBase[int]:
 
 def is_land(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], x: int, y: int) -> bool:
     bin_x = top_left_offset.longitude + x
-    bin_y = top_left_offset.latitude + y   
+    bin_y = top_left_offset.latitude + y 
+    bin_x = bin_x - 1 if top_left_offset.longitude > 1 else bin_x
+    bin_y = bin_y - 1 if top_left_offset.latitude > 1 else bin_y
     index = (bin_y * BINARY_MAP_WIDTH) + bin_x
     return binary_map[index] == 0
 
@@ -76,6 +77,10 @@ def get_cartesian_product_range(size_x: int, size_y: int) -> product:
 def get_map_range(top_left_offset: CoordinatesBase[int], bottom_right_offset: CoordinatesBase[int]) -> product:
     size_x = bottom_right_offset.longitude - top_left_offset.longitude
     size_y = bottom_right_offset.latitude - top_left_offset.latitude
+    size_x = size_x + 1 if bottom_right_offset.longitude + size_x + 1 < BINARY_MAP_WIDTH else size_x
+    size_y = size_y + 1 if bottom_right_offset.latitude  + size_y + 1 < BINARY_MAP_HEIGHT else size_y
+    size_x = size_x + 1 if bottom_right_offset.longitude > 1 else size_x
+    size_y = size_y + 1 if bottom_right_offset.latitude  > 1 else size_y
     return get_cartesian_product_range(size_x, size_y)
 
 
@@ -89,7 +94,7 @@ def get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], 
     return lands
 
 
-def map_binary_lands(binary_lands: set[Coord_t]) -> set[Coord_t]:
+def map_binary_lands(binary_lands: set[Coord_t]):
     logger.debug("STATED: Mapping binary lands")
     BEARING_OFFSET = 90.0
       
@@ -103,9 +108,9 @@ def map_binary_lands(binary_lands: set[Coord_t]) -> set[Coord_t]:
     def calculate_point_xy(lon, lat):
         bearing, distance = calculate_compass_bearing_and_dist(const.top_left_coord, Coordinates(latitude=lat, longitude=lon))
         rad = radians(bearing - BEARING_OFFSET)
-        x = distance * cos(rad) // const.point_side_size
-        y = distance * sin(rad) // const.point_side_size
-        return (x, y)
+        x = int(distance * cos(rad)) // const.point_side_size
+        y = int(distance * sin(rad)) // const.point_side_size
+        return (min(x, const.point_side_lon_count), min(y, const.point_side_lat_count))
     
     def get_point_xy(lon, lat):
         if (lon, lat) not in xy_points:
@@ -117,36 +122,41 @@ def map_binary_lands(binary_lands: set[Coord_t]) -> set[Coord_t]:
             projected_to_coords[(x, y)] = project_to_coordinates_raw(x, y, BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
         return projected_to_coords[(x, y)]
     
-    
-        
+       
     result = set()
     
+
     for x, y in binary_lands:
         x += top_left_offset.longitude
         y += top_left_offset.latitude
         
         vertex_top_left = get_projected_to_coords(x, y)
         vertex_bottom_right = get_projected_to_coords(x + 1, y + 1)
+        vertex_top_right = get_projected_to_coords(x + 1, y)
+        vertex_bottom_left = get_projected_to_coords(x, y + 1)
         
-        vertex_top_left_xy = get_point_xy(vertex_top_left[0], vertex_top_left[1])
-        vertex_bottom_right_xy = get_point_xy(vertex_bottom_right[0], vertex_bottom_right[1])
+        vertex_top_left_x, vertex_top_left_y = get_point_xy(vertex_top_left[0], vertex_top_left[1])
+        vertex_bottom_right_x, vertex_bottom_right_y  = get_point_xy(vertex_bottom_right[0], vertex_bottom_right[1])
+        vertex_top_right_x, vertex_top_right_y = get_point_xy(vertex_top_right[0], vertex_top_right[1])
+        vertex_bottom_left_x, vertex_bottom_left_y = get_point_xy(vertex_bottom_left[0], vertex_bottom_left[1])
+          
+        max_y = max(vertex_top_left_y, vertex_bottom_right_y, vertex_top_right_y, vertex_bottom_left_y)
+        min_y = min(vertex_top_left_y, vertex_bottom_right_y, vertex_top_right_y, vertex_bottom_left_y)
+        max_x = max(vertex_top_left_x, vertex_bottom_right_x, vertex_top_right_x, vertex_bottom_left_x)
+        min_x = min(vertex_top_left_x, vertex_bottom_right_x, vertex_top_right_x, vertex_bottom_left_x)
             
-        x_count = abs(vertex_bottom_right_xy[0] - vertex_top_left_xy[0])
-        y_count = abs(vertex_bottom_right_xy[1] - vertex_top_left_xy[1])
-
+        max_y = min(max_y, const.point_side_lat_count)
+        max_x = min(max_x, const.point_side_lon_count)  
         
-        for x, y in get_cartesian_product_range(int(x_count), int(y_count)):
-            x = vertex_top_left_xy[0] + x
-            y = vertex_top_left_xy[1] + y
-            result.add((x, y))
-            
-        
+        for x in range(min_x, max_x):
+            for y in range(min_y, max_y):
+                result.add((x, y))
+    
     logger.debug("FINISHED: Mapping binary lands")
+
     return result
 
 
-def load_topography() -> set[Coord_t]:        
+def load_topography():
     binary_lands = get_lands_set(get_binary_map_path(), get_top_left_offset(), get_bottom_right_offset())
-    result = map_binary_lands(binary_lands)
-    logger.info("Loaded topography")
-    return result
+    return map_binary_lands(binary_lands)

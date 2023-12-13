@@ -23,10 +23,19 @@ def start_initial_menu(window):
     class ParametersSettingController(tk.Frame):
         def __init__(self, parent):
             super().__init__(parent)
-            self.top_coord = 30.188548
-            self.down_coord = 22.105591
-            self.left_coord = -93.846629
-            self.right_coord = -85.697892
+            
+            
+            # self.top_coord = 54.901302
+            # self.down_coord = 54.248038
+            # self.left_coord = 18.188771  
+            # self.right_coord = 18.898391
+            
+            
+            self.top_coord = 66.597503
+            self.down_coord = 63.799381
+            self.left_coord = -17.068176
+            self.right_coord = -11.692310
+            
             self.time_range_start = "2010-04-01 00:00:00"
             self.time_range_end = "2010-04-02 00:00:00"
             self.data_time_step_minutes = 30
