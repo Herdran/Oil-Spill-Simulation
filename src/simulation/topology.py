@@ -1,3 +1,4 @@
+import time
 from logging import getLogger
 from typing import Set
 from os import PathLike, path
@@ -19,7 +20,6 @@ BinaryMap = npt.ArrayLike
 
 BINARY_MAP_WIDTH = 86400
 BINARY_MAP_HEIGHT = 43200
-
 
 logger = getLogger("topology")
 
@@ -93,8 +93,9 @@ def get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], 
     return lands
 
 
-def map_binary_lands(binary_lands: set[Coord_t]) -> set[Coord_t]:
+def map_binary_lands(binary_lands: set[Coord_t]):
     logger.debug("STATED: Mapping binary lands")
+    start = time.time()
     top_left_binary_map_offset = get_top_left_offset()
     
     def is_land(coord: Coord_t) -> bool:
@@ -108,11 +109,28 @@ def map_binary_lands(binary_lands: set[Coord_t]) -> set[Coord_t]:
         return (lat, lon) in binary_lands
        
     product = get_cartesian_product_range(const.point_side_lon_count, const.point_side_lat_count)
-    result = {coord for coord in product if is_land(coord)}
+    # result = {coord for coord in product if is_land(coord)}
+    result = set()
+
+    x_indices = []
+    y_indices = []
+
+    for coord in product:
+        if is_land(coord):
+            result.add(coord)
+            x_indices.append(coord[0])
+            y_indices.append(coord[1])
+
     logger.debug("FINISHED: Mapping binary lands")
-    return result
+
+    x_indices = np.array(x_indices)
+    y_indices = np.array(y_indices)
+
+    end = time.time()
+    print(f"Loading lands set time {end - start}")
+    return result, x_indices, y_indices
 
 
-def load_topography() -> set[Coord_t]:        
+def load_topography():
     binary_lands = get_lands_set(get_binary_map_path(), get_top_left_offset(), get_bottom_right_offset())
     return map_binary_lands(binary_lands)

@@ -23,6 +23,12 @@ def start_initial_menu(window):
             self.down_coord = 30.19767
             self.left_coord = -88.77964
             self.right_coord = -88.72648
+
+            # self.top_coord = 30.188548
+            # self.down_coord = 22.105591
+            # self.left_coord = -93.846629
+            # self.right_coord = -79.697892
+
             self.time_range_start = "2010-04-01 00:00:00"
             self.time_range_end = "2010-04-02 00:00:00"
             self.data_time_step_minutes = 30
