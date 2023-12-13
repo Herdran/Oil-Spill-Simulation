@@ -21,7 +21,6 @@ BinaryMap = npt.ArrayLike
 BINARY_MAP_WIDTH = 86400
 BINARY_MAP_HEIGHT = 43200
 
-
 logger = getLogger("topology")
 
 
@@ -89,7 +88,7 @@ def get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], 
     return lands
 
 
-def map_binary_lands(binary_lands: set[Coord_t]) -> set[Coord_t]:
+def map_binary_lands(binary_lands: set[Coord_t]):
     logger.debug("STATED: Mapping binary lands")
     BEARING_OFFSET = 90.0
       
@@ -120,6 +119,8 @@ def map_binary_lands(binary_lands: set[Coord_t]) -> set[Coord_t]:
     
         
     result = set()
+    x_indices = []
+    y_indices = []
     
     for x, y in binary_lands:
         x += top_left_offset.longitude
@@ -138,14 +139,21 @@ def map_binary_lands(binary_lands: set[Coord_t]) -> set[Coord_t]:
         for x, y in get_cartesian_product_range(int(x_count), int(y_count)):
             x = vertex_top_left_xy[0] + x
             y = vertex_top_left_xy[1] + y
-            result.add((x, y))
+            if x < const.point_side_lon_count and y < const.point_side_lat_count:
+                result.add((x, y))
+                x_indices.append(x)
+                y_indices.append(y)
             
         
     logger.debug("FINISHED: Mapping binary lands")
-    return result
+
+    x_indices = np.array(x_indices, dtype=int)
+    y_indices = np.array(y_indices, dtype=int)
+
+    return result, x_indices, y_indices
 
 
-def load_topography() -> set[Coord_t]:        
+def load_topography():
     binary_lands = get_lands_set(get_binary_map_path(), get_top_left_offset(), get_bottom_right_offset())
     result = map_binary_lands(binary_lands)
     logger.info("Loaded topography")

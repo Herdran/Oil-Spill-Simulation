@@ -20,8 +20,7 @@ class SimulationEngine:
         self.data_processor = data_processor
         self.total_mass = 0
         self.total_land_mass = 0
-        self.lands = load_topography()
-        print("Loaded topography")
+        self.lands, self.x_indices, self.y_indices = load_topography()
         self.total_time = 0
         self.points_changed = []
         self._constants_sources = []
