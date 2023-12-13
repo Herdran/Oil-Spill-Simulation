@@ -45,7 +45,6 @@ class SpreadingEngine:
             if not is_coord_in_simulation_area(coord):
                 continue
             self.world[coord] = point
-            self.engine.points_changed.append(coord)
 
     def process_spread_between(self, total_mass: float, delta_time: float, first: Point, second: Point, is_new: bool) -> None:
         if not (first.topography == TopographyState.SEA and second.topography == TopographyState.SEA):

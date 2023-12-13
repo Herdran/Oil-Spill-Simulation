@@ -52,7 +52,7 @@ def start_simulation(neighborhood, window):
             self.bind("<Leave>", self.on_leave)
             self.bind("<Configure>", self.resize)
 
-        def update_image(self, oil_change=False):
+        def update_image(self):
             start = time.time()
             self.zoomed_width = int(self.image_array_width * self.zoom_level)
             self.zoomed_height = int(self.image_array_height * self.zoom_level)
@@ -87,7 +87,7 @@ def start_simulation(neighborhood, window):
                                               image=self.current_img)
 
             end = time.time()
-            print(f"Image update time {end - start}, All reloaded {oil_change}")
+            print(f"Image update time {end - start}")
 
         def on_mousewheel(self, event):
             zoom_factor = 1.1 if event.delta > 0 else 10 / 11
@@ -152,10 +152,8 @@ def start_simulation(neighborhood, window):
                     var = blend_color(OIL_COLOR, SEA_COLOR,
                                       point_clicked.oil_mass / self.image_change_controller.minimal_oil_to_show)
                     self.image_change_controller.update_infobox()
-                    # self.image_array_overlay[y][x] = var
                     self.full_img.putpixel((x, y), var)
-                    # TODO
-                    self.update_image(True)
+                    self.update_image()
                     self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(point_clicked))
                     self.image_change_controller.value_not_yet_processed += self.image_change_controller.oil_to_add_on_click
             self.image_change_controller.update_oil_amount_infobox()
@@ -377,7 +375,7 @@ def start_simulation(neighborhood, window):
                 if self.job_id is not None:
                     self.after_cancel(self.job_id)
                 threading.Thread(target=self.update_image_array).start()
-                self.viewer.update_image(True)
+                self.viewer.update_image()
             except ValueError:
                 pass
 
@@ -410,19 +408,17 @@ def start_simulation(neighborhood, window):
 
             if self.is_running:
                 start = time.time()
-                points_changed, points_removed = engine.update(self.iter_as_sec)
+                points_removed = engine.update(self.iter_as_sec)
                 end = time.time()
                 print(f"Engine update: {end - start}")
 
-                for coords in points_changed:
-                    if coords in engine.world.keys():
-                        point = engine.world[coords]
-                        if point.topography == simulation.TopographyState.LAND:
-                            var = blend_color(LAND_WITH_OIL_COLOR, LAND_COLOR, point.oil_mass / self.minimal_oil_to_show)
-                        else:
-                            var = blend_color(OIL_COLOR, SEA_COLOR, point.oil_mass / self.minimal_oil_to_show)
-                        self.full_img.putpixel((coords[0], coords[1]), var)
-                        # TODO
+                for coords in engine.world:
+                    point = engine.world[coords]
+                    if point.topography == simulation.TopographyState.LAND:
+                        var = blend_color(LAND_WITH_OIL_COLOR, LAND_COLOR, point.oil_mass / self.minimal_oil_to_show)
+                    else:
+                        var = blend_color(OIL_COLOR, SEA_COLOR, point.oil_mass / self.minimal_oil_to_show)
+                    self.full_img.putpixel((coords[0], coords[1]), var)
 
                 for coords in points_removed:
                     if coords in engine.lands:
@@ -434,7 +430,7 @@ def start_simulation(neighborhood, window):
                 self.value_not_yet_processed = 0
 
             if self.is_running:
-                self.viewer.update_image(True)
+                self.viewer.update_image()
                 self.curr_iter += 1
                 self.sim_sec_passed += self.iter_as_sec
                 self.job_id = self.after(self.interval, self.update_image_array)
@@ -515,4 +511,4 @@ def start_simulation(neighborhood, window):
 
     frame_controller.update_image_array()
     viewer.update()
-    viewer.update_image(True)
+    viewer.update_image()

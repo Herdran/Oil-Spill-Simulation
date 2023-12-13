@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import pandas as pd
 
@@ -22,14 +22,12 @@ class SimulationEngine:
         self.total_land_mass = 0
         self.lands, self.x_indices, self.y_indices = load_topography()
         self.total_time = 0
-        self.points_changed = []
         self._constants_sources = []
 
     def is_finished(self) -> bool:
         return self.total_time >= const.simulation_time
 
-    def update(self, delta_time) -> tuple[List[Coord_t], List[Coord_t]]:
-        self.points_changed = []
+    def update(self, delta_time) -> List[Coord_t]:
         self.pour_from_sources(delta_time)
         self.update_oil_points(delta_time)
 
@@ -48,9 +46,8 @@ class SimulationEngine:
         for point in empty_points:
             del self.world[point]
             deleted.append(point)
-            # self.points_changed.append(point)
         self.total_time += delta_time
-        return self.points_changed, deleted
+        return deleted
 
     def update_oil_points(self, delta_time):
         for coord in list(self.world.keys()):  # copy because dict changes size during iteration
@@ -67,7 +64,6 @@ class SimulationEngine:
             if spill_start <= current_timestamp <= spill_end:
                 if cords not in self.world:
                     self.world[cords] = Point(cords, self.initial_values, self)
-                    self.points_changed.append(cords)
                 self.world[cords].add_oil(mass_per_minute * delta_seconds / 60)
 
     def get_topography(self, coord: Coord_t) -> TopographyState:

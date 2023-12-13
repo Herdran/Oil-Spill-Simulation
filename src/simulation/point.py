@@ -143,7 +143,6 @@ class Point:
                 continue
             if cords not in self.world:
                 self.world[cords] = Point(cords, self.initial_values, self.engine)
-                self.engine.points_changed.append(cords)
             to_share.append(self.world[cords])
         if len(to_share) == 0:  # in case of bug
             return
@@ -235,5 +234,5 @@ class Point:
             return
         if coord not in self.world:
             self.world[coord] = Point(coord, self.initial_values, self.engine)
-            self.engine.points_changed.append(coord)
+            # self.engine.points_changed.append(coord)
         self.world[coord].oil_buffer.append((mass, self.viscosity_dynamic, self.emulsification_rate))
