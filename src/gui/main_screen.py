@@ -14,18 +14,18 @@ from data.data_processor import DataProcessor, DataReader, DataValidationExcepti
 from files import get_main_path
 from gui.utilities import get_tooltip_text, create_frame, create_label_pack, create_input_entry_pack
 
+Image.MAX_IMAGE_PIXELS = 999999999999
+
 
 def start_simulation(window, points=None, oil_sources=None):
     class ImageViewer(tk.Canvas):
-        def __init__(self, parent, image_array, image_change_controller, initial_zoom_level):
+        def __init__(self, parent, image_array_shape, image_change_controller, initial_zoom_level, full_img):
             super().__init__(parent)
-            self.image_array = image_array
-            self.image_array_height, self.image_array_width, _ = self.image_array.shape
-            self.current_image = None
+            self.image_array_height, self.image_array_width, _ = image_array_shape
             self.initial_zoom_level = initial_zoom_level
             self.zoom_level = initial_zoom_level
-            self.zoomed_width = int(image_array.shape[1] * initial_zoom_level)
-            self.zoomed_height = int(image_array.shape[0] * initial_zoom_level)
+            self.zoomed_width = int(self.image_array_width * initial_zoom_level)
+            self.zoomed_height = int(self.image_array_height * initial_zoom_level)
             self.image_id = None
             self.prev_x = 0
             self.prev_y = 0
@@ -34,7 +34,8 @@ def start_simulation(window, points=None, oil_sources=None):
             self.is_holding = None
             self.is_panning = None
             self.tooltip = None
-            self.img = None
+            self.full_img = full_img
+            self.current_img = None
             self.image_change_controller = image_change_controller
 
             self.bind("<MouseWheel>", self.on_mousewheel)
@@ -55,23 +56,28 @@ def start_simulation(window, points=None, oil_sources=None):
             self.pan_x = max(min(self.pan_x, 0), min(window_width - self.zoomed_width, 0))
             self.pan_y = max(min(self.pan_y, 0), min(window_height - self.zoomed_height, 0))
 
-            image_array = self.image_array[
-                          int(-self.pan_y / self.zoom_level):
-                          int(window_height / self.zoom_level - (self.pan_y / self.zoom_level)),
-                          int(-self.pan_x / self.zoom_level):
-                          int(window_width / self.zoom_level - (self.pan_x / self.zoom_level))
-                          ]
+            left = int(-self.pan_x / self.zoom_level)
+            top = int(-self.pan_y / self.zoom_level)
+            right = int(window_width / self.zoom_level - (self.pan_x / self.zoom_level))
+            bottom = int(window_height / self.zoom_level - (self.pan_y / self.zoom_level))
 
-            self.img = Image.fromarray(image_array)
-            self.img = self.img.resize((min(window_width, self.zoomed_width),
-                                        min(window_height, self.zoomed_height)),
-                                       Image.NEAREST)
+            right = min(right, self.image_array_width)
+            bottom = min(bottom, self.image_array_height)
 
-            self.current_image = ImageTk.PhotoImage(self.img)
+            cropped_image = self.full_img.crop((left, top, right, bottom))
+
+            self.current_img = cropped_image.resize((min(window_width, self.zoomed_width),
+                                                     min(window_height, self.zoomed_height)),
+                                                    Image.NEAREST)
+
+            self.current_img = ImageTk.PhotoImage(self.current_img)
+
+            self.delete("all")
+
             self.image_id = self.create_image(max(0, (window_width - self.zoomed_width) // 2),
                                               max(0, (window_height - self.zoomed_height) // 2),
                                               anchor=tk.NW,
-                                              image=self.current_image)
+                                              image=self.current_img)
 
         def on_mousewheel(self, event):
             zoom_factor = 1.1 if event.delta > 0 else 10 / 11
@@ -123,19 +129,19 @@ def start_simulation(window, points=None, oil_sources=None):
             window_height = self.winfo_height()
             x = int((event.x - self.pan_x - max((window_width - self.zoomed_width) // 2, 0)) / self.zoom_level)
             y = int((event.y - self.pan_y - max((window_height - self.zoomed_height) // 2, 0)) / self.zoom_level)
-            if 0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]:
+            if 0 <= x < self.image_array_width and 0 <= y < self.image_array_height:
                 coord = (x, y)
                 if engine.get_topography(coord) == simulation.TopographyState.SEA:
                     if coord not in engine.world:
                         engine.world[coord] = simulation.Point(coord, engine)
+
                     point_clicked = engine.world[coord]
                     point_clicked.add_oil(self.image_change_controller.oil_to_add_on_click)
 
-                    var = blend_color(InitialValues.OIL_COLOR_RGBA, InitialValues.SEA_COLOR_RGBA,
-                                      point_clicked.oil_mass / self.image_change_controller.minimal_oil_to_show,
-                                      True)
+                    var = blend_color(InitialValues.OIL_COLOR, InitialValues.SEA_COLOR,
+                                      point_clicked.oil_mass / self.image_change_controller.minimal_oil_to_show)
                     self.image_change_controller.update_infobox()
-                    image_array[y][x] = var[:3]
+                    self.full_img.putpixel((x, y), var)
                     self.update_image()
                     self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(point_clicked))
                     self.image_change_controller.value_not_yet_processed += self.image_change_controller.oil_to_add_on_click
@@ -161,7 +167,7 @@ def start_simulation(window, points=None, oil_sources=None):
             x = int((event.x - self.pan_x - max((window_width - self.zoomed_width) // 2, 0)) / self.zoom_level)
             y = int((event.y - self.pan_y - max((window_height - self.zoomed_height) // 2, 0)) / self.zoom_level)
             coord = (x, y)
-            if not (0 <= x < self.image_array.shape[1] and 0 <= y < self.image_array.shape[0]):
+            if not (0 <= x < self.image_array_height and 0 <= y < self.image_array_width):
                 self.hide_tooltip()
                 return
             if coord not in engine.world:
@@ -220,9 +226,8 @@ def start_simulation(window, points=None, oil_sources=None):
             self.parent.tooltip = None
 
     class ImageChangeController(tk.Frame):
-        def __init__(self, parent, image_array):
+        def __init__(self, parent, full_img):
             super().__init__(parent)
-            self.image_array = image_array
             self.is_running = False
             self.interval = 10
             self.job_id = None
@@ -235,6 +240,7 @@ def start_simulation(window, points=None, oil_sources=None):
             self.viewer = None
             self.value_not_yet_processed = 0
             self.oil_spill_on_bool = True
+            self.full_img = full_img
 
             self.options_frame = create_frame(window, 1, 0, 1, 2, tk.N + tk.S, 3, 3, relief_style=tk.RAISED)
 
@@ -248,7 +254,7 @@ def start_simulation(window, points=None, oil_sources=None):
             interval_frame = create_frame(self.options_frame, 0, 0, 1, 1, tk.N + tk.S, 3, 3)
             oil_added_frame = create_frame(self.options_frame, 0, 1, 1, 1, tk.N + tk.S, 3, 3)
             minimal_oil_value_to_show_frame = create_frame(self.options_frame, 0, 2, 1, 1, tk.N + tk.S, 3, 3)
-            start_stop_frame = create_frame(self.options_frame, 0, 3, 1, 2, tk.N + tk.S + tk.E, 3, 3)
+            buttons_frame = create_frame(self.options_frame, 0, 3, 1, 2, tk.N + tk.S + tk.E, 3, 3)
 
             create_label_pack(interval_frame, "Interval of changes [s]")
             create_label_pack(oil_added_frame, "Oil added on click [kg]")
@@ -265,10 +271,10 @@ def start_simulation(window, points=None, oil_sources=None):
 
             create_label_pack(minimal_oil_value_to_show_frame, "Minimal oil value to show [kg]")
 
-            self.btn_start_stop = tk.Button(start_stop_frame, text="Start", width=15, command=self.toggle_start_stop)
+            self.btn_start_stop = tk.Button(buttons_frame, text="Start", width=15, command=self.toggle_start_stop)
             self.btn_start_stop.pack(side=tk.TOP, padx=5, pady=5)
 
-            self.btn_save_checkpoint = tk.Button(start_stop_frame, text="Save checkpoint", width=15, command=self.save_checkpoint)
+            self.btn_save_checkpoint = tk.Button(buttons_frame, text="Save checkpoint", width=15, command=self.save_checkpoint)
             self.btn_save_checkpoint.pack(side=tk.TOP, padx=5, pady=5)
 
             self.text_interval = create_input_entry_pack(interval_frame, 10, str(self.interval / 1000),
@@ -377,24 +383,24 @@ def start_simulation(window, points=None, oil_sources=None):
                 self.bottom_frame.grid()
 
             if self.is_running:
-                deleted = engine.update(self.curr_iter)
-                for coords in deleted:
-                    self.image_array[coords[1]][coords[0]] = InitialValues.LAND_COLOR if engine.get_topography(coords) == simulation.TopographyState.LAND else InitialValues.SEA_COLOR
-                self.value_not_yet_processed = 0
+                points_removed = engine.update(self.iter_as_sec)
 
-            new_oil_mass_sea = 0
-            new_oil_mass_land = 0
-            for coords, point in engine.world.items():
-                if point.topography == simulation.TopographyState.LAND:
-                    var = blend_color(InitialValues.LAND_WITH_OIL_COLOR_RGBA, InitialValues.LAND_COLOR_RGBA,
-                                      point.oil_mass / self.minimal_oil_to_show,
-                                      True)
-                    new_oil_mass_land += point.oil_mass
-                else:
-                    var = blend_color(InitialValues.OIL_COLOR_RGBA, InitialValues.SEA_COLOR_RGBA, point.oil_mass / self.minimal_oil_to_show,
-                                      True)
-                    new_oil_mass_sea += point.oil_mass
-                self.image_array[coords[1]][coords[0]] = var[:3]
+                for coords in engine.world:
+                    point = engine.world[coords]
+                    if point.topography == simulation.TopographyState.LAND:
+                        var = blend_color(InitialValues.LAND_WITH_OIL_COLOR, InitialValues.LAND_COLOR, point.oil_mass / self.minimal_oil_to_show)
+                    else:
+                        var = blend_color(InitialValues.OIL_COLOR, InitialValues.SEA_COLOR, point.oil_mass / self.minimal_oil_to_show)
+                    self.full_img.putpixel((coords[0], coords[1]), var)
+
+                for coords in points_removed:
+                    if coords in engine.lands:
+                        var = InitialValues.LAND_COLOR
+                    else:
+                        var = InitialValues.SEA_COLOR
+                    self.full_img.putpixel((coords[0], coords[1]), var)
+
+                self.value_not_yet_processed = 0
 
             if self.is_running:
                 self.viewer.update_image()
@@ -454,20 +460,29 @@ def start_simulation(window, points=None, oil_sources=None):
     if oil_sources:
         engine.add_oil_sources(oil_sources)
 
-    image_array = np.array(
-        [InitialValues.LAND_COLOR if engine.get_topography((j, i)) == simulation.TopographyState.LAND else InitialValues.SEA_COLOR for i in
-         range(InitialValues.point_side_count) for j in
-         range(InitialValues.point_side_count)]).reshape((InitialValues.point_side_count, InitialValues.point_side_count, 3)).astype(np.uint8)
+    x_indices = engine.x_indices
+    y_indices = engine.y_indices
+
+    sea_color = np.array(InitialValues.SEA_COLOR, dtype=np.uint8)
+    land_color = np.array(InitialValues.LAND_COLOR, dtype=np.uint8)
+
+    image_array = np.full((InitialValues.point_side_count, InitialValues.point_side_count, 3), sea_color, dtype=np.uint8)
+
+    image_array[y_indices, x_indices, :] = land_color
+
+    del engine.x_indices, engine.y_indices
 
     window.rowconfigure(0, weight=5, uniform='row')
     window.rowconfigure(1, weight=1, uniform='row')
     window.columnconfigure(0, weight=2, uniform='column')
     window.columnconfigure(1, weight=1, uniform='column')
 
-    frame_controller = ImageChangeController(window, image_array)
+    full_img = Image.fromarray(image_array)
+
+    frame_controller = ImageChangeController(window, full_img)
 
     initial_zoom_level = 1
-    viewer = ImageViewer(window, image_array, frame_controller, initial_zoom_level)
+    viewer = ImageViewer(window, image_array.shape, frame_controller, initial_zoom_level, full_img)
     viewer.grid(row=0, column=0, sticky=tk.N + tk.S + tk.E + tk.W)
     frame_controller.set_viewer(viewer)
 

@@ -1,6 +1,5 @@
 import pandas as pd
 
-from color import rgba
 from data.generic import Range
 from data.measurment_data import Coordinates
 from data.simulation_run_parameters import CellSideCount, SimulationRunParameters
@@ -12,11 +11,6 @@ class InitialValues:
     LAND_COLOR = (38, 166, 91)
     OIL_COLOR = (0, 0, 0)
     LAND_WITH_OIL_COLOR = (0, 100, 0)
-
-    SEA_COLOR_RGBA = rgba(SEA_COLOR[0], SEA_COLOR[1], SEA_COLOR[2])
-    LAND_COLOR_RGBA = rgba(LAND_COLOR[0], LAND_COLOR[1], LAND_COLOR[2])
-    OIL_COLOR_RGBA = rgba(OIL_COLOR[0], OIL_COLOR[1], OIL_COLOR[2])
-    LAND_WITH_OIL_COLOR_RGBA = rgba(LAND_WITH_OIL_COLOR[0], LAND_WITH_OIL_COLOR[1], LAND_WITH_OIL_COLOR[2])
 
     BINARY_MAP_WIDTH = 86400
     BINARY_MAP_HEIGHT = 43200

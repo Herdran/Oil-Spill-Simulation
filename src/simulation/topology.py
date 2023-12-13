@@ -1,11 +1,12 @@
 from logging import getLogger
-from typing import Set, List, Tuple
+from typing import Set, List, Tuple, Any
 from os import PathLike, path
 from itertools import product
 from zipfile import ZipFile
 
 import numpy as np
 import numpy.typing as npt
+from numpy import ndarray
 
 from simulation.point import Coord_t
 from data.measurment_data import Coordinates, CoordinatesBase
@@ -71,17 +72,27 @@ def _get_cartesian_product_range() -> product:
     return product(range(InitialValues.point_side_count), range(InitialValues.point_side_count))
 
 
-def _get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int]) -> Set[Coord_t]:
+def _get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int]) -> tuple[set[tuple[Any, Any]], ndarray, ndarray]:
     logger.debug("STATED: Loading lands set")
     lands = set()
+
+    x_indices = []
+    y_indices = []
+
     for x, y in _get_cartesian_product_range():
         if _is_land(binary_map, top_left_offset, x, y):
             lands.add((x, y))
+            x_indices.append(x)
+            y_indices.append(y)
+
+    x_indices = np.array(x_indices, dtype=int)
+    y_indices = np.array(y_indices, dtype=int)
+
     logger.debug("FINISHED: Loading lands set")
-    return lands
+    return lands, x_indices, y_indices
 
 
-def load_topography() -> Set[Coord_t]:        
+def load_topography() -> tuple[set[tuple[Any, Any]], ndarray, ndarray]:
     return _get_lands_set(_get_binary_map(), _get_top_left_offset())
 
 

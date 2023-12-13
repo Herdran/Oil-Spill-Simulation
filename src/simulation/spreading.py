@@ -44,7 +44,6 @@ class SpreadingEngine:
             if not (0 <= coord[0] < InitialValues.point_side_count and 0 <= coord[1] < InitialValues.point_side_count):
                 continue
             self._world[coord] = point
-            self._engine.points_changed.append(coord)
 
     @staticmethod
     def _process_spread_between(total_mass: float, first: Point, second: Point, is_new: bool) -> None:
