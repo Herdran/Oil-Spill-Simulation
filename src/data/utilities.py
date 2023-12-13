@@ -58,8 +58,8 @@ def kelvins_to_celsius(kelvins: Temperature) -> float:
     return kelvins - KELVIN_CONSTANT
 
 def round_values(arr: np.array):
-    DATA_FLOAT_PRECISSION = 5
-    return np.round(arr, DATA_FLOAT_PRECISSION)
+    DATA_FLOAT_PRECISION = 5
+    return np.round(arr, DATA_FLOAT_PRECISION)
 
 
 LONGITUDE_OFFSET = 180.0

@@ -36,7 +36,7 @@ class DataDescriptor(Enum):
     TEMPERATURE = "temp"
     
 
-class StationNeigbourType(Enum):
+class StationNeighbourType(Enum):
     NORTH = DataStationInfo(longitude=0, latitude=-1)
     SOUTH = DataStationInfo(longitude=0, latitude=1)
     WEST = DataStationInfo(longitude=-1, latitude=0)
@@ -47,18 +47,18 @@ class StationNeigbourType(Enum):
     SOUTH_EAST = DataStationInfo(longitude=1, latitude=1)
     CENTER = DataStationInfo(longitude=0, latitude=0)
 
-    def get_interpolation_neigbours(self) -> Optional[list['StationNeigbourType']]:
+    def get_interpolation_neighbours(self) -> Optional[list['StationNeighbourType']]:
         return INTERPOLATION_NEIGHBOURS.get(self)
 
     
 INTERPOLATION_NEIGHBOURS = {
-    StationNeigbourType.NORTH_WEST: [StationNeigbourType.NORTH, StationNeigbourType.CENTER, StationNeigbourType.WEST, StationNeigbourType.NORTH_WEST],
-    StationNeigbourType.NORTH_EAST: [StationNeigbourType.NORTH, StationNeigbourType.CENTER, StationNeigbourType.EAST, StationNeigbourType.NORTH_EAST],
-    StationNeigbourType.SOUTH_WEST: [StationNeigbourType.SOUTH, StationNeigbourType.CENTER, StationNeigbourType.WEST, StationNeigbourType.SOUTH_WEST],
-    StationNeigbourType.SOUTH_EAST: [StationNeigbourType.SOUTH, StationNeigbourType.CENTER, StationNeigbourType.EAST, StationNeigbourType.SOUTH_EAST]
+    StationNeighbourType.NORTH_WEST: [StationNeighbourType.NORTH, StationNeighbourType.CENTER, StationNeighbourType.WEST, StationNeighbourType.NORTH_WEST],
+    StationNeighbourType.NORTH_EAST: [StationNeighbourType.NORTH, StationNeighbourType.CENTER, StationNeighbourType.EAST, StationNeighbourType.NORTH_EAST],
+    StationNeighbourType.SOUTH_WEST: [StationNeighbourType.SOUTH, StationNeighbourType.CENTER, StationNeighbourType.WEST, StationNeighbourType.SOUTH_WEST],
+    StationNeighbourType.SOUTH_EAST: [StationNeighbourType.SOUTH, StationNeighbourType.CENTER, StationNeighbourType.EAST, StationNeighbourType.SOUTH_EAST]
 }
     
-class DataAggregatesDecriptior(Enum):
+class DataAggregationDescriptor(Enum):
     LATITUDE = "lat"
     LONGITUDE = "lon"
     TIME_STAMP = "time"
@@ -86,7 +86,7 @@ class LoadedData:
         measure = self.measurements_data.get((time, latitude, longitude))
         
         if measure is None:
-            logger.warning(f"can't parse measurment for given coordinates {(latitude, longitude)} and time stamp {time}")
+            logger.warning(f"can't parse measurement for given coordinates {(latitude, longitude)} and time stamp {time}")
             DEFAULT_SPEED = SpeedMeasure(0, 0)
             DEFAULT_TEMPERATURE = 302.15
             return CertainMeasurement(DEFAULT_SPEED, DEFAULT_SPEED, DEFAULT_TEMPERATURE)
@@ -104,9 +104,9 @@ class DataProcessorImpl:
         self.run_parameters = simulation_run_parameters
         data = self._load_all_data(csv_paths)      
         
-        time_points = self._create_envirement_time_range(simulation_run_parameters)
-        self.latitude_points = self._create_envirement_latitude_range(simulation_run_parameters)
-        self.longitude_points = self._create_envirement_longitude_range(simulation_run_parameters)
+        time_points = self._create_environment_time_range(simulation_run_parameters)
+        self.latitude_points = self._create_environment_latitude_range(simulation_run_parameters)
+        self.longitude_points = self._create_environment_longitude_range(simulation_run_parameters)
         
         self.latitude_points = round_values(self.latitude_points)
         self.longitude_points = round_values(self.longitude_points)
@@ -123,36 +123,36 @@ class DataProcessorImpl:
         
         time_points, latitude_points, longitude_points = np.meshgrid(time_points, self.latitude_points, self.longitude_points)
 
-        points_wind_n, values_wind_n = self._get_interpolation_area(data, DataAggregatesDecriptior.WIND_N, DataAggregatesDecriptior.WIND_E)
+        points_wind_n, values_wind_n = self._get_interpolation_area(data, DataAggregationDescriptor.WIND_N, DataAggregationDescriptor.WIND_E)
         wind_n_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_wind_n, values_wind_n)
         
-        points_wind_e, values_wind_e = self._get_interpolation_area(data, DataAggregatesDecriptior.WIND_E, DataAggregatesDecriptior.WIND_N)
+        points_wind_e, values_wind_e = self._get_interpolation_area(data, DataAggregationDescriptor.WIND_E, DataAggregationDescriptor.WIND_N)
         wind_e_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_wind_e, values_wind_e)
         
-        points_current_n, values_current_n = self._get_interpolation_area(data, DataAggregatesDecriptior.CURRENT_N, DataAggregatesDecriptior.CURRENT_E)
+        points_current_n, values_current_n = self._get_interpolation_area(data, DataAggregationDescriptor.CURRENT_N, DataAggregationDescriptor.CURRENT_E)
         current_n_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_current_n, values_current_n)
         
-        points_current_e, values_current_e = self._get_interpolation_area(data, DataAggregatesDecriptior.CURRENT_E, DataAggregatesDecriptior.CURRENT_N)
+        points_current_e, values_current_e = self._get_interpolation_area(data, DataAggregationDescriptor.CURRENT_E, DataAggregationDescriptor.CURRENT_N)
         current_e_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_current_e, values_current_e)
         
-        points_temp, values_temp = self._get_interpolation_area(data, DataAggregatesDecriptior.TEMPERATURE)
+        points_temp, values_temp = self._get_interpolation_area(data, DataAggregationDescriptor.TEMPERATURE)
         values_temp = np.vectorize(celcius_to_kelvins)(values_temp)
         temp_interpolated = self._get_interpolated_data(time_points, latitude_points, longitude_points, points_temp, values_temp)
         
         environment_area = pd.DataFrame(
             {
-                DataAggregatesDecriptior.TIME_STAMP.value: time_points.flatten(),
-                DataAggregatesDecriptior.LATITUDE.value : latitude_points.flatten(),
-                DataAggregatesDecriptior.LONGITUDE.value: longitude_points.flatten(),
-                DataAggregatesDecriptior.WIND_N.value: wind_n_interpolated.flatten(),
-                DataAggregatesDecriptior.WIND_E.value: wind_e_interpolated.flatten(),
-                DataAggregatesDecriptior.CURRENT_N.value: current_n_interpolated.flatten(),
-                DataAggregatesDecriptior.CURRENT_E.value: current_e_interpolated.flatten(),
-                DataAggregatesDecriptior.TEMPERATURE.value: temp_interpolated.flatten()
+                DataAggregationDescriptor.TIME_STAMP.value: time_points.flatten(),
+                DataAggregationDescriptor.LATITUDE.value : latitude_points.flatten(),
+                DataAggregationDescriptor.LONGITUDE.value: longitude_points.flatten(),
+                DataAggregationDescriptor.WIND_N.value: wind_n_interpolated.flatten(),
+                DataAggregationDescriptor.WIND_E.value: wind_e_interpolated.flatten(),
+                DataAggregationDescriptor.CURRENT_N.value: current_n_interpolated.flatten(),
+                DataAggregationDescriptor.CURRENT_E.value: current_e_interpolated.flatten(),
+                DataAggregationDescriptor.TEMPERATURE.value: temp_interpolated.flatten()
             }
         )
         
-        environment_area.sort_values(inplace=True, by=[DataAggregatesDecriptior.TIME_STAMP.value])
+        environment_area.sort_values(inplace=True, by=[DataAggregationDescriptor.TIME_STAMP.value])
 
         logger.debug("FINISHED: Preprocessing data...")
         path_to_save = self.run_parameters.path_to_data
@@ -162,7 +162,7 @@ class DataProcessorImpl:
         logger.debug(f"STARTED: Saving preprocessed data to {path_to_save}...")
 
 
-        # TODO: code below is a mess propably need to be refactored in the future
+        # TODO: code below is a mess probably need to be refactored in the future
         to_save = pd.DataFrame()
         
         hour = 0
@@ -171,7 +171,7 @@ class DataProcessorImpl:
         get_data_path = lambda: path.join(path_to_save, f"{hour}.csv")
         
         for _, row in environment_area.iterrows():
-            time = row[DataAggregatesDecriptior.TIME_STAMP.value]
+            time = row[DataAggregationDescriptor.TIME_STAMP.value]
             if time > 0 and time % MINUTES_IN_HOUR == 0 and last_minutes != time:
                 to_save.to_csv(get_data_path(), index=False)
                 to_save = pd.DataFrame()
@@ -198,16 +198,16 @@ class DataProcessorImpl:
         if not SHOULD_INTERPOLATE or coordinates == station_coordinates:
             return self._get_certain_measurement(loaded_data, station_coordinates, time_stamp)
         
-        interpolation_neigbours = self._get_direction_of_station(coordinates, station_coordinates).get_interpolation_neigbours()
-        neigbours_stations_info = self._get_neighbours_station_info(interpolation_neigbours, nearest_station_info)
-        neigbours_stations_coords = [self._get_coord_for_station(station_info) for station_info in neigbours_stations_info]
-        weights = [great_circle_distance(coordinates, coord) for coord in neigbours_stations_coords]
-        measurments = [self._get_certain_measurement(loaded_data, coord, time_stamp) for coord in neigbours_stations_coords]
+        interpolation_neighbours = self._get_direction_of_station(coordinates, station_coordinates).get_interpolation_neighbours()
+        neighbours_stations_info = self._get_neighbours_station_info(interpolation_neighbours, nearest_station_info)
+        neighbours_stations_coords = [self._get_coord_for_station(station_info) for station_info in neighbours_stations_info]
+        weights = [great_circle_distance(coordinates, coord) for coord in neighbours_stations_coords]
+        measurements = [self._get_certain_measurement(loaded_data, coord, time_stamp) for coord in neighbours_stations_coords]
     
         return CertainMeasurement(
-            wind = SpeedMeasure.from_average([measurment.wind for measurment in measurments], weights),
-            current = SpeedMeasure.from_average([measurment.current for measurment in measurments], weights),
-            temperature = average_measurement([measurment.temperature for measurment in measurments], weights)
+            wind = SpeedMeasure.from_average([measurement.wind for measurement in measurements], weights),
+            current = SpeedMeasure.from_average([measurement.current for measurement in measurements], weights),
+            temperature = average_measurement([measurement.temperature for measurement in measurements], weights)
         )
             
         
@@ -218,23 +218,23 @@ class DataProcessorImpl:
         )
     
             
-    def _get_neighbours_station_info(self, interpolation_neigbours: list['StationNeigbourType'], nearest_station_info: DataStationInfo) -> list[DataStationInfo]:
+    def _get_neighbours_station_info(self, interpolation_neighbours: list['StationNeighbourType'], nearest_station_info: DataStationInfo) -> list[DataStationInfo]:
         result = []
-        for neigbour_type in interpolation_neigbours:
-            station_info_opt = self._neighbour_station_info(nearest_station_info, neigbour_type)
+        for neighbour_type in interpolation_neighbours:
+            station_info_opt = self._neighbour_station_info(nearest_station_info, neighbour_type)
             if station_info_opt is not None:
                 result.append(station_info_opt)
         return result
     
     @staticmethod
-    def _get_direction_of_station(coordinates: Coordinates, station_coordinates: Coordinates) -> StationNeigbourType:
-        lat_diff = (StationNeigbourType.NORTH if coordinates.latitude > station_coordinates.latitude else StationNeigbourType.SOUTH).value.latitude
-        lon_diff = (StationNeigbourType.EAST if coordinates.longitude > station_coordinates.longitude else StationNeigbourType.WEST).value.longitude
-        return StationNeigbourType(DataStationInfo(lat_diff, lon_diff))
+    def _get_direction_of_station(coordinates: Coordinates, station_coordinates: Coordinates) -> StationNeighbourType:
+        lat_diff = (StationNeighbourType.NORTH if coordinates.latitude > station_coordinates.latitude else StationNeighbourType.SOUTH).value.latitude
+        lon_diff = (StationNeighbourType.EAST if coordinates.longitude > station_coordinates.longitude else StationNeighbourType.WEST).value.longitude
+        return StationNeighbourType(DataStationInfo(lat_diff, lon_diff))
     
-    def _neighbour_station_info(self, station_info: DataStationInfo, neigbour_type: StationNeigbourType) -> Optional[DataStationInfo]:
-        lat_candidate = station_info.latitude + neigbour_type.value.latitude
-        lon_candidate = station_info.longitude + neigbour_type.value.longitude
+    def _neighbour_station_info(self, station_info: DataStationInfo, neighbour_type: StationNeighbourType) -> Optional[DataStationInfo]:
+        lat_candidate = station_info.latitude + neighbour_type.value.latitude
+        lon_candidate = station_info.longitude + neighbour_type.value.longitude
         
         MIN_COORD = 0
         if (not (MIN_COORD <= lat_candidate < self.run_parameters.cells_side_count.latitude) or 
@@ -290,7 +290,7 @@ class DataProcessorImpl:
         interpolator = NearestNDInterpolator(points, values)
         return interpolator(time_points, latitude_points, longitude_points)
         
-    def _get_interpolation_area(self, data: pd.DataFrame, column_filter: DataAggregatesDecriptior, additional_filter: DataAggregatesDecriptior = None) -> tuple[np.ndarray, np.ndarray]:
+    def _get_interpolation_area(self, data: pd.DataFrame, column_filter: DataAggregationDescriptor, additional_filter: DataAggregationDescriptor = None) -> tuple[np.ndarray, np.ndarray]:
         points: list[list] = []
         values: list[float] = []
         
@@ -300,9 +300,9 @@ class DataProcessorImpl:
             data_with_column = data[data[column_filter.value].notna()]
         
         for _, row in data_with_column.iterrows():
-            lat = row[DataAggregatesDecriptior.LATITUDE.value]
-            lon = row[DataAggregatesDecriptior.LONGITUDE.value]
-            time = row[DataAggregatesDecriptior.TIME_STAMP.value]
+            lat = row[DataAggregationDescriptor.LATITUDE.value]
+            lon = row[DataAggregationDescriptor.LONGITUDE.value]
+            time = row[DataAggregationDescriptor.TIME_STAMP.value]
             time_from_start = minutes(time - self.run_parameters.time.min)
             points.append((time_from_start, lat, lon))
             values.append(row[column_filter.value])
@@ -311,19 +311,19 @@ class DataProcessorImpl:
         
         
     @staticmethod
-    def _create_envirement_latitude_range(simulation_run_parameters: SimulationRunParameters) -> np.array:
+    def _create_environment_latitude_range(simulation_run_parameters: SimulationRunParameters) -> np.array:
         latitude_range = Range(simulation_run_parameters.area.min.latitude, simulation_run_parameters.area.max.latitude)
         latitude_step = (latitude_range.max - latitude_range.min) / simulation_run_parameters.cells_side_count.latitude
         return np.array([latitude_range.min + i * latitude_step for i in range(simulation_run_parameters.cells_side_count.latitude)])
         
     @staticmethod
-    def _create_envirement_longitude_range(simulation_run_parameters: SimulationRunParameters) -> np.array:
+    def _create_environment_longitude_range(simulation_run_parameters: SimulationRunParameters) -> np.array:
         longitude_range = Range(simulation_run_parameters.area.min.longitude, simulation_run_parameters.area.max.longitude)
         longitude_step = (longitude_range.max - longitude_range.min) / simulation_run_parameters.cells_side_count.longitude
         return np.array([longitude_range.min + i * longitude_step for i in range(simulation_run_parameters.cells_side_count.longitude)])
     
     @staticmethod
-    def _create_envirement_time_range(simulation_run_parameters: SimulationRunParameters) -> np.array:
+    def _create_environment_time_range(simulation_run_parameters: SimulationRunParameters) -> np.array:
         time_range = simulation_run_parameters.time
         time_step = simulation_run_parameters.data_time_step
         times_count = int((time_range.max - time_range.min) / time_step)
@@ -334,13 +334,13 @@ class DataProcessorImpl:
         return pd.read_csv(csv_path)
 
     def _load_all_data(self, csv_paths: list[PathLike]) -> pd.DataFrame:
-        concated_data = pd.concat([self._load_single_dataset(csv_path)
+        concatenated_data = pd.concat([self._load_single_dataset(csv_path)
                                    for csv_path in csv_paths])
-        self._data_agg_wind(concated_data)
-        self._data_agg_current(concated_data)
-        self._data_agg_time(concated_data)
+        self._data_agg_wind(concatenated_data)
+        self._data_agg_current(concatenated_data)
+        self._data_agg_time(concatenated_data)
 
-        return concated_data
+        return concatenated_data
 
     @staticmethod
     def _data_agg_time(data: pd.DataFrame):
@@ -349,7 +349,7 @@ class DataProcessorImpl:
         
         dataframe_replace_apply(
             dataframe=data,
-            result_columns=[DataAggregatesDecriptior.TIME_STAMP.value],
+            result_columns=[DataAggregationDescriptor.TIME_STAMP.value],
             function=get_time_stamp,
             columns=[
                 DataDescriptor.YEAR.value,
@@ -364,7 +364,7 @@ class DataProcessorImpl:
     def _data_agg_wind(data: pd.DataFrame):
         dataframe_replace_apply(
             dataframe=data,
-            result_columns=[DataAggregatesDecriptior.WIND_N.value, DataAggregatesDecriptior.WIND_E.value],
+            result_columns=[DataAggregationDescriptor.WIND_N.value, DataAggregationDescriptor.WIND_E.value],
             function=SpeedMeasure.from_direction,
             columns=[
                 DataDescriptor.WIND_SPEED.value,
@@ -376,7 +376,7 @@ class DataProcessorImpl:
     def _data_agg_current(data: pd.DataFrame):
         dataframe_replace_apply(
             dataframe=data,
-            result_columns=[DataAggregatesDecriptior.CURRENT_N.value, DataAggregatesDecriptior.CURRENT_E.value],
+            result_columns=[DataAggregationDescriptor.CURRENT_N.value, DataAggregationDescriptor.CURRENT_E.value],
             function=SpeedMeasure.from_direction,
             columns=[
                 DataDescriptor.CURRENT_SPEED.value,
@@ -399,7 +399,7 @@ class DataProcessor:
     def __init__(self, *args):
         self._impl = DataProcessorImpl(*args)
 
-    def get_measurment(self, coordinates: Coordinates, nearest_station_info: DataStationInfo, time_stamp: pd.Timestamp) -> CertainMeasurement:
+    def get_measurement(self, coordinates: Coordinates, nearest_station_info: DataStationInfo, time_stamp: pd.Timestamp) -> CertainMeasurement:
         return self._impl.get_measurement(coordinates, nearest_station_info, time_stamp)
     
     def should_update_data(self, time_from_last_update: pd.Timedelta) -> bool:

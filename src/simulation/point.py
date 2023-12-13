@@ -63,11 +63,11 @@ class Point:
         if not self._should_update_weather_data(time_delta):
             return
         time_stamp = InitialValues.simulation_initial_parameters.time.min + time_delta
-        measurment = self._data_processor.get_measurement(self._coordinates, self._weather_station_coordinates,
+        measurement = self._data_processor.get_measurement(self._coordinates, self._weather_station_coordinates,
                                                           time_stamp)
-        self._wave_velocity = measurment.current.to_numpy()
-        self._wind_velocity = measurment.wind.to_numpy()
-        self._temperature = measurment.temperature
+        self._wave_velocity = measurement.current.to_numpy()
+        self._wind_velocity = measurement.wind.to_numpy()
+        self._temperature = measurement.temperature
         self._last_weather_update_time = time_delta
 
     def update(self) -> None:

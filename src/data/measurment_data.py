@@ -40,8 +40,8 @@ class SpeedMeasure:
     @staticmethod
     def from_average(measurements: 'SpeedMeasure', weights: float) -> 'SpeedMeasure':
         return SpeedMeasure(
-            speed_north = average_measurement([measurment.speed_north for measurment in measurements], weights),
-            speed_east = average_measurement([measurment.speed_east for measurment in measurements], weights)
+            speed_north = average_measurement([measurement.speed_north for measurement in measurements], weights),
+            speed_east = average_measurement([measurement.speed_east for measurement in measurements], weights)
         )
         
     def __getitem__(self, index: int) -> float:
