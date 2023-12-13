@@ -123,8 +123,8 @@ def map_binary_lands(binary_lands: set[Coord_t]):
 
     logger.debug("FINISHED: Mapping binary lands")
 
-    x_indices = np.array(x_indices)
-    y_indices = np.array(y_indices)
+    x_indices = np.array(x_indices, dtype=int)
+    y_indices = np.array(y_indices, dtype=int)
 
     end = time.time()
     print(f"Loading lands set time {end - start}")

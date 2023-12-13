@@ -8,35 +8,31 @@ import numpy as np
 from PIL import Image, ImageTk
 
 import simulation.simulation as simulation
-from color import rgba, blend_color
+from color import blend_color
 from constatnts import Constants as const
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from files import get_main_path
 from gui.utilities import get_tooltip_text, create_frame, create_label_pack, create_input_entry_pack
 
-SEA_COLOR = rgba(15, 10, 222)
-LAND_COLOR = rgba(38, 166, 91)
-OIL_COLOR = rgba(0, 0, 0)
-LAND_WITH_OIL_COLOR = rgba(0, 100, 0)
-INVISIBLE_OIL = rgba(0, 0, 0, 0)
+SEA_COLOR = (15, 10, 222)
+LAND_COLOR = (38, 166, 91)
+OIL_COLOR = (0, 0, 0)
+LAND_WITH_OIL_COLOR = (0, 100, 0)
 
-IMAGE_SCALING = 10
-# TODO should be dynamic, IDK
+Image.MAX_IMAGE_PIXELS = 999999999999
 
 
 def start_simulation(neighborhood, window):
     class ImageViewer(tk.Canvas):
-        def __init__(self, parent, background_image_array, overlay_image_array, image_change_controller, initial_zoom_level):
+        def __init__(self, parent, image_array, image_change_controller, initial_zoom_level, full_img):
             super().__init__(parent)
-            self.image_array_background = background_image_array
-            self.image_array_height, self.image_array_width, _ = background_image_array.shape
-            self.image_array_overlay = overlay_image_array
+            self.image_array = image_array
+            self.image_array_height, self.image_array_width, _ = image_array.shape
             self.initial_zoom_level = initial_zoom_level
             self.zoom_level = initial_zoom_level
             self.zoomed_width = int(self.image_array_width * initial_zoom_level)
             self.zoomed_height = int(self.image_array_height * initial_zoom_level)
-            self.background_image_id = None
-            self.overlay_image_id = None
+            self.image_id = None
             self.prev_x = 0
             self.prev_y = 0
             self.pan_x = 0
@@ -44,9 +40,8 @@ def start_simulation(neighborhood, window):
             self.is_holding = None
             self.is_panning = None
             self.tooltip = None
-            self.full_background_img = Image.fromarray(self.image_array_background).resize((self.image_array_width//IMAGE_SCALING, self.image_array_height // IMAGE_SCALING),Image.NEAREST)
-            self.current_background_img = None
-            self.current_overlay_img = None
+            self.full_img = full_img
+            self.current_img = None
             self.image_change_controller = image_change_controller
 
             self.bind("<MouseWheel>", self.on_mousewheel)
@@ -76,34 +71,20 @@ def start_simulation(neighborhood, window):
             right = min(right, self.image_array_width)
             bottom = min(bottom, self.image_array_height)
 
-            cropped_background_image = self.full_background_img.crop((left//IMAGE_SCALING, top//IMAGE_SCALING, right//IMAGE_SCALING, bottom//IMAGE_SCALING))
+            cropped_image = self.full_img.crop((left, top, right, bottom))
 
-            cropped_overlay_image_array = self.image_array_overlay[top:bottom, left:right]
+            self.current_img = cropped_image.resize((min(window_width, self.zoomed_width),
+                                                     min(window_height, self.zoomed_height)),
+                                                    Image.NEAREST)
 
-            cropped_overlay_image = Image.fromarray(cropped_overlay_image_array)
-
-            self.current_background_img = cropped_background_image.resize((min(window_width, self.zoomed_width),
-                                                                           min(window_height, self.zoomed_height)),
-                                                                          Image.NEAREST)
-
-            self.current_overlay_img = cropped_overlay_image.resize((min(window_width, self.zoomed_width),
-                                                                     min(window_height, self.zoomed_height)),
-                                                                    Image.NEAREST)
-
-            self.current_background_img = ImageTk.PhotoImage(self.current_background_img)
-            self.current_overlay_img = ImageTk.PhotoImage(self.current_overlay_img)
+            self.current_img = ImageTk.PhotoImage(self.current_img)
 
             self.delete("all")
 
-            self.background_image_id = self.create_image(max(0, (window_width - self.zoomed_width) // 2),
-                                                         max(0, (window_height - self.zoomed_height) // 2),
-                                                         anchor=tk.NW,
-                                                         image=self.current_background_img)
-
-            self.overlay_image_id = self.create_image(max(0, (window_width - self.zoomed_width) // 2),
-                                                      max(0, (window_height - self.zoomed_height) // 2),
-                                                      anchor=tk.NW,
-                                                      image=self.current_overlay_img)
+            self.image_id = self.create_image(max(0, (window_width - self.zoomed_width) // 2),
+                                              max(0, (window_height - self.zoomed_height) // 2),
+                                              anchor=tk.NW,
+                                              image=self.current_img)
 
             end = time.time()
             print(f"Image update time {end - start}, All reloaded {oil_change}")
@@ -169,10 +150,11 @@ def start_simulation(neighborhood, window):
                     point_clicked.add_oil(self.image_change_controller.oil_to_add_on_click)
 
                     var = blend_color(OIL_COLOR, SEA_COLOR,
-                                      point_clicked.oil_mass / self.image_change_controller.minimal_oil_to_show,
-                                      True)
+                                      point_clicked.oil_mass / self.image_change_controller.minimal_oil_to_show)
                     self.image_change_controller.update_infobox()
-                    self.image_array_overlay[y][x] = var
+                    # self.image_array_overlay[y][x] = var
+                    self.full_img.putpixel((x, y), var)
+                    # TODO
                     self.update_image(True)
                     self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(point_clicked))
                     self.image_change_controller.value_not_yet_processed += self.image_change_controller.oil_to_add_on_click
@@ -225,7 +207,7 @@ def start_simulation(neighborhood, window):
             window_width = self.winfo_width()
             window_height = self.winfo_height()
             self.zoom_level /= self.initial_zoom_level
-            self.initial_zoom_level = min(window_width / image_array_background.shape[1], window_height / image_array_background.shape[0])
+            self.initial_zoom_level = min(window_width / image_array.shape[1], window_height / image_array.shape[0])
             self.zoom_level *= self.initial_zoom_level
             self.update_image()
 
@@ -257,9 +239,8 @@ def start_simulation(neighborhood, window):
             self.parent.tooltip = None
 
     class ImageChangeController(tk.Frame):
-        def __init__(self, parent, image_array_overlay):
+        def __init__(self, parent, full_img):
             super().__init__(parent)
-            self.image_array_overlay = image_array_overlay
             self.is_running = False
             self.interval = 10
             self.job_id = None
@@ -272,6 +253,7 @@ def start_simulation(neighborhood, window):
             self.viewer = None
             self.value_not_yet_processed = 0
             self.oil_spill_on_bool = True
+            self.full_img = full_img
 
             self.options_frame = create_frame(window, 1, 0, 1, 2, tk.N + tk.S, 5, 5)
 
@@ -428,26 +410,28 @@ def start_simulation(neighborhood, window):
 
             if self.is_running:
                 start = time.time()
-                deleted = engine.update(self.iter_as_sec)
+                points_changed, points_removed = engine.update(self.iter_as_sec)
                 end = time.time()
                 print(f"Engine update: {end - start}")
-                for coords in deleted:
-                    self.image_array_overlay[coords[1]][coords[0]] = INVISIBLE_OIL
-                self.value_not_yet_processed = 0
 
-            new_oil_mass_sea = 0
-            new_oil_mass_land = 0
-            for coords, point in engine.world.items():
-                if point.topography == simulation.TopographyState.LAND:
-                    var = blend_color(LAND_WITH_OIL_COLOR, LAND_COLOR,
-                                      point.oil_mass / self.minimal_oil_to_show,
-                                      True)
-                    new_oil_mass_land += point.oil_mass
-                else:
-                    var = blend_color(OIL_COLOR, SEA_COLOR, point.oil_mass / self.minimal_oil_to_show,
-                                      True)
-                    new_oil_mass_sea += point.oil_mass
-                self.image_array_overlay[coords[1]][coords[0]] = var
+                for coords in points_changed:
+                    if coords in engine.world.keys():
+                        point = engine.world[coords]
+                        if point.topography == simulation.TopographyState.LAND:
+                            var = blend_color(LAND_WITH_OIL_COLOR, LAND_COLOR, point.oil_mass / self.minimal_oil_to_show)
+                        else:
+                            var = blend_color(OIL_COLOR, SEA_COLOR, point.oil_mass / self.minimal_oil_to_show)
+                        self.full_img.putpixel((coords[0], coords[1]), var)
+                        # TODO
+
+                for coords in points_removed:
+                    if coords in engine.lands:
+                        var = LAND_COLOR
+                    else:
+                        var = SEA_COLOR
+                    self.full_img.putpixel((coords[0], coords[1]), var)
+
+                self.value_not_yet_processed = 0
 
             if self.is_running:
                 self.viewer.update_image(True)
@@ -507,14 +491,10 @@ def start_simulation(neighborhood, window):
 
     sea_color = np.array((15, 10, 222), dtype=np.uint8)
     land_color = np.array((38, 166, 91), dtype=np.uint8)
-    oil_color = np.array((0, 0, 0, 0), dtype=np.uint8)
-    land_with_oil_color = np.array((0, 100, 0, 0), dtype=np.uint8)
 
-    image_array_background = np.full((const.point_side_lat_count, const.point_side_lon_count, 3), sea_color, dtype=np.uint8)
-    image_array_overlay = np.full((const.point_side_lat_count, const.point_side_lon_count, 4), oil_color, dtype=np.uint8)
+    image_array = np.full((const.point_side_lat_count, const.point_side_lon_count, 3), sea_color, dtype=np.uint8)
 
-    image_array_background[y_indices, x_indices, :] = land_color
-    image_array_overlay[y_indices, x_indices, :] = land_with_oil_color
+    image_array[y_indices, x_indices, :] = land_color
 
     end = time.time()
     print(f"Image arrays creation time {end - start}")
@@ -524,10 +504,12 @@ def start_simulation(neighborhood, window):
     window.columnconfigure(0, weight=2, uniform='column')
     window.columnconfigure(1, weight=1, uniform='column')
 
-    frame_controller = ImageChangeController(window, image_array_overlay)
+    full_img = Image.fromarray(image_array)
+
+    frame_controller = ImageChangeController(window, full_img)
 
     initial_zoom_level = 1
-    viewer = ImageViewer(window, image_array_background, image_array_overlay, frame_controller, initial_zoom_level)
+    viewer = ImageViewer(window, image_array, frame_controller, initial_zoom_level, full_img)
     viewer.grid(row=0, column=0, sticky=tk.N + tk.S + tk.E + tk.W)
     frame_controller.set_viewer(viewer)
 

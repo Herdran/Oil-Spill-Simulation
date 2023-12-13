@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import pandas as pd
 
@@ -28,7 +28,7 @@ class SimulationEngine:
     def is_finished(self) -> bool:
         return self.total_time >= const.simulation_time
 
-    def update(self, delta_time) -> List[Coord_t]:
+    def update(self, delta_time) -> tuple[List[Coord_t], List[Coord_t]]:
         self.points_changed = []
         self.pour_from_sources(delta_time)
         self.update_oil_points(delta_time)
@@ -48,9 +48,9 @@ class SimulationEngine:
         for point in empty_points:
             del self.world[point]
             deleted.append(point)
-            self.points_changed.append(point)
+            # self.points_changed.append(point)
         self.total_time += delta_time
-        return deleted
+        return self.points_changed, deleted
 
     def update_oil_points(self, delta_time):
         for coord in list(self.world.keys()):  # copy because dict changes size during iteration
