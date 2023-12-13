@@ -97,13 +97,13 @@ def get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], 
     return lands
 
 
-def map_binary_lands(binary_lands: set[Coord_t]):
+def map_binary_lands(binary_lands: set[Coord_t]) -> set[Coord_t]:
     logger.debug("STATED: Mapping binary lands")
     BEARING_OFFSET = 90.0
       
     top_left_offset = get_top_left_offset()
 
-    def calculate_point_xy(lon, lat):
+    def calculate_point_xy(lon: float, lat: float) -> (int, int):
         bearing, distance = calculate_compass_bearing_and_dist(const.top_left_coord, Coordinates(latitude=lat, longitude=lon))
         rad = radians(bearing - BEARING_OFFSET)
         x = int(distance * cos(rad)) // const.point_side_size
@@ -111,13 +111,13 @@ def map_binary_lands(binary_lands: set[Coord_t]):
         return (min(x, const.point_side_lon_count), min(y, const.point_side_lat_count))
     
     xy_points = dict()
-    def get_point_xy(lon, lat):
+    def get_point_xy(lon: float, lat: float) -> (int, int):
         if (lon, lat) not in xy_points:
             xy_points[(lon, lat)] = calculate_point_xy(lon, lat)
         return xy_points[(lon, lat)]
     
     projected_to_coords = dict()
-    def get_projected_to_coords(x: int, y: int) -> Coord_t:
+    def get_projected_to_coords(x: int, y: int) -> (float, float):
         if (x, y) not in projected_to_coords:
             projected_to_coords[(x, y)] = project_to_coordinates_raw(x, y, BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
         return projected_to_coords[(x, y)]
@@ -149,12 +149,12 @@ def map_binary_lands(binary_lands: set[Coord_t]):
         for x in range(min_x, max_x):
             for y in range(min_y, max_y):
                 result.add((x, y))
-    
+
     logger.debug("FINISHED: Mapping binary lands")
 
     return result
 
 
-def load_topography():
+def load_topography() -> set[Coord_t]:
     binary_lands = get_lands_set(get_binary_map_path(), get_top_left_offset(), get_bottom_right_offset())
     return map_binary_lands(binary_lands)

@@ -1,5 +1,5 @@
 from enum import Enum
-from math import atan2, degrees, sqrt, radians, sin, cos
+from math import atan2, degrees, sqrt
 from typing import Callable, Optional
 
 from data.measurment_data import CoordinatesBase, Coordinates, Temperature
@@ -93,11 +93,11 @@ def move_coordinate_bearing(source: Coordinates, distance: float, bearing: float
     point = geo.distance(meters=distance).destination(source.as_tuple(), bearing)
     return Coordinates(latitude=point.latitude, longitude=point.longitude)
 
-def move_coordinate(source: Coordinates, distance: float, direcion: Move_direction) -> Coordinates:
-    return move_coordinate_bearing(source, distance, direcion.value)
+def move_coordinate(source: Coordinates, distance: float, direction: Move_direction) -> Coordinates:
+    return move_coordinate_bearing(source, distance, direction.value)
 
-def move_coordinate_raw(lat: float, lon: float, distance: float, direcion: Move_direction) -> (float, float):
-    bearing = direcion.value
+def move_coordinate_raw(lat: float, lon: float, distance: float, direction: Move_direction) -> (float, float):
+    bearing = direction.value
     point = geo.distance(meters=distance).destination((lat, lon), bearing)
     return (point.latitude, point.longitude)
 
