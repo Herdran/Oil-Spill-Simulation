@@ -1,5 +1,4 @@
 from logging import getLogger
-from typing import Set
 from os import PathLike, path
 from math import cos, sin, radians
 from itertools import product
@@ -10,7 +9,7 @@ import numpy.typing as npt
 
 from simulation.point import Coord_t
 from data.measurment_data import Coordinates, CoordinatesBase
-from data.utilities import Move_direction, calculate_compass_bearing_and_dist, coordinates_distance, move_coordinate_raw, project_coordinates, project_coordinates_raw, project_to_coordinates, project_to_coordinates_raw
+from data.utilities import calculate_compass_bearing_and_dist, project_coordinates, project_coordinates_raw, project_to_coordinates_raw
 from constatnts import Constants as const
 from files import get_binary_world_map_path, get_binary_world_map_zip_path, get_unzipped_world_map_dir_path
 
@@ -48,14 +47,18 @@ def get_binary_map_path() -> BinaryMap:
         unzip_world_map()    
     return load_binary_from_file(binary_map_path)
 
+
 def project_binary_map_coordinates(coord: Coordinates) -> CoordinatesBase[int]:
     return project_coordinates(coord, BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
+
 
 def project_binary_map_coordinates_raw(lat: float, lon: float) -> (int, int):
     return project_coordinates_raw(lat, lon, BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
 
+
 def get_top_left_offset() -> CoordinatesBase[int]:
     return project_binary_map_coordinates(const.top_left_coord)
+
 
 def get_bottom_right_offset() -> CoordinatesBase[int]:
     return project_binary_map_coordinates(const.bottom_right_coord)
@@ -98,12 +101,7 @@ def map_binary_lands(binary_lands: set[Coord_t]):
     logger.debug("STATED: Mapping binary lands")
     BEARING_OFFSET = 90.0
       
-    projected_to_coords = dict()
-    xy_points = dict()
-    
-    
     top_left_offset = get_top_left_offset()
-    
 
     def calculate_point_xy(lon, lat):
         bearing, distance = calculate_compass_bearing_and_dist(const.top_left_coord, Coordinates(latitude=lat, longitude=lon))
@@ -112,19 +110,19 @@ def map_binary_lands(binary_lands: set[Coord_t]):
         y = int(distance * sin(rad)) // const.point_side_size
         return (min(x, const.point_side_lon_count), min(y, const.point_side_lat_count))
     
+    xy_points = dict()
     def get_point_xy(lon, lat):
         if (lon, lat) not in xy_points:
             xy_points[(lon, lat)] = calculate_point_xy(lon, lat)
         return xy_points[(lon, lat)]
     
+    projected_to_coords = dict()
     def get_projected_to_coords(x: int, y: int) -> Coord_t:
         if (x, y) not in projected_to_coords:
             projected_to_coords[(x, y)] = project_to_coordinates_raw(x, y, BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
         return projected_to_coords[(x, y)]
     
-       
-    result = set()
-    
+    result = set()        
 
     for x, y in binary_lands:
         x += top_left_offset.longitude
