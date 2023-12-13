@@ -113,8 +113,3 @@ def calculate_compass_bearing_and_dist(start: Coordinates, end: Coordinates) -> 
     forward_azimuth, _, dist = geodesic.inv(start.longitude, start.latitude, end.longitude, end.latitude)
     bearing = forward_azimuth + 360 if forward_azimuth < 0 else forward_azimuth
     return (bearing, dist)
-        
-    
-    
-    
-    
