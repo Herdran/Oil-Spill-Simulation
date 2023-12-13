@@ -236,7 +236,7 @@ def start_simulation(window, points=None, oil_sources=None):
             self.value_not_yet_processed = 0
             self.oil_spill_on_bool = True
 
-            self.options_frame = create_frame(window, 1, 0, 1, 2, tk.N + tk.S, 5, 5)
+            self.options_frame = create_frame(window, 1, 0, 1, 2, tk.N + tk.S, 3, 3, relief_style=tk.RAISED)
 
             self.options_frame.columnconfigure(0, weight=2)
             self.options_frame.columnconfigure(1, weight=2)
@@ -245,10 +245,10 @@ def start_simulation(window, points=None, oil_sources=None):
             self.options_frame.columnconfigure(4, weight=1)
             self.options_frame.columnconfigure(5, weight=1)
 
-            interval_frame = create_frame(self.options_frame, 0, 0, 1, 1, tk.N + tk.S, 5, 5)
-            oil_added_frame = create_frame(self.options_frame, 0, 2, 1, 1, tk.N + tk.S, 5, 5)
-            minimal_oil_value_to_show_frame = create_frame(self.options_frame, 0, 3, 1, 1, tk.N + tk.S, 5, 5)
-            start_stop_frame = create_frame(self.options_frame, 0, 4, 1, 2, tk.N + tk.S, 5, 5)
+            interval_frame = create_frame(self.options_frame, 0, 0, 1, 1, tk.N + tk.S, 3, 3)
+            oil_added_frame = create_frame(self.options_frame, 0, 1, 1, 1, tk.N + tk.S, 3, 3)
+            minimal_oil_value_to_show_frame = create_frame(self.options_frame, 0, 2, 1, 1, tk.N + tk.S, 3, 3)
+            start_stop_frame = create_frame(self.options_frame, 0, 3, 1, 2, tk.N + tk.S + tk.E, 3, 3)
 
             create_label_pack(interval_frame, "Interval of changes [s]")
             create_label_pack(oil_added_frame, "Oil added on click [kg]")
@@ -265,8 +265,11 @@ def start_simulation(window, points=None, oil_sources=None):
 
             create_label_pack(minimal_oil_value_to_show_frame, "Minimal oil value to show [kg]")
 
-            self.btn_start_stop = tk.Button(start_stop_frame, text="Start", width=10, command=self.toggle_start_stop)
+            self.btn_start_stop = tk.Button(start_stop_frame, text="Start", width=15, command=self.toggle_start_stop)
             self.btn_start_stop.pack(side=tk.TOP, padx=5, pady=5)
+
+            self.btn_save_checkpoint = tk.Button(start_stop_frame, text="Save checkpoint", width=15, command=self.save_checkpoint)
+            self.btn_save_checkpoint.pack(side=tk.TOP, padx=5, pady=5)
 
             self.text_interval = create_input_entry_pack(interval_frame, 10, str(self.interval / 1000),
                                                          self.validate_interval)
@@ -276,7 +279,7 @@ def start_simulation(window, points=None, oil_sources=None):
                                                                  str(self.minimal_oil_to_show),
                                                                  self.validate_minimal_oil_to_show)
 
-            self.infoboxes_frame = create_frame(window, 0, 1, 1, 1, tk.N + tk.S + tk.E, 5, 5)
+            self.infoboxes_frame = create_frame(window, 0, 1, 1, 1, tk.N + tk.S + tk.E, 3, 3, relief_style=tk.RAISED)
 
             frame_infoboxes_labels = create_frame(self.infoboxes_frame, 0, 0, 1, 1, tk.N + tk.S + tk.E, 5, 5)
 
@@ -294,7 +297,7 @@ def start_simulation(window, points=None, oil_sources=None):
             self.infobox4_values_label = create_label_pack(frame_infoboxes_values)
             self.infobox5_values_label = create_label_pack(frame_infoboxes_values, "1.0")
 
-            self.bottom_frame = create_frame(window, 1, 0, 1, 2, tk.N + tk.S, 5, 5)
+            self.bottom_frame = create_frame(window, 1, 0, 1, 2, tk.N + tk.S, 3, 3, relief_style=tk.RAISED)
 
             create_label_pack(self.bottom_frame, "Simulation finished!")
             self.bottom_frame.grid_remove()
@@ -348,10 +351,12 @@ def start_simulation(window, points=None, oil_sources=None):
             if self.is_running:
                 self.stop_image_changes()
                 self.set_oil_spill_on_off.config(state=NORMAL)
+                self.btn_save_checkpoint.config(state=NORMAL)
             else:
                 self.start_image_changes()
                 self.set_oil_spill_on_off.deselect()
                 self.set_oil_spill_on_off.config(state=DISABLED)
+                self.btn_save_checkpoint.config(state=DISABLED)
                 self.oil_spill_on_bool = False
 
         def start_image_changes(self):
@@ -422,6 +427,10 @@ def start_simulation(window, points=None, oil_sources=None):
 
         def oil_spill_on_off(self):
             self.oil_spill_on_bool = not self.oil_spill_on_bool
+
+        def save_checkpoint(self):
+            engine.save_checkpoint(self.curr_iter, True)
+
 
     # TODO: what if user already data has been processed?
     #  maybe interface for choosing already processed data?
