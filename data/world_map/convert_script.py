@@ -4,7 +4,10 @@ from PIL import Image
 import numpy as np
 
 DATA_PATH = 'data/world_map/original'
+SCALE_PATH = 'data/world_map/scaled'
 SAVE_PATH = 'data/world_map'
+
+SCALE_FACTOR = 6 
 
 
 def get_save_file_name(original_path):
@@ -21,13 +24,24 @@ def convert_tif_to_binary(file_path):
        f.write(binary_bytes)
 
 
+def get_tif_file_path():
+    return DATA_PATH if SCALE_FACTOR == 1 else SCALE_PATH
+
 if __name__ == '__main__':
     Image.MAX_IMAGE_PIXELS = 999999999
     
     for file in os.listdir(DATA_PATH):
-        if file.endswith('.tifx'):
-            file = os.path.join(DATA_PATH, file)
-            print(f'Converting {file}...')
-            convert_tif_to_binary(file)
-            print(f'Converted {file} -> {get_save_file_name(file)}')
+        print(f'Processing {file}...')
+        if not file.endswith('.tif'): 
+            continue
+        if SCALE_FACTOR > 1:
+            print(f'Scaling {file} by {SCALE_FACTOR}...')
+            img = Image.open(os.path.join(DATA_PATH, file))
+            img = img.resize((img.width // SCALE_FACTOR, img.height // SCALE_FACTOR), Image.ANTIALIAS)
+            img.save(os.path.join(SCALE_PATH, file))
+            print(f'Scaled {file} by {SCALE_FACTOR} -> size {img.width}x{img.height}')
+        file_path = os.path.join(get_tif_file_path(), file)
+        print(f'Converting {file}...')
+        convert_tif_to_binary(file_path)
+        print(f'Converted {file} -> {get_save_file_name(file)}')
             

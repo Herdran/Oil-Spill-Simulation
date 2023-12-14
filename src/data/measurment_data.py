@@ -27,11 +27,11 @@ Temperature = float
 Value of temperature in kelvins
 '''
 
-def avrage_measurment(measurments: list[float], weights: float) -> list[float]:
-    return np.average(measurments, weights=weights)
+def average_measurement(measurements: list[float], weights: float) -> list[float]:
+    return np.average(measurements, weights=weights)
 
 @dataclass
-class SpeedMeasure():
+class SpeedMeasure:
     speed_north: float  # m/s
     speed_east: float   # m/s
     
@@ -43,10 +43,10 @@ class SpeedMeasure():
         )
     
     @staticmethod
-    def from_average(measurments: 'SpeedMeasure', weights: float) -> 'SpeedMeasure':
+    def from_average(measurements: 'SpeedMeasure', weights: float) -> 'SpeedMeasure':
         return SpeedMeasure(
-            speed_north = avrage_measurment([measurment.speed_north for measurment in measurments], weights),
-            speed_east = avrage_measurment([measurment.speed_east for measurment in measurments], weights)
+            speed_north = average_measurement([measurement.speed_north for measurement in measurements], weights),
+            speed_east = average_measurement([measurement.speed_east for measurement in measurements], weights)
         )
         
     def __getitem__(self, index: int) -> float:
@@ -66,14 +66,14 @@ class SpeedMeasure():
 
 
 @dataclass
-class Measurment:
+class Measurement:
     wind: Optional[SpeedMeasure]
     current: Optional[SpeedMeasure]
     temperature: Optional[Temperature]
 
 
 @dataclass
-class CertainMeasurment:
+class CertainMeasurement:
     wind: SpeedMeasure
     current: SpeedMeasure
     temperature: Temperature

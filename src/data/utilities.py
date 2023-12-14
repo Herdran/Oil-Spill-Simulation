@@ -1,5 +1,6 @@
 from enum import Enum
 from math import atan2, degrees, sqrt
+from math import acos, cos, radians, sin
 from typing import Callable, Optional
 
 from data.measurment_data import CoordinatesBase, Coordinates, Temperature
@@ -14,7 +15,17 @@ def minutes(time_delta: pd.Timedelta) -> float:
     SECONDS_IN_MINUTE = 60
     return time_delta.total_seconds() / SECONDS_IN_MINUTE
 
-def dataframe_replace_applay(dataframe: pd.DataFrame, result_columns: list[str], function: Callable, columns: list[str]):
+def great_circle_distance(first: Coordinates, second: Coordinates) -> float:
+    lon1, lat1, lon2, lat2 = map(
+        radians, [first.longitude, first.latitude, second.longitude, second.latitude])
+
+    RADIUS = 6371
+    return RADIUS * (
+        acos(sin(lat1) * sin(lat2) + cos(lat1)
+             * cos(lat2) * cos(lon1 - lon2))
+    )
+
+def dataframe_replace_apply(dataframe: pd.DataFrame, result_columns: list[str], function: Callable, columns: list[str]):
     def is_any_nan(row: pd.Series) -> bool:
         return any([pd.isna(row[column]) for column in columns])
 
@@ -44,27 +55,33 @@ def or_default(value: Optional[object], default: object) -> object:
         return default
     return value
 
-KELVIN_CONSTATNT = 273.15
+KELVIN_CONSTANT = 273.15
 
 def celcius_to_kelvins(celcius: float) -> Temperature:
-    return celcius + KELVIN_CONSTATNT
+    return celcius + KELVIN_CONSTANT
 
 def kelvins_to_celsius(kelvins: Temperature) -> float:
-    return kelvins - KELVIN_CONSTATNT
+    return kelvins - KELVIN_CONSTANT
 
 def round_values(arr: np.array):
-    DATA_FLOAT_PRECISSION = 5
-    return np.round(arr, DATA_FLOAT_PRECISSION)
-  
+    DATA_FLOAT_PRECISION = 5
+    return np.round(arr, DATA_FLOAT_PRECISION)
+
 LONGITUDE_OFFSET = 180.0
 LATITUDE_OFFSET = 90.0
 LONGITUDE_RANGE = 360.0
 LATITUDE_RANGE = 180.0
-    
+
 def project_coordinates(coordinates: Coordinates, width: int, height: int) -> CoordinatesBase[int]:
     lon = (coordinates.longitude + LONGITUDE_OFFSET) * (width / LONGITUDE_RANGE)
     lat = (-coordinates.latitude + LATITUDE_OFFSET) * (height / LATITUDE_RANGE)
     return CoordinatesBase[int](int(lat), int(lon))
+
+def project_coordinates_reverse(coordinates: tuple[float, float], width: int, height: int) -> tuple[float, float]:
+    lon = coordinates[1] / (width / LONGITUDE_RANGE) - LONGITUDE_OFFSET
+    lat = -(coordinates[0] / (height / LATITUDE_RANGE) - LATITUDE_OFFSET)
+
+    return lat, lon
 
 def project_coordinates_raw(lat: float, lon: float, width: int, height: int) -> (int, int):
     x = (lon + LONGITUDE_OFFSET) * (width / LONGITUDE_RANGE)

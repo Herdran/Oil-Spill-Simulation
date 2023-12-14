@@ -2,7 +2,7 @@ import os
 import bitarray
 
 def get_binary_files() -> list:
-    DATA_PATH = 'data/world_map/bin'
+    DATA_PATH = 'data/world_map/scaled_bin'
     files = []    
     for file in os.listdir(DATA_PATH):
         if file.endswith('.bin'):
@@ -40,7 +40,7 @@ if __name__ == "__main__":
                     bit_index = (row * SIDE_COUNT) + col
                     result_binary.append(binaries[image_index][bit_index])
                     
-    RESULT_PATH = "data/world_map/full_world_map.bin"
+    RESULT_PATH = "data/world_map/scaled_world_map.bin"
     with open(RESULT_PATH, 'wb') as file:
         result_binary.tofile(file)
    
