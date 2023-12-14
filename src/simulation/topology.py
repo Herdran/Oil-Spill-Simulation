@@ -1,35 +1,31 @@
 from logging import getLogger
-from typing import Set
+from typing import Set, List, Tuple, Any
 from os import PathLike, path
 from itertools import product
 from zipfile import ZipFile
 
 import numpy as np
 import numpy.typing as npt
+from numpy import ndarray
 
 from simulation.point import Coord_t
 from data.measurment_data import Coordinates, CoordinatesBase
-from data.utilities import project_coordinates
-from constatnts import Constants as const
-from files import get_binary_world_map_path, get_binary_world_map_zip_path, get_unzipped_world_map_dir_path
-
+from data.utilities import project_coordinates, project_coordinates_reverse
+from initial_values import InitialValues
+from files import get_binary_world_map_path, get_binary_world_map_zip_path, get_unzipped_world_map_dir_path, \
+    get_binary_world_scaled_map_path
 
 BinaryMap = npt.ArrayLike
-
-
-BINARY_MAP_WIDTH = 86400
-BINARY_MAP_HEIGHT = 43200
-
 
 logger = getLogger("topology")
 
 
-def load_binary_from_file(path_to_world_map: PathLike) -> BinaryMap:
+def _load_binary_from_file(path_to_world_map: PathLike) -> BinaryMap:
     map_bytes = np.fromfile(path_to_world_map, dtype='uint8')
     return np.unpackbits(map_bytes)
 
 
-def unzip_world_map():
+def _unzip_world_map():
     logger.info("Unzipping world map")
     output_dir = get_unzipped_world_map_dir_path()
     
@@ -43,41 +39,91 @@ def unzip_world_map():
     logger.info("World map has been unzipped successfully and saved to %s", output_dir)
 
 
-def get_binary_map_path() -> BinaryMap:
+def _get_binary_map() -> BinaryMap:
     binary_map_path = get_binary_world_map_path()
     if not path.exists(binary_map_path):
-        unzip_world_map()    
-    return load_binary_from_file(binary_map_path)
+        _unzip_world_map()
+    return _load_binary_from_file(binary_map_path)
 
 
-def get_top_left_offset() -> CoordinatesBase[int]:
+def get_binary_scaled_map() -> BinaryMap:
+    binary_map_path = get_binary_world_scaled_map_path()
+    if not path.exists(binary_map_path):
+        _unzip_world_map()
+    return _load_binary_from_file(binary_map_path)
+
+
+def _get_top_left_offset() -> CoordinatesBase[int]:
     top_left = Coordinates(
-        latitude  = const.simulation_initial_parameters.area.max.latitude,
-        longitude = const.simulation_initial_parameters.area.min.longitude
+        latitude  = InitialValues.simulation_initial_parameters.area.max.latitude,
+        longitude = InitialValues.simulation_initial_parameters.area.min.longitude
     )        
-    return project_coordinates(top_left, BINARY_MAP_WIDTH, BINARY_MAP_HEIGHT)
+    return project_coordinates(top_left, InitialValues.BINARY_MAP_WIDTH, InitialValues.BINARY_MAP_HEIGHT)
 
 
-def is_land(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], x: int, y: int) -> bool:
+def _is_land(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int], x: int, y: int) -> bool:
     bin_x = top_left_offset.longitude + x
     bin_y = top_left_offset.latitude + y   
-    index = (bin_y * BINARY_MAP_WIDTH) + bin_x
+    index = (bin_y * InitialValues.BINARY_MAP_WIDTH) + bin_x
     return binary_map[index] == 0
 
 
-def get_cartesian_product_range() -> product:
-    return product(range(const.point_side_count), range(const.point_side_count))
+def _get_cartesian_product_range() -> product:
+    return product(range(InitialValues.point_side_count), range(InitialValues.point_side_count))
 
 
-def get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int]) -> Set[Coord_t]:
+def _get_lands_set(binary_map: BinaryMap, top_left_offset: CoordinatesBase[int]) -> tuple[set[tuple[Any, Any]], ndarray, ndarray]:
     logger.debug("STATED: Loading lands set")
     lands = set()
-    for x, y in get_cartesian_product_range():
-        if is_land(binary_map, top_left_offset, x, y):
+
+    x_indices = []
+    y_indices = []
+
+    for x, y in _get_cartesian_product_range():
+        if _is_land(binary_map, top_left_offset, x, y):
             lands.add((x, y))
+            x_indices.append(x)
+            y_indices.append(y)
+
+    x_indices = np.array(x_indices, dtype=int)
+    y_indices = np.array(y_indices, dtype=int)
+
     logger.debug("FINISHED: Loading lands set")
-    return lands
+    return lands, x_indices, y_indices
 
 
-def load_topography() -> Set[Coord_t]:        
-    return get_lands_set(get_binary_map_path(), get_top_left_offset())
+def load_topography() -> tuple[set[tuple[Any, Any]], ndarray, ndarray]:
+    return _get_lands_set(_get_binary_map(), _get_top_left_offset())
+
+
+def project_coordinates_oil_sources_to_simulation(coord: List[float]):
+    coord = Coordinates(
+        latitude=coord[0],
+        longitude=coord[1]
+    )
+    coordinates = project_coordinates(coord, InitialValues.BINARY_MAP_WIDTH, InitialValues.BINARY_MAP_HEIGHT)
+
+    lon = coordinates.longitude
+    lat = coordinates.latitude
+
+    top_left_offset = _get_top_left_offset()
+
+    lon_top_left, lat_top_left = top_left_offset.longitude, top_left_offset.latitude
+
+    return int(lat) - int(lat_top_left), int(lon) - int(lon_top_left)
+    # TODO finish after merging with points_count
+
+
+def project_coordinates_oil_sources_from_simulation(coord: Tuple[int, int]):
+    lat, lon = coord[0], coord[1]
+
+    top_left_offset = _get_top_left_offset()
+
+    lon_top_left, lat_top_left = top_left_offset.longitude, top_left_offset.latitude
+
+    lat += lat_top_left
+    lon += lon_top_left
+
+    coordinates = project_coordinates_reverse((lat, lon), InitialValues.BINARY_MAP_WIDTH, InitialValues.BINARY_MAP_HEIGHT)
+
+    return round(coordinates[0], 4), round(coordinates[1], 4)

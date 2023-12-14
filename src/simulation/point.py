@@ -1,11 +1,11 @@
-from enum import Enum
 from typing import Tuple
+from enum import Enum
 
 import numpy as np
 import pandas as pd
 from numpy import exp, log, sqrt
 
-from constatnts import Constants as const
+from initial_values import InitialValues
 from data.measurment_data import Coordinates
 from simulation.utilities import get_neighbour_coordinates, Neighbourhood, sign
 
@@ -21,126 +21,107 @@ class TopographyState(Enum):
     SEA = 1
 
 
-class InitialValues:
-    def __init__(self, neighbourhood: Neighbourhood = Neighbourhood.MOORE):
-        self.water_density = 997  # [kg/m^3]
-        self.oil_density = 846  # [kg/m^3]
-        self.emulsion_max_content_water = 0.7  # max content of water in the emulsion
-        self.molar_mass = 348.23  # [g/mol] mean
-        self.boiling_point = 609  # [K] mean
-        self.interfacial_tension = 30  # [dyna/cm]
-        self.propagation_factor = 2.5
-        self.c = 10  # parameter dependant of oil type, used in viscosity change
-        self.viscosity_kinematic = 5.3e-6  # [m^2/s]
-        self.viscosity_dynamic = self.viscosity_kinematic * self.oil_density
-        self.emulsification_rate = 0
-        self.neighbourhood = neighbourhood
-
-
 class Point:
     world = dict()
 
-    def __init__(self, coord: Coord_t, initial_values: InitialValues, engine):
-        self.topography = engine.get_topography(coord)
-        self.engine = engine
-        self.coord = coord
+    def __init__(self, coord: Coord_t, engine):
+        self._topography = engine.get_topography(coord)
+        self._engine = engine
+        self._coord = coord  # world coordinates
         x, y = coord
-        self.coordinates = Coordinates(latitude=const.point_lat_centers[y], longitude=const.point_lon_centers[x])
-        self.weather_station_coordinates = engine.data_processor.weather_station_coordinates(self.coordinates)
-        self.wind_velocity = DEFAULT_WIND_VELOCITY
-        self.wave_velocity = DEFAULT_WAVE_VELOCITY
-        self.temperature = DEFAULT_TEMPERATURE
-        self.last_weather_update_time = None
-        self.oil_mass = 0  # [kg]
-        self.initial_values = initial_values
-        self.emulsification_rate = initial_values.emulsification_rate
-        self.data_processor = engine.data_processor
-        self.viscosity_dynamic = self.initial_values.viscosity_dynamic  # [Pa*s]
+        self._coordinates = Coordinates(latitude=InitialValues.point_lat_centers[y], longitude=InitialValues.point_lon_centers[x])
+        self._weather_station_coordinates = engine.data_processor.weather_station_coordinates(self._coordinates)
+        self._wind_velocity = DEFAULT_WIND_VELOCITY
+        self._wave_velocity = DEFAULT_WAVE_VELOCITY
+        self._temperature = DEFAULT_TEMPERATURE
+        self._last_weather_update_time = None
+        self._oil_mass = 0  # [kg]
+        self._emulsification_rate = InitialValues.emulsification_rate
+        self._data_processor = engine.data_processor
+        self._viscosity_dynamic = InitialValues.viscosity_dynamic  # [Pa*s]
         self.oil_buffer = []  # contains tuples (mass, viscosity, emulsification_rate)
-        self.advection_buffer = np.array([0, 0], dtype='float64')
-        self.evaporation_rate = 0
+        self._evaporation_rate = 0
 
     def contain_oil(self) -> bool:
-        # TODO dynamic value based on point area
-        return self.oil_mass > 1
+        return self.slick_thickness() > InitialValues.min_oil_thickness
 
     def add_oil(self, mass: float) -> None:
         # maybe initial emulsification rate will be changed
-        self.emulsification_rate = (self.oil_mass * self.emulsification_rate +
-                                    mass * self.initial_values.emulsification_rate) / (self.oil_mass + mass)
-        self.viscosity_dynamic = (
-                (self.oil_mass * self.viscosity_dynamic + mass * self.initial_values.viscosity_dynamic) / (
-                self.oil_mass + mass))
-        self.oil_mass += mass
+        self._emulsification_rate = (self._oil_mass * self._emulsification_rate +
+                                     mass * InitialValues.emulsification_rate) / (self._oil_mass + mass)
+        self._viscosity_dynamic = (
+                (self._oil_mass * self._viscosity_dynamic + mass * InitialValues.viscosity_dynamic) / (
+                self._oil_mass + mass))
+        self._oil_mass += mass
 
-    def should_update_weather_data(self, time_delta: pd.Timedelta) -> bool:
-        return (self.last_weather_update_time is None
-                or self.data_processor.should_update_data(time_delta - self.last_weather_update_time))
+    def _should_update_weather_data(self, time_delta: pd.Timedelta) -> bool:
+        return (self._last_weather_update_time is None
+                or self._data_processor.should_update_data(time_delta - self._last_weather_update_time))
 
-    def update_weather_data(self) -> None:
-        time_delta = pd.Timedelta(seconds=int(self.engine.total_time))
-        if self.should_update_weather_data(time_delta):
-            time_stamp = const.simulation_initial_parameters.time.min + time_delta
-            measurment = self.data_processor.get_measurment(self.coordinates, self.weather_station_coordinates,
-                                                            time_stamp)
-            self.wave_velocity = measurment.current.to_numpy()
-            self.wind_velocity = measurment.wind.to_numpy()
-            self.temperature = measurment.temperature
-            self.last_weather_update_time = time_delta
-
-    def update(self, delta_time: float) -> None:
-        self.update_weather_data()
-        if self.topography == TopographyState.LAND:
-            self.process_seashore_interaction(delta_time)
+    def _update_weather_data(self) -> None:
+        time_delta = pd.Timedelta(seconds=int(self._engine.total_time))
+        if not self._should_update_weather_data(time_delta):
             return
-        delta_y = self.process_emulsification(delta_time)
-        delta_f = self.process_evaporation(delta_time)
-        self.process_natural_dispersion(delta_time)
-        self.viscosity_change(delta_f, delta_y)
+        time_stamp = InitialValues.simulation_initial_parameters.time.min + time_delta
+        measurement = self._data_processor.get_measurement(self._coordinates, self._weather_station_coordinates,
+                                                          time_stamp)
+        self._wave_velocity = measurement.current.to_numpy()
+        self._wind_velocity = measurement.wind.to_numpy()
+        self._temperature = measurement.temperature
+        self._last_weather_update_time = time_delta
+
+    def update(self) -> None:
+        self._update_weather_data()
+        if self._topography == TopographyState.LAND:
+            self._process_seashore_interaction()
+            return
+        delta_y = self._process_emulsification()
+        delta_f = self._process_evaporation()
+        self._process_natural_dispersion()
+        self._viscosity_change(delta_f, delta_y)
 
         # to na końcu na pewno
-        self.process_advection(delta_time)
+        self._process_advection()
 
-    def process_emulsification(self, delta_time: float) -> float:
+    def _process_emulsification(self) -> float:
         K = 5.0e-7
-        old_emulsification_rate = self.emulsification_rate
-        self.emulsification_rate += delta_time * K * (
-                ((np.linalg.norm(self.wind_velocity) + 1) ** 2) * (
-                1 - self.emulsification_rate / self.initial_values.emulsion_max_content_water))
-        if self.emulsification_rate > self.initial_values.emulsion_max_content_water:
-            self.emulsification_rate = self.initial_values.emulsion_max_content_water
-        return self.emulsification_rate - old_emulsification_rate
+        old_emulsification_rate = self._emulsification_rate
+        self._emulsification_rate += InitialValues.iter_as_sec * K * (
+                ((np.linalg.norm(self._wind_velocity) + 1) ** 2) * (
+                1 - self._emulsification_rate / InitialValues.emulsion_max_content_water))
+        if self._emulsification_rate > InitialValues.emulsion_max_content_water:
+            self._emulsification_rate = InitialValues.emulsion_max_content_water
+        return self._emulsification_rate - old_emulsification_rate
 
-    def process_evaporation(self, delta_time: float) -> float:
+    def _process_evaporation(self) -> float:
         K = 1.25e-3
-        P = 1000 * exp(-(4.4 + log(self.initial_values.boiling_point)) * (
-                1.803 * (self.initial_values.boiling_point / self.temperature - 1) - 0.803 * log(
-            self.initial_values.boiling_point / self.temperature)))  # [Pa]
+        P = 1000 * exp(-(4.4 + log(InitialValues.boiling_point)) * (
+                1.803 * (InitialValues.boiling_point / self._temperature - 1) - 0.803 * log(
+            InitialValues.boiling_point / self._temperature)))  # [Pa]
         R = 8.314  # [J/(mol*K)]
 
-        self.evaporation_rate = (K * (self.initial_values.molar_mass / 1000) * P) / (R * self.temperature)
-        delta_mass = -1 * min(delta_time * const.point_side_size * const.point_side_size * self.evaporation_rate,
-                              self.oil_mass)
-        delta_f = -delta_mass / self.oil_mass
-        self.oil_mass += delta_mass
+        self._evaporation_rate = (K * (InitialValues.molar_mass / 1000) * P) / (R * self._temperature)
+        delta_mass = -1 * min(InitialValues.iter_as_sec * InitialValues.point_side_size * InitialValues.point_side_size * self._evaporation_rate,
+                              self._oil_mass)
+        delta_f = -delta_mass / self._oil_mass
+        self._oil_mass += delta_mass
         return delta_f
 
-    def process_seashore_interaction(self, delta_time: float) -> None:
+    def _process_seashore_interaction(self) -> None:
         half_time = 3600 * 24  # 24h for sand beach / sand and gravel beach
-        delta_mass = log(2) * self.oil_mass * delta_time / half_time
-        self.oil_mass -= delta_mass
+        delta_mass = log(2) * self._oil_mass * InitialValues.iter_as_sec / half_time
+        self._oil_mass -= delta_mass
         to_share = []
-        (x, y) = self.coord
+        (x, y) = self._coord
 
-        neighbours = get_neighbour_coordinates(x, y, self.initial_values.neighbourhood)
+        neighbours = get_neighbour_coordinates(x, y, InitialValues.neighbourhood)
         for cords in neighbours:
-            if not ((0 <= cords[0] < const.point_side_count) and (0 <= cords[1] < const.point_side_count)):
+            if not ((0 <= cords[0] < InitialValues.point_side_count) and (0 <= cords[1] < InitialValues.point_side_count)):
                 continue
-            if cords in self.engine.lands:
+            if self._engine.get_topography(cords) == TopographyState.LAND:
                 continue
             if cords not in self.world:
-                self.world[cords] = Point(cords, self.initial_values, self.engine)
-                self.engine.points_changed.append(cords)
+                self.world[cords] = Point(cords, self._engine)
             to_share.append(self.world[cords])
         if len(to_share) == 0:  # in case of bug
             return
@@ -148,8 +129,8 @@ class Point:
         for neighbor in to_share:
             neighbor.oil_mass += delta_mass
 
-    def advection_land_collision(self, advection_vector: Tuple[float, float]) -> Tuple[int, int, Tuple[float, float]]:
-        x, y = self.coord
+    def _advection_land_collision(self, advection_vector: Tuple[float, float]) -> Tuple[int, int, Tuple[float, float]]:
+        x, y = self._coord
         next_x = x + int(advection_vector[0])
         next_y = y + int(advection_vector[1])
         for i in range(1, int(max(map(abs, advection_vector)))):
@@ -158,22 +139,22 @@ class Point:
                 crossing_point = (x + i * sign(advection_x), y + round(i * advection_y / abs(advection_x)))
             else:
                 crossing_point = (round(x + i * advection_x / abs(advection_y)), y + i * sign(advection_y))
-            if self.engine.get_topography(crossing_point) == TopographyState.LAND:
+            if self._engine.get_topography(crossing_point) == TopographyState.LAND:
                 next_x, next_y = map(int, crossing_point)
                 advection_vector = (0, 0)  # so it's not going through land in the next step
                 break
         return next_x, next_y, advection_vector
 
-    def process_advection(self, delta_time: float) -> None:
+    def _process_advection(self) -> None:
         ALPHA = 1.1
         BETA = 0.03
 
-        delta_r = (ALPHA * self.wave_velocity + BETA * self.wind_velocity) * delta_time
-        delta_r /= const.point_side_size
+        delta_r = (ALPHA * self._wave_velocity + BETA * self._wind_velocity) * InitialValues.iter_as_sec
+        delta_r /= InitialValues.point_side_size
         advection_vector = (delta_r[1], -delta_r[0])
 
         # check if there is a land between current and next point
-        next_x, next_y, advection_vector = self.advection_land_collision(advection_vector)
+        next_x, next_y, advection_vector = self._advection_land_collision(advection_vector)
 
         fractional_part_x = (abs(advection_vector[0]) % 1) * sign(advection_vector[0])
         fractional_part_y = (abs(advection_vector[1]) % 1) * sign(advection_vector[1])
@@ -183,54 +164,118 @@ class Point:
         areas = [abs(fractional_part_y) * (1 - abs(fractional_part_x)),
                  abs(fractional_part_x) * (1 - abs(fractional_part_y)),
                  abs(fractional_part_x * fractional_part_y)]
-        if self.initial_values.neighbourhood == Neighbourhood.VON_NEUMANN:
+        if InitialValues.neighbourhood == Neighbourhood.VON_NEUMANN:
             neighbours.pop()
             area_to_split = areas.pop()
             if sum(areas) > 0:
                 areas[0] += area_to_split * areas[0] / sum(areas)
                 areas[1] += area_to_split * areas[1] / sum(areas)
-        oil_mass = self.oil_mass
+        oil_mass = self._oil_mass
         for neighbour, area in zip(neighbours, areas):
             self.move_oil_to_other(neighbour, oil_mass * area)
 
-        if (next_x, next_y) != self.coord:
-            self.move_oil_to_other((next_x, next_y), self.oil_mass)
+        if (next_x, next_y) != self._coord:
+            self.move_oil_to_other((next_x, next_y), self._oil_mass)
 
-    def process_natural_dispersion(self, delta_time: float) -> None:
-        Da = 0.11 * (np.linalg.norm(self.wind_velocity) + 1) ** 2
-        interfacial_tension = self.initial_values.interfacial_tension * (1 + self.evaporation_rate)
+    def _process_natural_dispersion(self) -> None:
+        Da = 0.11 * (np.linalg.norm(self._wind_velocity) + 1) ** 2
+        interfacial_tension = InitialValues.interfacial_tension * (1 + self._evaporation_rate)
         # multiply viscosity by 100 to convert from Pa*s to cPa*s
-        Db = 1 / (1 + 50 * sqrt(self.viscosity_dynamic * 100) * self.slick_thickness() * interfacial_tension)
-        self.oil_mass -= self.oil_mass * Da * Db / (3600 * delta_time)
+        Db = 1 / (1 + 50 * sqrt(self._viscosity_dynamic * 100) * self.slick_thickness() * interfacial_tension)
+        self._oil_mass -= self._oil_mass * Da * Db / (3600 * InitialValues.iter_as_sec)
 
     def slick_thickness(self) -> float:
-        thickness = (self.oil_mass / self.initial_values.oil_density) / (const.point_side_size ** 2)  # [m]
-        return thickness / 100  # [cm]
+        thickness = (self._oil_mass / InitialValues.oil_density) / (InitialValues.point_side_size ** 2)  # [m]
+        return thickness * 100  # [cm]
 
-    def viscosity_change(self, delta_F: float, delta_Y: float) -> None:
-        delta_viscosity = self.initial_values.c * self.viscosity_dynamic * delta_F + (
-                2.5 * self.viscosity_dynamic * delta_Y) / (
-                                  (1 - self.initial_values.emulsion_max_content_water * self.emulsification_rate) ** 2)
-        self.viscosity_dynamic += delta_viscosity
-        if self.oil_mass < 1:
-            self.viscosity_dynamic = self.initial_values.viscosity_dynamic
+    def _viscosity_change(self, delta_F: float, delta_Y: float) -> None:
+        delta_viscosity = InitialValues.c * self._viscosity_dynamic * delta_F + (
+                2.5 * self._viscosity_dynamic * delta_Y) / (
+                (1 - InitialValues.emulsion_max_content_water * self._emulsification_rate) ** 2)
+        self._viscosity_dynamic += delta_viscosity
+        if self._oil_mass < 1:
+            self._viscosity_dynamic = InitialValues.viscosity_dynamic
 
     def pour_from_buffer(self):
-        oil_mass = sum([tup[0] for tup in self.oil_buffer]) + self.oil_mass
+        oil_mass = sum([tup[0] for tup in self.oil_buffer]) + self._oil_mass
         if oil_mass < 1:
             return
-        self.viscosity_dynamic = (sum([tup[0] * tup[1] for tup in
-                                       self.oil_buffer]) + self.oil_mass * self.viscosity_dynamic) / oil_mass
-        self.emulsification_rate = (sum([tup[0] * tup[2] for tup in
-                                         self.oil_buffer]) + self.oil_mass * self.emulsification_rate) / oil_mass
+        self._viscosity_dynamic = (sum([tup[0] * tup[1] for tup in
+                                        self.oil_buffer]) + self._oil_mass * self._viscosity_dynamic) / oil_mass
+        self._emulsification_rate = (sum([tup[0] * tup[2] for tup in
+                                          self.oil_buffer]) + self._oil_mass * self._emulsification_rate) / oil_mass
         self.oil_buffer = []
-        self.oil_mass = oil_mass
+        self._oil_mass = oil_mass
 
     def move_oil_to_other(self, coord: Coord_t, mass: float) -> None:
-        self.oil_mass -= mass
-        if not (0 <= coord[0] < const.point_side_count and 0 <= coord[1] < const.point_side_count):
+        self._oil_mass -= mass
+        if not (0 <= coord[0] < InitialValues.point_side_count and 0 <= coord[1] < InitialValues.point_side_count):
             return
         if coord not in self.world:
-            self.world[coord] = Point(coord, self.initial_values, self.engine)
-            self.engine.points_changed.append(coord)
-        self.world[coord].oil_buffer.append((mass, self.viscosity_dynamic, self.emulsification_rate))
+            self.world[coord] = Point(coord, self._engine)
+        self.world[coord].oil_buffer.append((mass, self._viscosity_dynamic, self._emulsification_rate))
+
+    @property
+    def oil_mass(self) -> float:
+        return self._oil_mass
+
+    @oil_mass.setter
+    def oil_mass(self, value: float) -> None:
+        if value < 0:
+            self._oil_mass = 0
+            return
+        self._oil_mass = value
+
+    @property
+    def viscosity_dynamic(self) -> float:
+        return self._viscosity_dynamic
+
+    @viscosity_dynamic.setter
+    def viscosity_dynamic(self, value: float) -> None:
+        if not 0 < value < 10:
+            raise ValueError("Viscosity value is strange")
+        self._viscosity_dynamic = value
+
+    @property
+    def coord(self) -> Coord_t:
+        return self._coord
+
+    @property
+    def emulsification_rate(self) -> float:
+        return self._emulsification_rate
+
+    @emulsification_rate.setter
+    def emulsification_rate(self, value: float) -> None:
+        if not 0 <= value <= 1:
+            raise ValueError("Emulsification rate should be between 0 and 1")
+        self._emulsification_rate = value
+
+    @property
+    def temperature(self) -> float:
+        return self._temperature
+
+    @property
+    def wave_velocity(self) -> np.ndarray:
+        return self._wave_velocity
+
+    @property
+    def wind_velocity(self) -> np.ndarray:
+        return self._wind_velocity
+
+    @property
+    def coordinates(self) -> Coordinates:
+        return self._coordinates
+
+    @property
+    def evaporation_rate(self) -> float:
+        return self._evaporation_rate
+
+    @evaporation_rate.setter
+    def evaporation_rate(self, value: float) -> None:
+        if not 0 <= value <= 1:
+            raise ValueError("Evaporation rate should be between 0 and 1")
+        self._evaporation_rate = value
+
+    @property
+    def topography(self) -> TopographyState:
+        return self._topography
