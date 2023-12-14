@@ -6,16 +6,17 @@ import pandas as pd
 
 from files import get_main_path
 from initial_values import InitialValues
-from simulation.point import Point, Coord_t
-from simulation.topology import project_coordinates_oil_sources_from_simulation
+from simulation.point import Point, Coord_t, get_coordinate
+from simulation.topology import project_binary_map_coordinates_raw
 
 
 def _point_to_dict(point: Point) -> Dict[str, any]:
+    coordinate = get_coordinate(point.coord)
     return {
         "coord": point.coord,
         "coordinates": {
-            "latitude": point.coordinates.latitude,
-            "longitude": point.coordinates.longitude
+            "latitude": coordinate.latitude,
+            "longitude": coordinate.longitude
         },
         "oil_mass": point.oil_mass,
         "evaporation_rate": point.evaporation_rate,
@@ -26,7 +27,7 @@ def _point_to_dict(point: Point) -> Dict[str, any]:
 
 def _oil_source_to_dict(source: Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]) -> Dict[str, any]:
     return {
-        "coord": project_coordinates_oil_sources_from_simulation(source[0]),
+        "coord": project_binary_map_coordinates_raw(source[0][0], source[0][1]),
         "mass_per_minute": source[1],
         "spill_start": str(source[2]),
         "spill_end": str(source[3])
@@ -35,7 +36,7 @@ def _oil_source_to_dict(source: Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp])
 
 def save_to_json(world: Dict[Coord_t, Point], total_time: int, curr_iter: int, constant_sources: List[Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]]) -> None:
     timestamp = time.strftime("%Y_%m_%d-%H_%M_%S")
-    path = get_main_path().joinpath(f"checkpoints/checkpoint_{timestamp}_iteration{curr_iter}.json")
+    path = get_main_path().joinpath(f"checkpoints/checkpoint_{timestamp}_iteration_{curr_iter}.json")
     data = {
         "top_coord": InitialValues.simulation_initial_parameters.area.max.latitude,
         "down_coord": InitialValues.simulation_initial_parameters.area.min.latitude,
@@ -44,8 +45,8 @@ def save_to_json(world: Dict[Coord_t, Point], total_time: int, curr_iter: int, c
         "time_range_start": str(InitialValues.simulation_initial_parameters.time.min),
         "time_range_end": str(InitialValues.simulation_initial_parameters.time.min),
         "data_time_step": int(InitialValues.simulation_initial_parameters.data_time_step.total_seconds() / 60),
-        "cells_side_count_latitude": InitialValues.simulation_initial_parameters.cells_side_count.latitude,
-        "cells_side_count_longitude": InitialValues.simulation_initial_parameters.cells_side_count.longitude,
+        "cells_side_count_latitude": InitialValues.simulation_initial_parameters.interpolation_grid_size.latitude,
+        "cells_side_count_longitude": InitialValues.simulation_initial_parameters.interpolation_grid_size.longitude,
         "point_side_size": InitialValues.point_side_size,
         "iter_as_sec": InitialValues.iter_as_sec,
         "min_oil_thickness": InitialValues.min_oil_thickness,

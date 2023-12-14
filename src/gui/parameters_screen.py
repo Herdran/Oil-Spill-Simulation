@@ -16,6 +16,11 @@ from simulation.utilities import Neighbourhood
 
 
 def start_initial_menu(window):
+    def set_text(input_widget, text):
+        input_widget.delete(0, END)
+        input_widget.insert(0, text)
+        return
+
     class ParametersSettingController(tk.Frame):
         def __init__(self, parent):
             super().__init__(parent)
@@ -26,8 +31,8 @@ def start_initial_menu(window):
             self.time_range_start = str(InitialValues.simulation_initial_parameters.time.min)
             self.time_range_end = str(InitialValues.simulation_initial_parameters.time.max)
             self.data_time_step_minutes = int(InitialValues.simulation_initial_parameters.data_time_step.total_seconds() / 60)
-            self.cells_side_count_latitude = InitialValues.simulation_initial_parameters.cells_side_count.latitude
-            self.cells_side_count_longitude = InitialValues.simulation_initial_parameters.cells_side_count.longitude
+            self.interpolation_grid_size_latitude = InitialValues.simulation_initial_parameters.interpolation_grid_size.latitude
+            self.interpolation_grid_size_longitude = InitialValues.simulation_initial_parameters.interpolation_grid_size.longitude
             self.point_side_size = InitialValues.point_side_size
             self.iter_as_sec = InitialValues.iter_as_sec
             self.min_oil_thickness = InitialValues.min_oil_thickness
@@ -40,8 +45,8 @@ def start_initial_menu(window):
             self.img = None
             self.points_from_checkpoint = None
             self.oil_sources = []
-            self.longitude_oil_source = 0.0
             self.latitude_oil_source = 0.0
+            self.longitude_oil_source = 0.0
             self.mass_per_minute_oil_source = 0.0
             self.spill_start_oil_source = str(InitialValues.simulation_initial_parameters.time.min)
             self.spill_end_oil_source = str(InitialValues.simulation_initial_parameters.time.max)
@@ -691,37 +696,38 @@ def start_initial_menu(window):
                 loaded_parameters = load_from_json(self.checkpoint_path.get())
                 self.set_all_parameters_from_checkpoint(loaded_parameters)
                 self.validate_all_parameters()
+                self.check_all_main_parameters_validity(True)
 
         def set_all_parameters_from_checkpoint(self, loaded_parameters):
-            self.top_coord_input.setvar(str(loaded_parameters["top_coord"]))
+            set_text(self.top_coord_input, str(loaded_parameters["top_coord"]))
             self.top_coord_input.config(state=DISABLED)
-            self.down_coord_input.setvar(str(loaded_parameters["down_coord"]))
+            set_text(self.down_coord_input, str(loaded_parameters["down_coord"]))
             self.down_coord_input.config(state=DISABLED)
-            self.left_coord_input.setvar(str(loaded_parameters["left_coord"]))
+            set_text(self.left_coord_input, str(loaded_parameters["left_coord"]))
             self.left_coord_input.config(state=DISABLED)
-            self.right_coord_input.setvar(str(loaded_parameters["right_coord"]))
+            set_text(self.right_coord_input, str(loaded_parameters["right_coord"]))
             self.right_coord_input.config(state=DISABLED)
-            self.time_range_start_input.setvar(str(loaded_parameters["time_range_start"]))
+            set_text(self.time_range_start_input, str(loaded_parameters["time_range_start"]))
             self.time_range_start_input.config(state=DISABLED)
-            self.time_range_end_input.setvar(str(loaded_parameters["time_range_end"]))
+            set_text(self.time_range_end_input, str(loaded_parameters["time_range_end"]))
             self.time_range_end_input.config(state=DISABLED)
-            self.data_time_step_input.setvar(str(loaded_parameters["data_time_step"]))
+            set_text(self.data_time_step_input, str(loaded_parameters["data_time_step"]))
             self.data_time_step_input.config(state=DISABLED)
-            self.cells_side_count_latitude_input.setvar(str(loaded_parameters["cells_side_count_latitude"]))
-            self.cells_side_count_latitude_input.config(state=DISABLED)
-            self.cells_side_count_longitude_input.setvar(str(loaded_parameters["cells_side_count_longitude"]))
-            self.cells_side_count_longitude_input.config(state=DISABLED)
-            self.point_side_size_input.setvar(str(loaded_parameters["point_side_size"]))
+            set_text(self.interpolation_grid_size_latitude_input, str(loaded_parameters["cells_side_count_latitude"]))
+            self.interpolation_grid_size_latitude_input.config(state=DISABLED)
+            set_text(self.interpolation_grid_size_longitude_input, str(loaded_parameters["cells_side_count_longitude"]))
+            self.interpolation_grid_size_longitude_input.config(state=DISABLED)
+            set_text(self.point_side_size_input, str(loaded_parameters["point_side_size"]))
             self.point_side_size_input.config(state=DISABLED)
-            self.iter_as_sec_input.setvar(str(loaded_parameters["iter_as_sec"]))
+            set_text(self.iter_as_sec_input, str(loaded_parameters["iter_as_sec"]))
             self.iter_as_sec_input.config(state=DISABLED)
-            self.min_oil_thickness_input.setvar(str(loaded_parameters["min_oil_thickness"]))
+            set_text(self.min_oil_thickness_input, str(loaded_parameters["min_oil_thickness"]))
             self.min_oil_thickness_input.config(state=DISABLED)
-            self.oil_viscosity_input.setvar(str(loaded_parameters["oil_viscosity"]))
+            set_text(self.oil_viscosity_input, str(loaded_parameters["oil_viscosity"]))
             self.oil_viscosity_input.config(state=DISABLED)
-            self.oil_density_input.setvar(str(loaded_parameters["oil_density"]))
+            set_text(self.oil_density_input, str(loaded_parameters["oil_density"]))
             self.oil_density_input.config(state=DISABLED)
-            self.checkpoint_frequency_input.setvar(str(loaded_parameters["checkpoint_frequency"]))
+            set_text(self.oil_density_input, str(loaded_parameters["checkpoint_frequency"]))
             self.checkpoint_frequency_input.config(state=DISABLED)
 
             self.total_simulation_time = loaded_parameters["total_simulation_time"]
@@ -755,6 +761,7 @@ def start_initial_menu(window):
             self.spill_end_oil_source_input.config(state=DISABLED)
             self.oil_sources_listbox_insert.config(state=DISABLED)
             self.oil_sources_listbox_delete.config(state=DISABLED)
+
 
         def crop_and_resize_preview_image(self, event=None):
             image_width, image_height = self.loaded_img.size

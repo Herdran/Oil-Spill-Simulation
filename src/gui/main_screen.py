@@ -9,10 +9,10 @@ from PIL import Image, ImageTk
 import simulation.simulation as simulation
 from checkpoints import initialize_points_from_checkpoint
 from color import blend_color
-from initial_values import InitialValues
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from files import get_main_path
 from gui.utilities import get_tooltip_text, create_frame, create_label_pack, create_input_entry_pack
+from initial_values import InitialValues
 
 Image.MAX_IMAGE_PIXELS = 999999999999
 
@@ -437,7 +437,6 @@ def start_simulation(window, points=None, oil_sources=None):
         def save_checkpoint(self):
             engine.save_checkpoint(self.curr_iter, True)
 
-
     # TODO: what if user already data has been processed?
     #  maybe interface for choosing already processed data?
     #  for time saving
@@ -466,7 +465,7 @@ def start_simulation(window, points=None, oil_sources=None):
     sea_color = np.array(InitialValues.SEA_COLOR, dtype=np.uint8)
     land_color = np.array(InitialValues.LAND_COLOR, dtype=np.uint8)
 
-    image_array = np.full((InitialValues.point_side_count, InitialValues.point_side_count, 3), sea_color, dtype=np.uint8)
+    image_array = np.full((InitialValues.point_side_lat_count, InitialValues.point_side_lon_count, 3), sea_color, dtype=np.uint8)
 
     image_array[y_indices, x_indices, :] = land_color
 

@@ -1,14 +1,14 @@
-from typing import Tuple
 from enum import Enum
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
 from numpy import exp, log, sqrt
 
-from initial_values import InitialValues
 from data.measurment_data import Coordinates
-from simulation.utilities import get_neighbour_coordinates, Neighbourhood, sign
 from data.utilities import get_coordinate_from_xy
+from initial_values import InitialValues
+from simulation.utilities import get_neighbour_coordinates, Neighbourhood, sign
 
 DEFAULT_WAVE_VELOCITY = np.array([0.0, 0.0])  # [m/s]
 DEFAULT_WIND_VELOCITY = np.array([0.0, 0.0])  # [m/s]
@@ -43,9 +43,7 @@ class Point:
         self._topography = engine.get_topography(coord)
         self._engine = engine
         self._coord = coord  # world coordinates
-        x, y = coord
-        self._coordinates = Coordinates(latitude=InitialValues.point_lat_centers[y], longitude=InitialValues.point_lon_centers[x])
-        self._weather_station_coordinates = engine.data_processor.weather_station_coordinates(self._coordinates)
+        self.weather_station_coordinates = engine.data_processor.weather_station_coordinates(get_coordinate(coord))
         self._wind_velocity = DEFAULT_WIND_VELOCITY
         self._wave_velocity = DEFAULT_WAVE_VELOCITY
         self._temperature = DEFAULT_TEMPERATURE
@@ -78,8 +76,8 @@ class Point:
         if not self._should_update_weather_data(time_delta):
             return
         time_stamp = InitialValues.simulation_initial_parameters.time.min + time_delta
-        measurement = self._data_processor.get_measurement(self._coordinates, self._weather_station_coordinates,
-                                                          time_stamp)
+        measurement = self._data_processor.get_measurement(get_coordinate(self.coord), self.weather_station_coordinates,
+                                                        time_stamp)
         self._wave_velocity = measurement.current.to_numpy()
         self._wind_velocity = measurement.wind.to_numpy()
         self._temperature = measurement.temperature
@@ -276,10 +274,6 @@ class Point:
     @property
     def wind_velocity(self) -> np.ndarray:
         return self._wind_velocity
-
-    @property
-    def coordinates(self) -> Coordinates:
-        return self._coordinates
 
     @property
     def evaporation_rate(self) -> float:

@@ -1,9 +1,15 @@
+from logging import getLogger
+from math import ceil
+
 import pandas as pd
 
 from data.generic import Range
 from data.measurment_data import Coordinates
-from data.simulation_run_parameters import CellSideCount, SimulationRunParameters
+from data.simulation_run_parameters import Interpolation_grid_size, SimulationRunParameters
+from data.utilities import coordinates_distance
 from simulation.utilities import Neighbourhood
+
+logger = getLogger("constants")
 
 
 class InitialValues:
@@ -18,14 +24,13 @@ class InitialValues:
     PREVIEW_MAP_SCALE = 6
 
     point_side_size: int = 50
-    point_side_count: int = 1000  # TODO to be calculated
     iter_as_sec: int = 20
 
-    point_lat_size: float = None
-    point_lon_size: float = None
+    point_side_lat_count: int = None
+    point_side_lon_count: int = None
 
-    point_lat_centers: list[float] = None
-    point_lon_centers: list[float] = None
+    top_left_coord: Coordinates = None
+    bottom_right_coord: Coordinates = None
 
     simulation_initial_parameters: SimulationRunParameters = SimulationRunParameters(
         area=Range(
@@ -43,7 +48,7 @@ class InitialValues:
             max=pd.Timestamp("2010-04-02 00:00:00"),
         ),
         data_time_step=pd.Timedelta(minutes=30),
-        cells_side_count=CellSideCount(
+        interpolation_grid_size=Interpolation_grid_size(
             latitude=10,
             longitude=10
         ),
@@ -78,8 +83,8 @@ def set_simulation_coordinates_parameters(top_coord: float,
                                           time_range_start: str,
                                           time_range_end: str,
                                           data_time_step: int,
-                                          cells_side_count_latitude: int,
-                                          cells_side_count_longitude: int,
+                                          interpolation_grid_size_latitude: int,
+                                          interpolation_grid_size_longitude: int,
                                           data_path: str,
                                           point_side_size: int,
                                           iter_as_sec: int,
@@ -103,36 +108,42 @@ def set_simulation_coordinates_parameters(top_coord: float,
                 longitude=right_coord
             )
         ),
-        # we need to think about behavior of our application when sim time ends
         time=Range(
             min=pd.Timestamp(time_range_start),
             max=pd.Timestamp(time_range_end),
         ),
         data_time_step=pd.Timedelta(minutes=data_time_step),
-        # how many point we want is how good the interpolation will be
-        # but I guess we don't need many of them as that is the only initial interpolation
-        # and making that initial interpolation is costly at app start
-        # -----
-        # and that cells count is not the same as cells count in simulation!
-        cells_side_count=CellSideCount(
-            latitude=cells_side_count_latitude,
-            longitude=cells_side_count_longitude
+        interpolation_grid_size=Interpolation_grid_size(
+            latitude=interpolation_grid_size_latitude,
+            longitude=interpolation_grid_size_longitude
         ),
         path_to_data=data_path
     )
 
     InitialValues.point_side_size = point_side_size
 
-    InitialValues.point_lat_size = (top_coord - down_coord) / InitialValues.point_side_count
-    InitialValues.point_lon_size = (right_coord - left_coord) / InitialValues.point_side_count
+    middle_lat = (top_coord + down_coord) / 2
+    middle_lon = (left_coord + right_coord) / 2
+    middle_coord_lat = lambda lat: Coordinates(latitude=lat, longitude=middle_lon)
+    middle_coord_lon = lambda lon: Coordinates(latitude=middle_lat, longitude=lon)
+    height = coordinates_distance(middle_coord_lat(top_coord), middle_coord_lat(down_coord))
+    width = coordinates_distance(middle_coord_lon(left_coord), middle_coord_lon(right_coord))
 
-    InitialValues.point_lat_centers = [top_coord - InitialValues.point_lat_size / 2 - (InitialValues.point_lat_size * i) for i in
-                                       range(InitialValues.point_side_count)]
-    InitialValues.point_lon_centers = [left_coord + InitialValues.point_lon_size / 2 + (InitialValues.point_lon_size * i) for i in
-                                       range(InitialValues.point_side_count)]
+    get_points_count = lambda size: int(ceil(size / InitialValues.point_side_size))
 
-    InitialValues.simulation_time = (InitialValues.simulation_initial_parameters.time.max - InitialValues.simulation_initial_parameters.time.min).total_seconds()
+    InitialValues.point_side_lat_count = get_points_count(height)
+    InitialValues.point_side_lon_count = get_points_count(width)
+
+    logger.debug(f"Points count: {InitialValues.point_side_lat_count} x {InitialValues.point_side_lon_count}")
+
+    InitialValues.top_left_coord = Coordinates(latitude=top_coord, longitude=left_coord)
+    InitialValues.bottom_right_coord = Coordinates(latitude=down_coord, longitude=right_coord)
+
+    InitialValues.simulation_time = (
+            InitialValues.simulation_initial_parameters.time.max - InitialValues.simulation_initial_parameters.time.min).total_seconds()
     InitialValues.iter_as_sec = iter_as_sec
+
+    logger.debug(f"Simulation time: {InitialValues.simulation_time}s")
 
     InitialValues.viscosity_kinematic = oil_viscosity
     InitialValues.oil_density = oil_density

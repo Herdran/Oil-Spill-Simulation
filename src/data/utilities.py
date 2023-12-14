@@ -77,12 +77,6 @@ def project_coordinates(coordinates: Coordinates, width: int, height: int) -> Co
     lat = (-coordinates.latitude + LATITUDE_OFFSET) * (height / LATITUDE_RANGE)
     return CoordinatesBase[int](int(lat), int(lon))
 
-def project_coordinates_reverse(coordinates: tuple[float, float], width: int, height: int) -> tuple[float, float]:
-    lon = coordinates[1] / (width / LONGITUDE_RANGE) - LONGITUDE_OFFSET
-    lat = -(coordinates[0] / (height / LATITUDE_RANGE) - LATITUDE_OFFSET)
-
-    return lat, lon
-
 def project_coordinates_raw(lat: float, lon: float, width: int, height: int) -> (int, int):
     x = (lon + LONGITUDE_OFFSET) * (width / LONGITUDE_RANGE)
     y = (-lat + LATITUDE_OFFSET) * (height / LATITUDE_RANGE)
