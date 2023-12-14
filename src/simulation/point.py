@@ -36,7 +36,7 @@ class Point:
         self._temperature = DEFAULT_TEMPERATURE
         self._last_weather_update_time = None
         self._oil_mass = 0  # [kg]
-        self._emulsification_rate = InitialValues.emulsification_rate
+        self._emulsification_rate = 0
         self._data_processor = engine.data_processor
         self._viscosity_dynamic = InitialValues.viscosity_dynamic  # [Pa*s]
         self.oil_buffer = []  # contains tuples (mass, viscosity, emulsification_rate)

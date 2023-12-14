@@ -42,7 +42,7 @@ def save_to_json(world: Dict[Coord_t, Point], total_time: int, curr_iter: int, c
         "left_coord": InitialValues.simulation_initial_parameters.area.min.longitude,
         "right_coord": InitialValues.simulation_initial_parameters.area.max.longitude,
         "time_range_start": str(InitialValues.simulation_initial_parameters.time.min),
-        "time_range_end": str(InitialValues.simulation_initial_parameters.time.min),
+        "time_range_end": str(InitialValues.simulation_initial_parameters.time.max),
         "data_time_step": int(InitialValues.simulation_initial_parameters.data_time_step.total_seconds() / 60),
         "cells_side_count_latitude": InitialValues.simulation_initial_parameters.cells_side_count.latitude,
         "cells_side_count_longitude": InitialValues.simulation_initial_parameters.cells_side_count.longitude,

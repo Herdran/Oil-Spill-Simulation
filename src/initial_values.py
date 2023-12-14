@@ -64,7 +64,6 @@ class InitialValues:
     c = 10  # parameter dependant of oil type, used in viscosity change
     viscosity_kinematic = 5.3e-6  # [m^2/s]
     viscosity_dynamic = viscosity_kinematic * oil_density
-    emulsification_rate = 0
     neighbourhood: Neighbourhood = None
     checkpoint_frequency: int = 0
     total_simulation_time: int = 0
