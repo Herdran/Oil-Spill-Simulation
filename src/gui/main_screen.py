@@ -36,6 +36,10 @@ def start_simulation(window, points=None, oil_sources=None):
             self.tooltip = None
             self.full_img = full_img
             self.current_img = None
+            self.left = 0
+            self.top = 0
+            self.right = self.image_array_width
+            self.bottom = self.image_array_height
             self.image_change_controller = image_change_controller
 
             self.bind("<MouseWheel>", self.on_mousewheel)
@@ -56,15 +60,15 @@ def start_simulation(window, points=None, oil_sources=None):
             self.pan_x = max(min(self.pan_x, 0), min(window_width - self.zoomed_width, 0))
             self.pan_y = max(min(self.pan_y, 0), min(window_height - self.zoomed_height, 0))
 
-            left = int(-self.pan_x / self.zoom_level)
-            top = int(-self.pan_y / self.zoom_level)
-            right = int(window_width / self.zoom_level - (self.pan_x / self.zoom_level))
-            bottom = int(window_height / self.zoom_level - (self.pan_y / self.zoom_level))
+            self.left = int(-self.pan_x / self.zoom_level)
+            self.top = int(-self.pan_y / self.zoom_level)
+            self.right = int(window_width / self.zoom_level - (self.pan_x / self.zoom_level))
+            self.bottom = int(window_height / self.zoom_level - (self.pan_y / self.zoom_level))
 
-            right = min(right, self.image_array_width)
-            bottom = min(bottom, self.image_array_height)
+            self.right = min(self.right, self.image_array_width)
+            self.bottom = min(self.bottom, self.image_array_height)
 
-            cropped_image = self.full_img.crop((left, top, right, bottom))
+            cropped_image = self.full_img.crop((self.left, self.top, self.right, self.bottom))
 
             self.current_img = cropped_image.resize((min(window_width, self.zoomed_width),
                                                      min(window_height, self.zoomed_height)),
@@ -386,12 +390,13 @@ def start_simulation(window, points=None, oil_sources=None):
                 points_removed = engine.update(self.iter_as_sec)
 
                 for coords in engine.world:
-                    point = engine.world[coords]
-                    if point.topography == simulation.TopographyState.LAND:
-                        var = blend_color(InitialValues.LAND_WITH_OIL_COLOR, InitialValues.LAND_COLOR, point.oil_mass / self.minimal_oil_to_show)
-                    else:
-                        var = blend_color(InitialValues.OIL_COLOR, InitialValues.SEA_COLOR, point.oil_mass / self.minimal_oil_to_show)
-                    self.full_img.putpixel((coords[0], coords[1]), var)
+                    if self.viewer.top <= coords[1] <= self.viewer.bottom and self.viewer.left <= coords[0] <= self.viewer.right:
+                        point = engine.world[coords]
+                        if point.topography == simulation.TopographyState.LAND:
+                            var = blend_color(InitialValues.LAND_WITH_OIL_COLOR, InitialValues.LAND_COLOR, point.oil_mass / self.minimal_oil_to_show)
+                        else:
+                            var = blend_color(InitialValues.OIL_COLOR, InitialValues.SEA_COLOR, point.oil_mass / self.minimal_oil_to_show)
+                        self.full_img.putpixel((coords[0], coords[1]), var)
 
                 for coords in points_removed:
                     if coords in engine.lands:
