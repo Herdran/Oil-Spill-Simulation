@@ -1,13 +1,18 @@
 import json
 import time
+from logging import getLogger
+from os import PathLike
 from typing import Dict, Any, List, Tuple
 
 import pandas as pd
 
-from files import get_main_path
+from files import get_checkpoint_dir_path
 from initial_values import InitialValues
 from simulation.point import Point, Coord_t, get_coordinate
-from simulation.topology import project_binary_map_coordinates_raw
+from topology.binary_map_math import project_binary_map_coordinates_raw
+
+
+logger = getLogger("checkpoints")
 
 
 def _point_to_dict(point: Point) -> Dict[str, any]:
@@ -34,9 +39,14 @@ def _oil_source_to_dict(source: Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp])
     }
 
 
-def save_to_json(world: Dict[Coord_t, Point], total_time: int, curr_iter: int, constant_sources: List[Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]]) -> None:
+def _get_path_to_save(curr_iter: int) -> PathLike:
     timestamp = time.strftime("%Y_%m_%d-%H_%M_%S")
-    path = get_main_path().joinpath(f"checkpoints/checkpoint_{timestamp}_iteration_{curr_iter}.json")
+    checkpoint_dir_path = get_checkpoint_dir_path()
+    checkpoint_dir_path.mkdir(parents=True, exist_ok=True)
+    return checkpoint_dir_path.joinpath(f"checkpoint_{timestamp}_iteration_{curr_iter}.json")
+
+def save_to_json(world: Dict[Coord_t, Point], total_time: int, curr_iter: int, constant_sources: List[Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]]) -> None:
+    logger.debug("STATED: Saving checkpoint")
     data = {
         "top_coord": InitialValues.simulation_initial_parameters.area.max.latitude,
         "down_coord": InitialValues.simulation_initial_parameters.area.min.latitude,
@@ -61,11 +71,15 @@ def save_to_json(world: Dict[Coord_t, Point], total_time: int, curr_iter: int, c
         "constants_sources": [_oil_source_to_dict(source) for source in constant_sources],
         "points": [_point_to_dict(point) for point in world.values()]
     }
+    path = _get_path_to_save(curr_iter)
     with open(path, "w") as file:
         json.dump(data, file, indent=4)
+    logger.debug(f"Checkpoint saved fo file: {path}")
+        
 
 
 def load_from_json(path: str) -> Dict[str, Any]:
+    logger.debug(f"STATED: Loading checkpoint from file: {path}")
     with open(path, "r") as file:
         data = json.load(file)
     constants_sources = []
@@ -76,10 +90,12 @@ def load_from_json(path: str) -> Dict[str, Any]:
         spill_end = pd.Timestamp(source["spill_end"])
         constants_sources.append((coord, mass_per_minute, spill_start, spill_end))
     data["constants_sources"] = constants_sources
+    logger.debug("FINISHED: Loading checkpoint")
     return data
 
 
 def initialize_points_from_checkpoint(points: List[Any], engine):
+    logger.debug("STATED: Initializing points from checkpoint")
     world = {}
     for point_data in points:
         point_coord = tuple(point_data["coord"])
@@ -89,5 +105,5 @@ def initialize_points_from_checkpoint(points: List[Any], engine):
         point.emulsification_rate = point_data["emulsification_rate"]
         point.viscosity_dynamic = point_data["viscosity_dynamic"]
         world[point_coord] = point
-
+    logger.debug("FINISHED: Initializing points from checkpoint")
     engine.world = world

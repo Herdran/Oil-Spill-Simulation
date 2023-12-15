@@ -4,11 +4,11 @@ import pandas as pd
 
 from checkpoints import save_to_json
 from data.data_processor import DataProcessor
-from data.measurment_data import Coordinates
 from initial_values import InitialValues
 from simulation.point import Point, Coord_t, TopographyState
 from simulation.spreading import SpreadingEngine
-from simulation.topology import load_topography, project_binary_map_coordinates
+from topology.lands_loader import load_topography
+from topology.math import get_xy_from_coord_raw
 
 
 class SimulationEngine:
@@ -57,12 +57,7 @@ class SimulationEngine:
 
     def add_oil_sources(self, oil_sources: List[dict[str, Any]]):
         for oil_source in oil_sources:
-            coord = Coordinates(
-                latitude=oil_source["coord"][0],
-                longitude=oil_source["coord"][1]
-            )
-            goddamnit = project_binary_map_coordinates(coord)
-            self._add_oil_source((goddamnit.latitude, goddamnit.longitude),
+            self._add_oil_source(get_xy_from_coord_raw(oil_source["coord"][1], oil_source["coord"][0]),
                                  oil_source["mass_per_minute"],
                                  oil_source["spill_start"],
                                  oil_source["spill_end"])
@@ -76,7 +71,7 @@ class SimulationEngine:
         for spill in self._constants_sources:
             cords, mass_per_minute, spill_start, spill_end = spill
             if spill_start <= current_timestamp <= spill_end:
-                if cords not in self._world and 0 <= cords[0] < InitialValues.point_side_lat_count and 0 <= cords[1] < InitialValues.point_side_lon_count:
+                if cords not in self._world and 0 <= cords[0] < InitialValues.point_side_lon_count and 0 <= cords[1] < InitialValues.point_side_lat_count:
                     self._world[cords] = Point(cords, self)
                 self._world[cords].add_oil(mass_per_minute * self.timestep / 60)
 

@@ -6,9 +6,9 @@ import pandas as pd
 from numpy import exp, log, sqrt
 
 from data.measurment_data import Coordinates
-from data.utilities import get_coordinate_from_xy
 from initial_values import InitialValues
 from simulation.utilities import get_neighbour_coordinates, Neighbourhood, sign
+from topology.math import get_coordinate_from_xy
 
 DEFAULT_WAVE_VELOCITY = np.array([0.0, 0.0])  # [m/s]
 DEFAULT_WIND_VELOCITY = np.array([0.0, 0.0])  # [m/s]
@@ -31,8 +31,7 @@ mapped_coordinates = dict()
 
 def get_coordinate(coord: Coord_t) -> Coordinates:
     if coord not in mapped_coordinates:
-        mapped_coordinates[coord] = get_coordinate_from_xy(InitialValues.top_left_coord, coord[0], coord[1],
-                                                           InitialValues.point_side_size)
+        mapped_coordinates[coord] = get_coordinate_from_xy(InitialValues.top_left_coord, InitialValues.point_side_size, coord[0], coord[1])
     return mapped_coordinates[coord]
 
 

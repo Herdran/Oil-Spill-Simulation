@@ -6,12 +6,13 @@ import numpy as np
 import pandas as pd
 from PIL import Image, ImageTk
 from checkpoints import load_from_json
-from initial_values import set_simulation_coordinates_parameters, InitialValues
+from initial_values import InitialValues
+from initial_values_loader import set_simulation_coordinates_parameters
 from files import get_data_path
 from gui.utilities import create_frame, create_label_pack, create_label_grid, create_input_entry_grid, \
     create_label_grid_parameter_screen, browse_button, resize_img_to_fit_frame
 from gui.main_screen import start_simulation
-from simulation.topology import get_binary_scaled_map
+from topology.file_loader import get_binary_scaled_map
 from simulation.utilities import Neighbourhood
 
 

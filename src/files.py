@@ -30,3 +30,6 @@ def get_binary_world_scaled_map_path():
 
 def get_binary_world_map_zip_path():
     return get_world_map_dir_path().joinpath("full_world_map.zip")
+
+def get_checkpoint_dir_path():
+    return get_main_path().joinpath("checkpoints")

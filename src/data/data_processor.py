@@ -1,20 +1,21 @@
-import logging
-
+from logging import getLogger
 from enum import Enum
 from math import floor
 from os import PathLike, path, listdir, mkdir
 from dataclasses import dataclass
 from typing import Optional
-import numpy as np
-import pandas as pd
-from scipy.interpolate import NearestNDInterpolator
 
 from data.generic import Range
-from data.utilities import dataframe_replace_apply, minutes, round_values, celcius_to_kelvins, coordinates_distance
+from data.utilities import dataframe_replace_apply, minutes, round_values, celcius_to_kelvins
 from data.measurment_data import CertainMeasurement, Coordinates, SpeedMeasure, CoordinatesBase, average_measurement
 from data.simulation_run_parameters import SimulationRunParameters
+from topology.math import coordinates_distance
 
-logger = logging.getLogger("data")
+from scipy.interpolate import NearestNDInterpolator
+import numpy as np
+import pandas as pd
+
+logger = getLogger("data")
 
 MINUTES_IN_HOUR = 60
 SECONDS_IN_MINUTE = 60
