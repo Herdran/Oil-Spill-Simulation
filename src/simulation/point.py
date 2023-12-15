@@ -48,7 +48,7 @@ class Point:
     def add_oil(self, mass: float) -> None:
         # maybe initial emulsification rate will be changed
         self._emulsification_rate = (self._oil_mass * self._emulsification_rate +
-                                     mass * InitialValues.emulsification_rate) / (self._oil_mass + mass)
+                                     mass * self._emulsification_rate) / (self._oil_mass + mass)
         self._viscosity_dynamic = (
                 (self._oil_mass * self._viscosity_dynamic + mass * InitialValues.viscosity_dynamic) / (
                 self._oil_mass + mass))

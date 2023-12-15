@@ -308,7 +308,7 @@ def start_simulation(window, points=None, oil_sources=None):
             create_label_pack(self.bottom_frame, "Simulation finished!")
             self.bottom_frame.grid_remove()
 
-            self.update_image_array()
+            self.update_image_array(True)
             self.update_infobox()
 
         def set_viewer(self, viewer):
@@ -376,13 +376,13 @@ def start_simulation(window, points=None, oil_sources=None):
             if self.job_id is not None:
                 self.after_cancel(self.job_id)
 
-        def update_image_array(self):
+        def update_image_array(self, first_update=False):
             if engine.is_finished():
                 self.toggle_start_stop()
                 self.options_frame.grid_remove()
                 self.bottom_frame.grid()
 
-            if self.is_running:
+            if self.is_running or first_update:
                 points_removed = engine.update(self.iter_as_sec)
 
                 for coords in engine.world:
