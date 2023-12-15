@@ -31,7 +31,7 @@ mapped_coordinates = dict()
 
 def get_coordinate(coord: Coord_t) -> Coordinates:
     if coord not in mapped_coordinates:
-        mapped_coordinates[coord] = get_coordinate_from_xy(InitialValues.top_left_coord, InitialValues.point_side_size, coord[0], coord[1])
+        mapped_coordinates[coord] = get_coordinate_from_xy(coord[0], coord[1])
     return mapped_coordinates[coord]
 
 

@@ -9,7 +9,7 @@ import pandas as pd
 from files import get_checkpoint_dir_path
 from initial_values import InitialValues
 from simulation.point import Point, Coord_t, get_coordinate
-from topology.binary_map_math import project_binary_map_coordinates_raw
+from topology.math import get_coordinate_from_xy
 
 
 logger = getLogger("checkpoints")
@@ -31,8 +31,10 @@ def _point_to_dict(point: Point) -> Dict[str, any]:
 
 
 def _oil_source_to_dict(source: Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]) -> Dict[str, any]:
+    x, y = source[0]
+    lon, lat = get_coordinate_from_xy(x, y).as_tuple()
     return {
-        "coord": project_binary_map_coordinates_raw(source[0][0], source[0][1]),
+        "coord": (lat, lon),
         "mass_per_minute": source[1],
         "spill_start": str(source[2]),
         "spill_end": str(source[3])
@@ -67,7 +69,6 @@ def save_to_json(world: Dict[Coord_t, Point], total_time: int, curr_iter: int, c
         "total_simulation_time": total_time,
         "curr_iter": curr_iter,
         "data_path": InitialValues.simulation_initial_parameters.path_to_data,
-
         "constants_sources": [_oil_source_to_dict(source) for source in constant_sources],
         "points": [_point_to_dict(point) for point in world.values()]
     }

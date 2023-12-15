@@ -30,12 +30,12 @@ def move_coordinate_raw(lat: float, lon: float, distance: float, direction: Move
     point = geo.distance(meters=distance).destination((lat, lon), bearing)
     return (point.latitude, point.longitude)
 
-def get_coordinate_from_xy(top_left: Coordinates, cell_size: int, x: int, y: int) -> Coordinates:
+def get_coordinate_from_xy(x: int, y: int) -> Coordinates:
     degree_bearing = (180.0 + degrees(atan2(-x, y))) % 360 if x != 0 or y != 0 else 0
-    x_distance = abs(x) * cell_size
-    y_distance = abs(y) * cell_size
+    x_distance = abs(x) * InitialValues.point_side_size
+    y_distance = abs(y) * InitialValues.point_side_size
     full_distance = sqrt((x_distance ** 2) + (y_distance ** 2))
-    return move_coordinate_bearing(top_left, full_distance, degree_bearing)
+    return move_coordinate_bearing(InitialValues.top_left_coord, full_distance, degree_bearing)
 
 BEARING_OFFSET = 90.0
 def get_xy_from_coord_raw(lon: float, lat: float) -> (int, int):
