@@ -1,4 +1,4 @@
-from data.measurment_data import Coordinates, CoordinatesBase
+from data.measurement_data import Coordinates, CoordinatesBase
 from initial_values import InitialValues
 
 

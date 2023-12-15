@@ -1,7 +1,7 @@
 from enum import Enum
 from math import atan2, cos, sin, degrees, radians, sqrt
 
-from data.measurment_data import Coordinates
+from data.measurement_data import Coordinates
 
 import geopy.distance as geo
 import pyproj as proj

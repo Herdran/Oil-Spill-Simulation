@@ -7,7 +7,7 @@ from typing import Optional
 
 from data.generic import Range
 from data.utilities import dataframe_replace_apply, minutes, round_values, celcius_to_kelvins
-from data.measurment_data import CertainMeasurement, Coordinates, SpeedMeasure, CoordinatesBase, average_measurement
+from data.measurement_data import CertainMeasurement, Coordinates, SpeedMeasure, CoordinatesBase, average_measurement
 from data.simulation_run_parameters import SimulationRunParameters
 from topology.math import coordinates_distance
 

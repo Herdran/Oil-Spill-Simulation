@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import pandas as pd
 
 from data.generic import Range
-from data.measurment_data import Coordinates, CoordinatesBase
+from data.measurement_data import Coordinates, CoordinatesBase
 
 
 Interpolation_grid_size  = CoordinatesBase[int]

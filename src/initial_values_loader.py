@@ -4,7 +4,7 @@ from math import ceil
 from initial_values import InitialValues
 from simulation.utilities import Neighbourhood
 from data.generic import Range
-from data.measurment_data import Coordinates
+from data.measurement_data import Coordinates
 from data.simulation_run_parameters import Interpolation_grid_size, SimulationRunParameters
 from topology.binary_map_math import project_binary_map_coordinates
 from topology.math import coordinates_distance

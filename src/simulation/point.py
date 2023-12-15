@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from numpy import exp, log, sqrt
 
-from data.measurment_data import Coordinates
+from data.measurement_data import Coordinates
 from initial_values import InitialValues
 from simulation.utilities import get_neighbour_coordinates, Neighbourhood, sign
 from topology.math import get_coordinate_from_xy

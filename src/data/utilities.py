@@ -1,6 +1,6 @@
 from typing import Callable, Optional
 
-from data.measurment_data import Temperature
+from data.measurement_data import Temperature
 
 import pandas as pd
 import numpy as np

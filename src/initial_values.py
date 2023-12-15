@@ -1,5 +1,5 @@
 from data.generic import Range
-from data.measurment_data import Coordinates
+from data.measurement_data import Coordinates
 from data.simulation_run_parameters import Interpolation_grid_size, SimulationRunParameters
 from simulation.utilities import Neighbourhood
 
