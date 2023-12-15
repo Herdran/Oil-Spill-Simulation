@@ -38,12 +38,17 @@ def get_coordinate_from_xy(x: int, y: int) -> Coordinates:
     return move_coordinate_bearing(InitialValues.top_left_coord, full_distance, degree_bearing)
 
 BEARING_OFFSET = 90.0
-def get_xy_from_coord_raw(lon: float, lat: float) -> (int, int):
-    bearing, distance = calculate_compass_bearing_and_dist(InitialValues.top_left_coord,
-                                                            Coordinates(latitude=lat, longitude=lon))
+def get_xy_dist_from_coord(first: Coordinates, second: Coordinates) -> (int, int):
+    bearing, distance = calculate_compass_bearing_and_dist(first, second)
     rad = radians(bearing - BEARING_OFFSET)
-    x = int(distance * cos(rad)) // InitialValues.point_side_size
-    y = int(distance * sin(rad)) // InitialValues.point_side_size
+    x = int(distance * cos(rad))
+    y = int(distance * sin(rad))
+    return (x, y)
+
+def get_xy_from_coord_raw(lon: float, lat: float) -> (int, int):
+    x, y = get_xy_dist_from_coord(InitialValues.top_left_coord, Coordinates(latitude=lat, longitude=lon))
+    x //= InitialValues.point_side_size
+    y //= InitialValues.point_side_size
     return min(x, InitialValues.point_side_lon_count), min(y, InitialValues.point_side_lat_count)
 
 _geodesic = proj.Geod(ellps='WGS84')

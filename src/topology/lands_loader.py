@@ -94,6 +94,8 @@ def _map_binary_lands(binary_lands: set[Coord_t]) -> tuple[set[tuple[int, int]],
 
         max_y = min(max_y, InitialValues.point_side_lat_count)
         max_x = min(max_x, InitialValues.point_side_lon_count)
+        min_x = max(min_x, 0)
+        min_y = max(min_y, 0)
 
         for x in range(min_x, max_x):
             for y in range(min_y, max_y):

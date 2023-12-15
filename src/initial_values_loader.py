@@ -7,7 +7,7 @@ from data.generic import Range
 from data.measurement_data import Coordinates
 from data.simulation_run_parameters import Interpolation_grid_size, SimulationRunParameters
 from topology.binary_map_math import project_binary_map_coordinates
-from topology.math import coordinates_distance
+from topology.math import get_xy_dist_from_coord
 
 import pandas as pd
 
@@ -61,12 +61,10 @@ def set_simulation_coordinates_parameters(top_coord: float,
 
     InitialValues.point_side_size = point_side_size
 
-    middle_lat = (top_coord + down_coord) / 2
-    middle_lon = (left_coord + right_coord) / 2
-    middle_coord_lat = lambda lat: Coordinates(latitude=lat, longitude=middle_lon)
-    middle_coord_lon = lambda lon: Coordinates(latitude=middle_lat, longitude=lon)
-    height = coordinates_distance(middle_coord_lat(top_coord), middle_coord_lat(down_coord))
-    width = coordinates_distance(middle_coord_lon(left_coord), middle_coord_lon(right_coord))
+    top_left = Coordinates(latitude=top_coord, longitude=left_coord)
+    bottom_right = Coordinates(latitude=down_coord, longitude=right_coord)
+    
+    width, height = get_xy_dist_from_coord(top_left, bottom_right)
 
     get_points_count = lambda size: int(ceil(size / InitialValues.point_side_size))
 
@@ -75,8 +73,8 @@ def set_simulation_coordinates_parameters(top_coord: float,
 
     logger.debug(f"Points count: {InitialValues.point_side_lat_count} x {InitialValues.point_side_lon_count}")
 
-    InitialValues.top_left_coord = Coordinates(latitude=top_coord, longitude=left_coord)
-    InitialValues.bottom_right_coord = Coordinates(latitude=down_coord, longitude=right_coord)
+    InitialValues.top_left_coord = top_left
+    InitialValues.bottom_right_coord = bottom_right
     InitialValues.top_left_binary_offset = project_binary_map_coordinates(InitialValues.top_left_coord)
     InitialValues.bottom_right_binary_offset = project_binary_map_coordinates(InitialValues.bottom_right_coord)
 
