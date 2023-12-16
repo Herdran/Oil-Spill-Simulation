@@ -20,11 +20,16 @@ def _is_land(binary_map: BinaryMap, x: int, y: int) -> bool:
 
 
 def _get_map_range() -> product:
+    ADDITIONAL_RANGE = 1
     max_x = project_longitude_to_x(InitialValues.max_lon)
     min_x = project_longitude_to_x(InitialValues.min_lon)
-    max_y = project_latitude_to_y(InitialValues.max_lat)
-    min_y = project_latitude_to_y(InitialValues.min_lat)
-    return product(range(min_x, max_x), range(max_y, min_y))
+    min_y = project_latitude_to_y(InitialValues.max_lat)
+    max_y = project_latitude_to_y(InitialValues.min_lat)
+    max_x = min(max_x + ADDITIONAL_RANGE, InitialValues.BINARY_MAP_WIDTH)
+    max_y = min(max_y + ADDITIONAL_RANGE, InitialValues.BINARY_MAP_HEIGHT)
+    min_y = max(min_y - ADDITIONAL_RANGE, 0)
+    min_x = max(min_x - ADDITIONAL_RANGE, 0)
+    return product(range(min_x, max_x + 1), range(min_y, max_y + 1))
 
 
 def _get_lands_set(binary_map: BinaryMap) -> set[tuple[Any, Any]]:
