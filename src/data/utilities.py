@@ -1,11 +1,11 @@
 from typing import Callable, Optional
 
+import numpy as np
+import pandas as pd
+
 from data.measurement_data import Temperature
 
-import pandas as pd
-import numpy as np
 
-    
 def minutes(time_delta: pd.Timedelta) -> float:
     SECONDS_IN_MINUTE = 60
     return time_delta.total_seconds() / SECONDS_IN_MINUTE
@@ -18,12 +18,11 @@ def dataframe_replace_apply(dataframe: pd.DataFrame, result_columns: list[str], 
     def apply_function(row: pd.Series) -> object:
         return pd.NA if is_any_nan(row) else function(*[row[column] for column in columns])
 
-
     result = dataframe.apply(
         lambda row: apply_function(row),
         axis=1
     )
-    
+
     SINGLE_RESULT_COLUMNS_COUNT = 1
     if len(result_columns) == SINGLE_RESULT_COLUMNS_COUNT:
         dataframe[result_columns[0]] = result
@@ -35,7 +34,7 @@ def dataframe_replace_apply(dataframe: pd.DataFrame, result_columns: list[str], 
         columns=columns,
         inplace=True
     )
-    
+
 
 def or_default(value: Optional[object], default: object) -> object:
     if value is None:

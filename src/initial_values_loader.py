@@ -1,16 +1,15 @@
 from logging import getLogger
 from math import ceil
 
-from initial_values import InitialValues
-from simulation.utilities import Neighbourhood
+import pandas as pd
+
 from data.generic import Range
 from data.measurement_data import Coordinates
 from data.simulation_run_parameters import Interpolation_grid_size, SimulationRunParameters
+from initial_values import InitialValues
+from simulation.utilities import Neighbourhood
 from topology.binary_map_math import project_binary_map_coordinates
 from topology.math import MoveDirection, get_xy_dist_from_coord, move_coordinate
-
-import pandas as pd
-
 
 logger = getLogger("constants")
 
@@ -35,7 +34,6 @@ def set_simulation_coordinates_parameters(top_coord: float,
                                           total_simulation_time: int,
                                           curr_iter: int
                                           ):
-
     InitialValues.simulation_initial_parameters = SimulationRunParameters(
         area=Range(
             min=Coordinates(
@@ -63,7 +61,7 @@ def set_simulation_coordinates_parameters(top_coord: float,
 
     top_left = Coordinates(latitude=top_coord, longitude=left_coord)
     bottom_right = Coordinates(latitude=down_coord, longitude=right_coord)
-    
+
     width, height = get_xy_dist_from_coord(top_left, bottom_right)
 
     get_points_count = lambda size: int(ceil(size / InitialValues.point_side_size))
@@ -75,12 +73,12 @@ def set_simulation_coordinates_parameters(top_coord: float,
 
     top_right = move_coordinate(top_left, width, MoveDirection.East)
     bottom_left = move_coordinate(bottom_right, width, MoveDirection.West)
-    
+
     max_lat = max(top_left.latitude, top_right.latitude)
     min_lat = min(bottom_left.latitude, bottom_right.latitude)
     max_lon = max(top_right.longitude, bottom_right.longitude)
     min_lon = min(top_left.longitude, bottom_left.longitude)
-    
+
     if top_coord > 0.0 and down_coord < 0.0:
         equator_coord = Coordinates(latitude=0.0, longitude=0.0)
         _, height = get_xy_dist_from_coord(top_left, equator_coord)
@@ -88,14 +86,12 @@ def set_simulation_coordinates_parameters(top_coord: float,
         equator_right = move_coordinate(top_right, height, MoveDirection.South)
         max_lon = max(max_lon, equator_left.longitude, equator_right.longitude)
         min_lon = min(min_lon, equator_left.longitude, equator_right.longitude)
-        
+
     InitialValues.max_lon = max_lon
     InitialValues.min_lon = min_lon
     InitialValues.max_lat = max_lat
     InitialValues.min_lat = min_lat
-    
 
-        
     InitialValues.top_left_coord = top_left
     InitialValues.top_left_binary_offset = project_binary_map_coordinates(InitialValues.top_left_coord)
 

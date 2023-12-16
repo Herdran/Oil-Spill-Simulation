@@ -278,7 +278,8 @@ def start_simulation(window, points=None, oil_sources=None):
             self.btn_start_stop = tk.Button(buttons_frame, text="Start", width=15, command=self.toggle_start_stop)
             self.btn_start_stop.pack(side=tk.TOP, padx=5, pady=5)
 
-            self.btn_save_checkpoint = tk.Button(buttons_frame, text="Save checkpoint", width=15, command=self.save_checkpoint)
+            self.btn_save_checkpoint = tk.Button(buttons_frame, text="Save checkpoint", width=15,
+                                                 command=self.save_checkpoint)
             self.btn_save_checkpoint.pack(side=tk.TOP, padx=5, pady=5)
 
             self.text_interval = create_input_entry_pack(interval_frame, 10, str(self.interval / 1000),
@@ -390,12 +391,15 @@ def start_simulation(window, points=None, oil_sources=None):
                 points_removed = engine.update(self.iter_as_sec)
 
                 for coords in engine.world:
-                    if self.viewer.top <= coords[1] <= self.viewer.bottom and self.viewer.left <= coords[0] <= self.viewer.right:
+                    if self.viewer.top <= coords[1] <= self.viewer.bottom and self.viewer.left <= coords[
+                        0] <= self.viewer.right:
                         point = engine.world[coords]
                         if point.topography == simulation.TopographyState.LAND:
-                            var = blend_color(InitialValues.LAND_WITH_OIL_COLOR, InitialValues.LAND_COLOR, point.oil_mass / self.minimal_oil_to_show)
+                            var = blend_color(InitialValues.LAND_WITH_OIL_COLOR, InitialValues.LAND_COLOR,
+                                              point.oil_mass / self.minimal_oil_to_show)
                         else:
-                            var = blend_color(InitialValues.OIL_COLOR, InitialValues.SEA_COLOR, point.oil_mass / self.minimal_oil_to_show)
+                            var = blend_color(InitialValues.OIL_COLOR, InitialValues.SEA_COLOR,
+                                              point.oil_mass / self.minimal_oil_to_show)
                         self.full_img.putpixel((coords[0], coords[1]), var)
 
                 for coords in points_removed:
@@ -470,7 +474,8 @@ def start_simulation(window, points=None, oil_sources=None):
     sea_color = np.array(InitialValues.SEA_COLOR, dtype=np.uint8)
     land_color = np.array(InitialValues.LAND_COLOR, dtype=np.uint8)
 
-    image_array = np.full((InitialValues.point_side_lat_count, InitialValues.point_side_lon_count, 3), sea_color, dtype=np.uint8)
+    image_array = np.full((InitialValues.point_side_lat_count, InitialValues.point_side_lon_count, 3), sea_color,
+                          dtype=np.uint8)
 
     image_array[y_indices, x_indices, :] = land_color
 

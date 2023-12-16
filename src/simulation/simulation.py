@@ -67,11 +67,13 @@ class SimulationEngine:
         self._constants_sources.append((coord, mass_per_minute, spill_start, spill_end))
 
     def _pour_from_sources(self):
-        current_timestamp = InitialValues.simulation_initial_parameters.time.min + pd.Timedelta(seconds=self._total_time)
+        current_timestamp = InitialValues.simulation_initial_parameters.time.min + pd.Timedelta(
+            seconds=self._total_time)
         for spill in self._constants_sources:
             cords, mass_per_minute, spill_start, spill_end = spill
             if spill_start <= current_timestamp <= spill_end:
-                if cords not in self._world and 0 <= cords[0] < InitialValues.point_side_lon_count and 0 <= cords[1] < InitialValues.point_side_lat_count:
+                if cords not in self._world and 0 <= cords[0] < InitialValues.point_side_lon_count and 0 <= cords[
+                    1] < InitialValues.point_side_lat_count:
                     self._world[cords] = Point(cords, self)
                 self._world[cords].add_oil(mass_per_minute * self.timestep / 60)
 
@@ -84,7 +86,8 @@ class SimulationEngine:
         return self._total_mass - self._total_land_mass, self._total_land_mass
 
     def save_checkpoint(self, curr_iter: int, on_demand: bool = False):
-        if on_demand or self.checkpoint_frequency > 0 and (self._total_time / self.timestep) % self.checkpoint_frequency == 0:
+        if on_demand or self.checkpoint_frequency > 0 and (
+                self._total_time / self.timestep) % self.checkpoint_frequency == 0:
             save_to_json(self._world, self._total_time, curr_iter, self._constants_sources)
 
     @property
