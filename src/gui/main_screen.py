@@ -313,11 +313,11 @@ def start_simulation(window, points=None, oil_sources=None):
             create_label_pack(self.bottom_frame, "Simulation finished!")
             self.bottom_frame.grid_remove()
 
-            self.update_image_array(True)
             self.update_infobox()
 
         def set_viewer(self, viewer):
             self.viewer = viewer
+            self.update_image_array(True)
 
         def validate_interval(self):
             new_value = self.text_interval.get()
