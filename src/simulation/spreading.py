@@ -9,26 +9,25 @@ from simulation.utilities import get_neighbour_coordinates
 
 class SpreadingEngine:
     def __init__(self, engine):
-        self._world = engine.world
         self._engine = engine
 
     def spread_oil_points(self, total_mass: float):
         new_points = {}
-        for coord, point in self._world.items():
+        for coord, point in self._engine.world.items():
             x, y = coord
             neighbours = get_neighbour_coordinates(x, y, InitialValues.neighbourhood)
             shuffle(neighbours)
             for neighbour in neighbours:
                 if not is_coord_in_simulation_area(neighbour):
                     continue
-                if neighbour not in self._world:
+                if neighbour not in self._engine.world:
                     neighbour_point = self.new_point(neighbour, new_points)
                     self._process_spread_between(total_mass, point, neighbour_point, True)
                 else:
-                    neighbour_point = self._world[neighbour]
+                    neighbour_point = self._engine.world[neighbour]
                     self._process_spread_between(total_mass, point, neighbour_point, False)
         self._update_new_points(new_points)
-        for point in self._world.values():
+        for point in self._engine.world.values():
             point.pour_from_buffer()
 
     def new_point(self, coord: Coord_t, new_points: dict[Coord_t, Point]) -> Point:
@@ -42,7 +41,7 @@ class SpreadingEngine:
         for coord, point in new_points.items():
             if not is_coord_in_simulation_area(coord):
                 continue
-            self._world[coord] = point
+            self._engine.world[coord] = point
 
     @staticmethod
     def _process_spread_between(total_mass: float, first: Point, second: Point, is_new: bool) -> None:
