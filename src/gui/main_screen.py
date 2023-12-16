@@ -171,7 +171,7 @@ def start_simulation(window, points=None, oil_sources=None):
             x = int((event.x - self.pan_x - max((window_width - self.zoomed_width) // 2, 0)) / self.zoom_level)
             y = int((event.y - self.pan_y - max((window_height - self.zoomed_height) // 2, 0)) / self.zoom_level)
             coord = (x, y)
-            if not (0 <= x < self.image_array_height and 0 <= y < self.image_array_width):
+            if not (0 <= x < self.image_array_width and 0 <= y < self.image_array_height):
                 self.hide_tooltip()
                 return
             if coord not in engine.world:
@@ -391,8 +391,7 @@ def start_simulation(window, points=None, oil_sources=None):
                 points_removed = engine.update(self.iter_as_sec)
 
                 for coords in engine.world:
-                    if self.viewer.top <= coords[1] <= self.viewer.bottom and self.viewer.left <= coords[
-                        0] <= self.viewer.right:
+                    if self.viewer.top <= coords[1] < self.viewer.bottom and self.viewer.left < coords[0] <= self.viewer.right:
                         point = engine.world[coords]
                         if point.topography == simulation.TopographyState.LAND:
                             var = blend_color(InitialValues.LAND_WITH_OIL_COLOR, InitialValues.LAND_COLOR,
