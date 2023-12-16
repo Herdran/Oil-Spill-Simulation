@@ -399,7 +399,7 @@ def start_simulation(window, points=None, oil_sources=None):
                 self.bottom_frame.grid()
 
             if self.is_running or first_update:
-                points_removed = engine.update(self.iter_as_sec) if not first_update else []
+                points_removed = engine.update() if not first_update else []
                 if not first_update:
                     self.viewer.update_tooltip_text()
 
@@ -455,7 +455,7 @@ def start_simulation(window, points=None, oil_sources=None):
             self.oil_spill_on_bool = not self.oil_spill_on_bool
 
         def save_checkpoint(self):
-            engine.save_checkpoint(self.curr_iter, True)
+            engine.save_checkpoint(True)
 
     # TODO: what if user already data has been processed?
     #  maybe interface for choosing already processed data?
