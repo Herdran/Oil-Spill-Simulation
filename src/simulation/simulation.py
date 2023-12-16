@@ -25,6 +25,8 @@ class SimulationEngine:
         self.lands, self.x_indices, self.y_indices = load_topography()
         self._total_time = InitialValues.total_simulation_time
         self._constants_sources = []  # contains tuples (coord, mass_per_minute, spill_start, spill_end)
+        self._evaporated_oil = 0  # [kg]
+        self._dispersed_oil = 0  # [kg]
 
     def is_finished(self) -> bool:
         return self._total_time >= InitialValues.simulation_time
@@ -53,7 +55,9 @@ class SimulationEngine:
 
     def _update_oil_points(self):
         for coord in list(self._world.keys()):  # copy because dict changes size during iteration
-            self._world[coord].update()
+            evaporated, dispersed = self._world[coord].update()
+            self._evaporated_oil += evaporated
+            self._dispersed_oil += dispersed
 
     def add_oil_sources(self, oil_sources: list[dict[str, Any]]):
         for oil_source in oil_sources:
@@ -102,3 +106,11 @@ class SimulationEngine:
     @property
     def total_time(self):
         return self._total_time
+
+    @property
+    def evaporated_oil(self):
+        return self._evaporated_oil
+
+    @property
+    def dispersed_oil(self):
+        return self._dispersed_oil
