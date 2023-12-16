@@ -24,20 +24,22 @@ class InitialValues:
     point_side_lon_count: int = None
 
     top_left_coord: Coordinates = None
-    bottom_right_coord: Coordinates = None
-    
     top_left_binary_offset = None
-    bottom_right_binary_offset = None
+    
+    min_lon = None
+    max_lon = None
+    min_lat = None
+    max_lat = None
 
     simulation_initial_parameters: SimulationRunParameters = SimulationRunParameters(
         area=Range(
             min=Coordinates(
-                latitude=30.19767,
-                longitude=-88.77964
+                latitude=26.36,
+                longitude=-91.31
             ),
             max=Coordinates(
-                latitude=30.24268,
-                longitude=-88.72648
+                latitude=30.6,
+                longitude=-85.23
             )
         ),
         time=Range(

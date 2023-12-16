@@ -7,10 +7,16 @@ LATITUDE_OFFSET = 90.0
 LONGITUDE_RANGE = 360.0
 LATITUDE_RANGE = 180.0
 
+def _project_longitude_to_x(lon: float, width: int) -> int:
+    return int((lon + LONGITUDE_OFFSET) * (width / LONGITUDE_RANGE))
+
+def _project_latitude_to_y(lat: float, height: int) -> int:
+    return int((-lat + LATITUDE_OFFSET) * (height / LATITUDE_RANGE))    
+
 def _project_coordinates(lat: float, lon: float, width: int, height: int) -> (int, int):
-    x = (lon + LONGITUDE_OFFSET) * (width / LONGITUDE_RANGE)
-    y = (-lat + LATITUDE_OFFSET) * (height / LATITUDE_RANGE)
-    return (int(x), int(y))
+    x = _project_longitude_to_x(lon, width)
+    y = _project_latitude_to_y(-lat, height)
+    return (x, y)
 
 def _project_to_coordinates_raw(x: int, y: int, width: int, height: int) -> (float, float):
     lon = x / (width / LONGITUDE_RANGE) - LONGITUDE_OFFSET
@@ -33,3 +39,9 @@ def project_binary_map_xy_to_coordinates(x: int, y: int) -> Coordinates:
 
 def project_binary_map_xy_to_coordinates_raw(x: int, y: int) -> (float, float):
     return _project_to_coordinates_raw(x, y, InitialValues.BINARY_MAP_WIDTH, InitialValues.BINARY_MAP_HEIGHT)
+
+def project_longitude_to_x(lon: float) -> int:
+    return _project_longitude_to_x(lon, InitialValues.BINARY_MAP_WIDTH)
+
+def project_latitude_to_y(lat: float) -> int:
+    return _project_latitude_to_y(lat, InitialValues.BINARY_MAP_HEIGHT)

@@ -9,7 +9,7 @@ import pyproj as proj
 from initial_values import InitialValues
 
 
-class Move_direction(Enum):
+class MoveDirection(Enum):
     North = 0
     East = 90
     South = 180
@@ -22,10 +22,10 @@ def move_coordinate_bearing(source: Coordinates, distance: float, bearing: float
     point = geo.distance(meters=distance).destination(source.as_tuple(), bearing)
     return Coordinates(latitude=point.latitude, longitude=point.longitude)
 
-def move_coordinate(source: Coordinates, distance: float, direction: Move_direction) -> Coordinates:
+def move_coordinate(source: Coordinates, distance: float, direction: MoveDirection) -> Coordinates:
     return move_coordinate_bearing(source, distance, direction.value)
 
-def move_coordinate_raw(lat: float, lon: float, distance: float, direction: Move_direction) -> (float, float):
+def move_coordinate_raw(lat: float, lon: float, distance: float, direction: MoveDirection) -> (float, float):
     bearing = direction.value
     point = geo.distance(meters=distance).destination((lat, lon), bearing)
     return (point.latitude, point.longitude)

@@ -5,7 +5,7 @@ from typing import Any
 from initial_values import InitialValues
 from simulation.point import Coord_t
 from topology.math import get_xy_from_coord_raw
-from topology.binary_map_math import project_binary_map_xy_to_coordinates_raw
+from topology.binary_map_math import project_binary_map_xy_to_coordinates_raw, project_latitude_to_y, project_longitude_to_x
 from topology.file_loader import BinaryMap, get_binary_map
 
 import numpy as np
@@ -15,29 +15,16 @@ logger = getLogger("topology")
 
 
 def _is_land(binary_map: BinaryMap, x: int, y: int) -> bool:
-    top_left_offset = InitialValues.top_left_binary_offset
-    bin_x = top_left_offset.longitude + x
-    bin_y = top_left_offset.latitude + y
-    bin_x = bin_x - 1 if top_left_offset.longitude > 1 else bin_x
-    bin_y = bin_y - 1 if top_left_offset.latitude > 1 else bin_y
-    index = (bin_y * InitialValues.BINARY_MAP_WIDTH) + bin_x
+    index = (y * InitialValues.BINARY_MAP_WIDTH) + x
     return binary_map[index] == 0
 
 
-def _get_cartesian_product_range(size_x: int, size_y: int) -> product:
-    return product(range(size_x), range(size_y))
-
-
 def _get_map_range() -> product:
-    top_left_offset = InitialValues.top_left_binary_offset
-    bottom_right_offset = InitialValues.bottom_right_binary_offset
-    size_x = bottom_right_offset.longitude - top_left_offset.longitude
-    size_y = bottom_right_offset.latitude - top_left_offset.latitude
-    size_x = size_x + 1 if bottom_right_offset.longitude + size_x + 1 < InitialValues.BINARY_MAP_WIDTH else size_x
-    size_y = size_y + 1 if bottom_right_offset.latitude + size_y + 1 < InitialValues.BINARY_MAP_HEIGHT else size_y
-    size_x = size_x + 1 if bottom_right_offset.longitude > 1 else size_x
-    size_y = size_y + 1 if bottom_right_offset.latitude > 1 else size_y
-    return _get_cartesian_product_range(size_x, size_y)
+    max_x = project_longitude_to_x(InitialValues.max_lon)
+    min_x = project_longitude_to_x(InitialValues.min_lon)
+    max_y = project_latitude_to_y(InitialValues.max_lat)
+    min_y = project_latitude_to_y(InitialValues.min_lat)
+    return product(range(min_x, max_x), range(max_y, min_y))
 
 
 def _get_lands_set(binary_map: BinaryMap) -> set[tuple[Any, Any]]:
@@ -54,8 +41,6 @@ def _get_lands_set(binary_map: BinaryMap) -> set[tuple[Any, Any]]:
 
 def _map_binary_lands(binary_lands: set[Coord_t]) -> tuple[set[tuple[int, int]], np.ndarray, np.ndarray]:
     logger.debug("STATED: Mapping binary lands")
-
-    top_left_offset = InitialValues.top_left_binary_offset
 
     xy_points = dict()
     def get_point_xy(lon: float, lat: float) -> (int, int):
@@ -74,9 +59,6 @@ def _map_binary_lands(binary_lands: set[Coord_t]) -> tuple[set[tuple[int, int]],
     y_indices = []
 
     for x, y in binary_lands:
-        x += top_left_offset.longitude
-        y += top_left_offset.latitude
-
         vertex_top_left = get_projected_to_coords(x, y)
         vertex_bottom_right = get_projected_to_coords(x + 1, y + 1)
         vertex_top_right = get_projected_to_coords(x + 1, y)
