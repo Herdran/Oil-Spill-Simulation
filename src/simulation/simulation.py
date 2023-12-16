@@ -1,4 +1,4 @@
-from typing import Dict, List, Any
+from typing import Any
 
 import pandas as pd
 
@@ -13,7 +13,7 @@ from topology.math import get_xy_from_coord_raw
 
 class SimulationEngine:
     def __init__(self, data_processor: DataProcessor):
-        self._world: Dict[Coord_t, Point] = dict()
+        self._world: dict[Coord_t, Point] = dict()
         self.spreading_engine = SpreadingEngine(self)
 
         Point.world = self._world
@@ -29,7 +29,7 @@ class SimulationEngine:
     def is_finished(self) -> bool:
         return self._total_time >= InitialValues.simulation_time
 
-    def update(self, curr_iter: int) -> List[Coord_t]:
+    def update(self, curr_iter: int) -> list[Coord_t]:
         self._pour_from_sources()
         self._update_oil_points()
 
@@ -55,7 +55,7 @@ class SimulationEngine:
         for coord in list(self._world.keys()):  # copy because dict changes size during iteration
             self._world[coord].update()
 
-    def add_oil_sources(self, oil_sources: List[dict[str, Any]]):
+    def add_oil_sources(self, oil_sources: list[dict[str, Any]]):
         for oil_source in oil_sources:
             self._add_oil_source(get_xy_from_coord_raw(oil_source["coord"][1], oil_source["coord"][0]),
                                  oil_source["mass_per_minute"],
@@ -95,7 +95,7 @@ class SimulationEngine:
         return self._world
 
     @world.setter
-    def world(self, world: Dict[Coord_t, Point]):
+    def world(self, world: dict[Coord_t, Point]):
         self._world = world
         Point.world = world
 

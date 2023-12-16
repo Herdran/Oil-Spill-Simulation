@@ -1,7 +1,6 @@
 from math import exp, sqrt
 from random import random as rand
 from random import shuffle
-from typing import Dict
 
 from initial_values import InitialValues
 from simulation.point import Point, Coord_t, TopographyState, is_coord_in_simulation_area
@@ -32,14 +31,14 @@ class SpreadingEngine:
         for point in self._world.values():
             point.pour_from_buffer()
 
-    def new_point(self, coord: Coord_t, new_points: Dict[Coord_t, Point]) -> Point:
+    def new_point(self, coord: Coord_t, new_points: dict[Coord_t, Point]) -> Point:
         if coord in new_points:
             return new_points[coord]
         point = Point(coord, self._engine)
         new_points[coord] = point
         return point
 
-    def _update_new_points(self, new_points: Dict[Coord_t, Point]) -> None:
+    def _update_new_points(self, new_points: dict[Coord_t, Point]) -> None:
         for coord, point in new_points.items():
             if not is_coord_in_simulation_area(coord):
                 continue

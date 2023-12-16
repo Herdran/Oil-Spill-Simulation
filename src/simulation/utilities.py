@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Tuple, List
 
 
 class Neighbourhood(Enum):
@@ -7,7 +6,7 @@ class Neighbourhood(Enum):
     MOORE = 1
 
 
-def get_neighbour_coordinates(x: int, y: int, neighbourhood: Neighbourhood) -> List[Tuple[int, int]]:
+def get_neighbour_coordinates(x: int, y: int, neighbourhood: Neighbourhood) -> list[tuple[int, int]]:
     if neighbourhood == Neighbourhood.VON_NEUMANN:
         return [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
     elif neighbourhood == Neighbourhood.MOORE:

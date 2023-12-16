@@ -1,11 +1,9 @@
 from enum import Enum
-from typing import Tuple
 
 import numpy as np
 import pandas as pd
 from numpy import exp, log, sqrt
 
-from data.measurement_data import Coordinates
 from initial_values import InitialValues
 from simulation.utilities import get_neighbour_coordinates, Neighbourhood, sign
 from topology.math import get_coordinate_from_xy_cached
@@ -14,7 +12,7 @@ DEFAULT_WAVE_VELOCITY = np.array([0.0, 0.0])  # [m/s]
 DEFAULT_WIND_VELOCITY = np.array([0.0, 0.0])  # [m/s]
 DEFAULT_TEMPERATURE = 302.15  # [K]
 
-Coord_t = Tuple[int, int]
+Coord_t = tuple[int, int]
 
 
 class TopographyState(Enum):
@@ -136,7 +134,7 @@ class Point:
         for neighbor in to_share:
             neighbor.oil_mass += delta_mass
 
-    def _advection_land_collision(self, advection_vector: Tuple[float, float]) -> Tuple[int, int, Tuple[float, float]]:
+    def _advection_land_collision(self, advection_vector: tuple[float, float]) -> tuple[int, int, tuple[float, float]]:
         x, y = self._coord
         next_x = x + int(advection_vector[0])
         next_y = y + int(advection_vector[1])

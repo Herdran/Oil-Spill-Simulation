@@ -2,7 +2,7 @@ import json
 import time
 from logging import getLogger
 from os import PathLike
-from typing import Dict, Any, List, Tuple
+from typing import Any
 
 import pandas as pd
 
@@ -14,7 +14,7 @@ from topology.math import get_coordinate_from_xy_cached
 logger = getLogger("checkpoints")
 
 
-def _point_to_dict(point: Point) -> Dict[str, any]:
+def _point_to_dict(point: Point) -> dict[str, any]:
     coordinate = get_coordinate_from_xy_cached(point.coord)
     return {
         "coord": point.coord,
@@ -29,7 +29,7 @@ def _point_to_dict(point: Point) -> Dict[str, any]:
     }
 
 
-def _oil_source_to_dict(source: Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]) -> Dict[str, any]:
+def _oil_source_to_dict(source: tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]) -> dict[str, any]:
     lon, lat = get_coordinate_from_xy_cached(source[0]).as_tuple()
     return {
         "coord": (lon, lat),
@@ -46,8 +46,8 @@ def _get_path_to_save(curr_iter: int) -> PathLike:
     return checkpoint_dir_path.joinpath(f"checkpoint_{timestamp}_iteration_{curr_iter}.json")
 
 
-def save_to_json(world: Dict[Coord_t, Point], total_time: int, curr_iter: int,
-                 constant_sources: List[Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]]) -> None:
+def save_to_json(world: dict[Coord_t, Point], total_time: int, curr_iter: int,
+                 constant_sources: list[tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]]) -> None:
     logger.debug("STATED: Saving checkpoint")
     data = {
         "top_coord": InitialValues.simulation_initial_parameters.area.max.latitude,
@@ -78,7 +78,7 @@ def save_to_json(world: Dict[Coord_t, Point], total_time: int, curr_iter: int,
     logger.debug(f"Checkpoint saved fo file: {path}")
 
 
-def load_from_json(path: str) -> Dict[str, Any]:
+def load_from_json(path: str) -> dict[str, Any]:
     logger.debug(f"STATED: Loading checkpoint from file: {path}")
     with open(path, "r") as file:
         data = json.load(file)
@@ -94,7 +94,7 @@ def load_from_json(path: str) -> Dict[str, Any]:
     return data
 
 
-def initialize_points_from_checkpoint(points: List[Any], engine):
+def initialize_points_from_checkpoint(points: list[Any], engine):
     logger.debug("STATED: Initializing points from checkpoint")
     world = {}
     for point_data in points:

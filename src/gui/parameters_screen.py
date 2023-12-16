@@ -255,7 +255,7 @@ def start_initial_menu(window):
 
             create_label_grid(oil_sources_frame, "Oil sources", columnspan=5)
 
-            self.oil_sources_listbox = tk.Listbox(oil_sources_frame, width=95, height=3)
+            self.oil_sources_listbox = tk.listbox(oil_sources_frame, width=95, height=3)
 
             self.oil_sources_listbox.grid(row=3, column=1, columnspan=3, sticky=tk.N + tk.S + tk.W, padx=5, pady=5)
 
