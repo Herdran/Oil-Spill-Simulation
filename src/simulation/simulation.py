@@ -24,14 +24,14 @@ class SimulationEngine:
         self._total_land_mass = 0
         self.lands, self.x_indices, self.y_indices = load_topography()
         self._total_time = InitialValues.total_simulation_time
-        self._constants_sources = []  # contains tuples (coord, mass_per_minute, spill_start, spill_end)
+        self._constant_sources = []  # contains tuples (coord, mass_per_minute, spill_start, spill_end)
         self._evaporated_oil = 0  # [kg]
         self._dispersed_oil = 0  # [kg]
 
     def is_finished(self) -> bool:
         return self._total_time >= InitialValues.simulation_time
 
-    def update(self, curr_iter: int) -> list[Coord_t]:
+    def update(self) -> list[Coord_t]:
         self._pour_from_sources()
         self._update_oil_points()
 
@@ -50,7 +50,7 @@ class SimulationEngine:
             del self._world[point]
             deleted.append(point)
         self._total_time += self.timestep
-        self.save_checkpoint(curr_iter)
+        self.save_checkpoint()
         return deleted
 
     def _update_oil_points(self):
@@ -68,12 +68,12 @@ class SimulationEngine:
 
     def _add_oil_source(self, coord: Coord_t, mass_per_minute: float, spill_start: pd.Timestamp,
                         spill_end: pd.Timestamp):
-        self._constants_sources.append((coord, mass_per_minute, spill_start, spill_end))
+        self._constant_sources.append((coord, mass_per_minute, spill_start, spill_end))
 
     def _pour_from_sources(self):
         current_timestamp = InitialValues.simulation_initial_parameters.time.min + pd.Timedelta(
             seconds=self._total_time)
-        for spill in self._constants_sources:
+        for spill in self._constant_sources:
             cords, mass_per_minute, spill_start, spill_end = spill
             if spill_start <= current_timestamp <= spill_end:
                 if cords not in self._world and 0 <= cords[0] < InitialValues.point_side_lon_count and 0 <= cords[
@@ -89,10 +89,10 @@ class SimulationEngine:
     def get_oil_amounts(self):
         return self._total_mass - self._total_land_mass, self._total_land_mass
 
-    def save_checkpoint(self, curr_iter: int, on_demand: bool = False):
+    def save_checkpoint(self, on_demand: bool = False):
         if on_demand or self.checkpoint_frequency > 0 and (
                 self._total_time / self.timestep) % self.checkpoint_frequency == 0:
-            save_to_json(self._world, self._total_time, curr_iter, self._constants_sources)
+            save_to_json(self)
 
     @property
     def world(self):
@@ -114,3 +114,7 @@ class SimulationEngine:
     @property
     def dispersed_oil(self):
         return self._dispersed_oil
+
+    @property
+    def constant_sources(self):
+        return self._constant_sources

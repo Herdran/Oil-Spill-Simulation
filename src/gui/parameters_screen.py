@@ -777,7 +777,7 @@ def start_initial_menu(window):
                 self.nvm.select()
                 self.neighborhood_var.set(1)
 
-            for oil_source in loaded_parameters["constants_sources"]:
+            for oil_source in loaded_parameters["constant_sources"]:
                 self.oil_sources_listbox.insert(END, f"{oil_source[0][0]}, "
                                                      f"{oil_source[0][1]}, "
                                                      f"{oil_source[1]}, "

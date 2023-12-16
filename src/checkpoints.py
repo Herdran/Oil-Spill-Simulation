@@ -46,8 +46,7 @@ def _get_path_to_save(curr_iter: int) -> PathLike:
     return checkpoint_dir_path.joinpath(f"checkpoint_{timestamp}_iteration_{curr_iter}.json")
 
 
-def save_to_json(world: dict[Coord_t, Point], total_time: int, curr_iter: int,
-                 constant_sources: list[tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]]) -> None:
+def save_to_json(engine) -> None:
     logger.debug("STATED: Saving checkpoint")
     data = {
         "top_coord": InitialValues.simulation_initial_parameters.area.max.latitude,
@@ -66,13 +65,13 @@ def save_to_json(world: dict[Coord_t, Point], total_time: int, curr_iter: int,
         "oil_density": InitialValues.oil_density,
         "neighborhood": str(InitialValues.neighbourhood),
         "checkpoint_frequency": InitialValues.checkpoint_frequency,
-        "total_simulation_time": total_time,
-        "curr_iter": curr_iter,
+        "total_simulation_time": engine.total_time,
+        "curr_iter": int(engine.total_time / engine.timestep),
         "data_path": InitialValues.simulation_initial_parameters.path_to_data,
-        "constants_sources": [_oil_source_to_dict(source) for source in constant_sources],
-        "points": [_point_to_dict(point) for point in world.values()]
+        "constant_sources": [_oil_source_to_dict(source) for source in engine.constant_sources],
+        "points": [_point_to_dict(point) for point in engine.world.values()]
     }
-    path = _get_path_to_save(curr_iter)
+    path = _get_path_to_save(int(engine.total_time / engine.timestep))
     with open(path, "w") as file:
         json.dump(data, file, indent=4)
     logger.debug(f"Checkpoint saved fo file: {path}")
@@ -82,14 +81,14 @@ def load_from_json(path: str) -> dict[str, Any]:
     logger.debug(f"STATED: Loading checkpoint from file: {path}")
     with open(path, "r") as file:
         data = json.load(file)
-    constants_sources = []
-    for source in data.get("constants_sources", []):
+    constant_sources = []
+    for source in data.get("constant_sources", []):
         coord = tuple(source["coord"])
         mass_per_minute = source["mass_per_minute"]
         spill_start = pd.Timestamp(source["spill_start"])
         spill_end = pd.Timestamp(source["spill_end"])
-        constants_sources.append((coord, mass_per_minute, spill_start, spill_end))
-    data["constants_sources"] = constants_sources
+        constant_sources.append((coord, mass_per_minute, spill_start, spill_end))
+    data["constant_sources"] = constant_sources
     logger.debug("FINISHED: Loading checkpoint")
     return data
 
