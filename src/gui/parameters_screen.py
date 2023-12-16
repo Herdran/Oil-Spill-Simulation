@@ -5,17 +5,24 @@ from tkinter import DISABLED, NORMAL, END, ANCHOR
 import numpy as np
 import pandas as pd
 from PIL import Image, ImageTk
+
 from checkpoints import load_from_json
-from initial_values import set_simulation_coordinates_parameters, InitialValues
 from files import get_data_path
+from gui.main_screen import start_simulation
 from gui.utilities import create_frame, create_label_pack, create_label_grid, create_input_entry_grid, \
     create_label_grid_parameter_screen, browse_button, resize_img_to_fit_frame
-from gui.main_screen import start_simulation
-from simulation.topology import get_binary_scaled_map
+from initial_values import InitialValues
+from initial_values_loader import set_simulation_coordinates_parameters
 from simulation.utilities import Neighbourhood
+from topology.file_loader import get_binary_scaled_map
 
 
 def start_initial_menu(window):
+    def set_text(input_widget, text):
+        input_widget.delete(0, END)
+        input_widget.insert(0, text)
+        return
+
     class ParametersSettingController(tk.Frame):
         def __init__(self, parent):
             super().__init__(parent)
@@ -25,9 +32,10 @@ def start_initial_menu(window):
             self.right_coord = InitialValues.simulation_initial_parameters.area.max.longitude
             self.time_range_start = str(InitialValues.simulation_initial_parameters.time.min)
             self.time_range_end = str(InitialValues.simulation_initial_parameters.time.max)
-            self.data_time_step_minutes = int(InitialValues.simulation_initial_parameters.data_time_step.total_seconds() / 60)
-            self.cells_side_count_latitude = InitialValues.simulation_initial_parameters.cells_side_count.latitude
-            self.cells_side_count_longitude = InitialValues.simulation_initial_parameters.cells_side_count.longitude
+            self.data_time_step_minutes = int(
+                InitialValues.simulation_initial_parameters.data_time_step.total_seconds() / 60)
+            self.interpolation_grid_size_latitude = InitialValues.simulation_initial_parameters.interpolation_grid_size.latitude
+            self.interpolation_grid_size_longitude = InitialValues.simulation_initial_parameters.interpolation_grid_size.longitude
             self.point_side_size = InitialValues.point_side_size
             self.iter_as_sec = InitialValues.iter_as_sec
             self.min_oil_thickness = InitialValues.min_oil_thickness
@@ -40,8 +48,8 @@ def start_initial_menu(window):
             self.img = None
             self.points_from_checkpoint = None
             self.oil_sources = []
-            self.longitude_oil_source = 0.0
             self.latitude_oil_source = 0.0
+            self.longitude_oil_source = 0.0
             self.mass_per_minute_oil_source = 0.0
             self.spill_start_oil_source = str(InitialValues.simulation_initial_parameters.time.min)
             self.spill_end_oil_source = str(InitialValues.simulation_initial_parameters.time.max)
@@ -63,10 +71,13 @@ def start_initial_menu(window):
             self.main_frame.columnconfigure(3, weight=1, uniform='column')
 
             title_frame = create_frame(self.main_frame, 0, 0, 1, 4, tk.N + tk.S)
-            neighborhood_type_frame = create_frame(self.main_frame, 4, 0, 1, 1, tk.S + tk.W, relief_style=tk.RAISED, padx=5, pady=5)
+            neighborhood_type_frame = create_frame(self.main_frame, 4, 0, 1, 1, tk.S + tk.W, relief_style=tk.RAISED,
+                                                   padx=5, pady=5)
             inputs_frame = create_frame(self.main_frame, 1, 0, 3, 4, tk.N + tk.S, padx=5, pady=5)
-            data_path_frame = create_frame(self.main_frame, 5, 0, 1, 2, tk.S + tk.W, relief_style=tk.RAISED, padx=3, pady=3)
-            checkpoint_path_frame = create_frame(self.main_frame, 6, 0, 2, 2, tk.S + tk.W, relief_style=tk.RAISED, padx=3, pady=3)
+            data_path_frame = create_frame(self.main_frame, 5, 0, 1, 2, tk.S + tk.W, relief_style=tk.RAISED, padx=3,
+                                           pady=3)
+            checkpoint_path_frame = create_frame(self.main_frame, 6, 0, 2, 2, tk.S + tk.W, relief_style=tk.RAISED,
+                                                 padx=3, pady=3)
             confirm_and_start_frame = create_frame(self.main_frame, 7, 2, 1, 2, tk.S + tk.E)
             oil_sources_frame = create_frame(self.main_frame, 4, 1, 3, 2, tk.N + tk.S + tk.W, relief_style=tk.RAISED)
 
@@ -85,8 +96,10 @@ def start_initial_menu(window):
             coord_and_time_range_frame = create_frame(inputs_frame, 0, 1, 3, 2, tk.N + tk.S, padx=3, pady=3)
             coord_frame = create_frame(coord_and_time_range_frame, 0, 1, 2, 2, tk.N + tk.S, relief_style=tk.RAISED)
             time_range_frame = create_frame(coord_and_time_range_frame, 2, 1, 1, 2, tk.N + tk.S, relief_style=tk.RAISED)
-            data_processor_parameters_frame = create_frame(inputs_frame, 0, 3, 3, 1, tk.N + tk.S, relief_style=tk.RAISED, padx=3, pady=3)
-            other_parameters_frame = create_frame(inputs_frame, 0, 4, 3, 2, tk.N + tk.S, relief_style=tk.RAISED, padx=3, pady=3)
+            data_processor_parameters_frame = create_frame(inputs_frame, 0, 3, 3, 1, tk.N + tk.S,
+                                                           relief_style=tk.RAISED, padx=3, pady=3)
+            other_parameters_frame = create_frame(inputs_frame, 0, 4, 3, 2, tk.N + tk.S, relief_style=tk.RAISED, padx=3,
+                                                  pady=3)
 
             top_coord_frame = create_frame(coord_frame, 0, 0, 1, 1, tk.N + tk.S)
             down_coord_frame = create_frame(coord_frame, 1, 0, 1, 1, tk.N + tk.S)
@@ -95,8 +108,10 @@ def start_initial_menu(window):
             time_range_start_frame = create_frame(time_range_frame, 0, 0, 1, 1, tk.N + tk.S)
             time_range_end_frame = create_frame(time_range_frame, 0, 1, 1, 1, tk.N + tk.S)
             data_time_step_frame = create_frame(data_processor_parameters_frame, 2, 0, 1, 1, tk.N + tk.S)
-            cells_side_count_latitude_frame = create_frame(data_processor_parameters_frame, 0, 0, 1, 1, tk.N + tk.S)
-            cells_side_count_longitude_frame = create_frame(data_processor_parameters_frame, 1, 0, 1, 1, tk.N + tk.S)
+            interpolation_grid_size_latitude_frame = create_frame(data_processor_parameters_frame, 0, 0, 1, 1,
+                                                                  tk.N + tk.S)
+            interpolation_grid_size_longitude_frame = create_frame(data_processor_parameters_frame, 1, 0, 1, 1,
+                                                                   tk.N + tk.S)
             point_side_size_frame = create_frame(other_parameters_frame, 0, 0, 1, 1, tk.N + tk.S)
             time_per_iteration_frame = create_frame(other_parameters_frame, 1, 0, 1, 1, tk.N + tk.S)
             min_oil_thickness_frame = create_frame(other_parameters_frame, 2, 1, 1, 1, tk.N + tk.S)
@@ -111,8 +126,8 @@ def start_initial_menu(window):
             create_label_grid(time_range_start_frame, "Time range: start\n[yyyy-mm-dd hh:mm:ss]")
             create_label_grid(time_range_end_frame, "Time range: end\n[yyyy-mm-dd hh:mm:ss]")
             create_label_grid(data_time_step_frame, "Data time step\n[min]")
-            create_label_grid(cells_side_count_latitude_frame, "Data stations count:\nlatitude")
-            create_label_grid(cells_side_count_longitude_frame, "Data stations count:\nlongitude")
+            create_label_grid(interpolation_grid_size_latitude_frame, "Data stations count:\nlatitude")
+            create_label_grid(interpolation_grid_size_longitude_frame, "Data stations count:\nlongitude")
             create_label_grid(point_side_size_frame, "Point side size\n[m]")
             create_label_grid(time_per_iteration_frame, "Time per iteration\n[s]")
             create_label_grid(min_oil_thickness_frame, "Minimum oil thickness\n[μm]")
@@ -136,23 +151,27 @@ def start_initial_menu(window):
             self.data_time_step_input = create_input_entry_grid(data_time_step_frame, 3,
                                                                 str(self.data_time_step_minutes),
                                                                 self.validate_data_time_step)
-            self.cells_side_count_latitude_input = create_input_entry_grid(cells_side_count_latitude_frame, 3,
-                                                                           str(self.cells_side_count_latitude),
-                                                                           self.validate_cells_side_count_latitude)
-            self.cells_side_count_longitude_input = create_input_entry_grid(cells_side_count_longitude_frame, 3,
-                                                                            str(self.cells_side_count_longitude),
-                                                                            self.validate_cells_side_count_longitude)
+            self.interpolation_grid_size_latitude_input = create_input_entry_grid(
+                interpolation_grid_size_latitude_frame, 3,
+                str(self.interpolation_grid_size_latitude),
+                self.validate_interpolation_grid_size_latitude)
+            self.interpolation_grid_size_longitude_input = create_input_entry_grid(
+                interpolation_grid_size_longitude_frame, 3,
+                str(self.interpolation_grid_size_longitude),
+                self.validate_interpolation_grid_size_longitude)
             self.point_side_size_input = create_input_entry_grid(point_side_size_frame, 3, str(self.point_side_size),
                                                                  self.validate_point_side_size)
             self.iter_as_sec_input = create_input_entry_grid(time_per_iteration_frame, 3, str(self.iter_as_sec),
                                                              self.validate_iter_as_sec)
-            self.min_oil_thickness_input = create_input_entry_grid(min_oil_thickness_frame, 7, str(self.min_oil_thickness),
+            self.min_oil_thickness_input = create_input_entry_grid(min_oil_thickness_frame, 7,
+                                                                   str(self.min_oil_thickness),
                                                                    self.validate_min_oil_thickness)
             self.oil_viscosity_input = create_input_entry_grid(oil_viscosity_frame, 7, str(self.oil_viscosity),
                                                                self.validate_oil_viscosity)
             self.oil_density_input = create_input_entry_grid(oil_density_frame, 7, str(self.oil_density),
                                                              self.validate_oil_density)
-            self.checkpoint_frequency_input = create_input_entry_grid(checkpoint_frequency_frame, 7, str(self.checkpoint_frequency),
+            self.checkpoint_frequency_input = create_input_entry_grid(checkpoint_frequency_frame, 7,
+                                                                      str(self.checkpoint_frequency),
                                                                       self.validate_checkpoint_frequency)
 
             self.top_coord_validation_label = create_label_grid_parameter_screen(top_coord_frame)
@@ -162,8 +181,10 @@ def start_initial_menu(window):
             self.time_range_start_validation_label = create_label_grid_parameter_screen(time_range_start_frame)
             self.time_range_end_validation_label = create_label_grid_parameter_screen(time_range_end_frame)
             self.data_time_step_validation_label = create_label_grid_parameter_screen(data_time_step_frame)
-            self.cells_side_count_latitude_validation_label = create_label_grid_parameter_screen(cells_side_count_latitude_frame)
-            self.cells_side_count_longitude_validation_label = create_label_grid_parameter_screen(cells_side_count_longitude_frame)
+            self.interpolation_grid_size_latitude_validation_label = create_label_grid_parameter_screen(
+                interpolation_grid_size_latitude_frame)
+            self.interpolation_grid_size_longitude_validation_label = create_label_grid_parameter_screen(
+                interpolation_grid_size_longitude_frame)
             self.point_side_size_validation_label = create_label_grid_parameter_screen(point_side_size_frame)
             self.iter_as_sec_validation_label = create_label_grid_parameter_screen(time_per_iteration_frame)
             self.min_oil_thickness_validation_label = create_label_grid_parameter_screen(min_oil_thickness_frame)
@@ -191,7 +212,8 @@ def start_initial_menu(window):
 
             self.neighborhood_var = tk.IntVar()
             self.nm = tk.Radiobutton(neighborhood_type_frame, text="Moore", variable=self.neighborhood_var, value=0)
-            self.nvm = tk.Radiobutton(neighborhood_type_frame, text="Von Neumann", variable=self.neighborhood_var, value=1)
+            self.nvm = tk.Radiobutton(neighborhood_type_frame, text="Von Neumann", variable=self.neighborhood_var,
+                                      value=1)
             self.nm.select()
 
             self.nm.grid(row=1, column=0, rowspan=1, padx=3, pady=3, sticky=tk.N + tk.S)
@@ -206,7 +228,8 @@ def start_initial_menu(window):
             browse_path_label = tk.Label(data_path_frame, textvariable=self.data_path)
             browse_path_label.grid(row=1, column=1, padx=3, pady=3, sticky=tk.N + tk.S + tk.W)
 
-            data_path_browse = tk.Button(data_path_frame, text="Browse", command=lambda: browse_button(target=self.data_path))
+            data_path_browse = tk.Button(data_path_frame, text="Browse",
+                                         command=lambda: browse_button(target=self.data_path))
             data_path_browse.grid(row=1, column=0, padx=3, pady=3, sticky=tk.N + tk.S + tk.W)
 
             create_label_grid(checkpoint_path_frame, "Checkpoint path:", font=("Arial", 14, "bold"), columnspan=2,
@@ -260,16 +283,28 @@ def start_initial_menu(window):
             create_label_grid(spill_start_oil_source_frame, "Spill start\n[yyyy-mm-dd hh:mm:ss]")
             create_label_grid(spill_end_oil_source_frame, "Spill end\n[yyyy-mm-dd hh:mm:ss]")
 
-            self.latitude_oil_source_input = create_input_entry_grid(latitude_oil_source_frame, 9, str(self.latitude_oil_source), self.validate_latitude_oil_source)
-            self.longitude_oil_source_input = create_input_entry_grid(longitude_oil_source_frame, 9, str(self.longitude_oil_source), self.validate_longitude_oil_source)
-            self.mass_per_minute_oil_source_input = create_input_entry_grid(mass_per_minute_oil_source_frame, 7, str(self.mass_per_minute_oil_source), self.validate_mass_per_minute_oil_source)
-            self.spill_start_oil_source_input = create_input_entry_grid(spill_start_oil_source_frame, 17, self.spill_start_oil_source, self.validate_spill_start_oil_source)
-            self.spill_end_oil_source_input = create_input_entry_grid(spill_end_oil_source_frame, 17, self.spill_end_oil_source, self.validate_spill_end_oil_source)
+            self.latitude_oil_source_input = create_input_entry_grid(latitude_oil_source_frame, 9,
+                                                                     str(self.latitude_oil_source),
+                                                                     self.validate_latitude_oil_source)
+            self.longitude_oil_source_input = create_input_entry_grid(longitude_oil_source_frame, 9,
+                                                                      str(self.longitude_oil_source),
+                                                                      self.validate_longitude_oil_source)
+            self.mass_per_minute_oil_source_input = create_input_entry_grid(mass_per_minute_oil_source_frame, 7,
+                                                                            str(self.mass_per_minute_oil_source),
+                                                                            self.validate_mass_per_minute_oil_source)
+            self.spill_start_oil_source_input = create_input_entry_grid(spill_start_oil_source_frame, 17,
+                                                                        self.spill_start_oil_source,
+                                                                        self.validate_spill_start_oil_source)
+            self.spill_end_oil_source_input = create_input_entry_grid(spill_end_oil_source_frame, 17,
+                                                                      self.spill_end_oil_source,
+                                                                      self.validate_spill_end_oil_source)
 
             self.longitude_oil_source_validation_label = create_label_grid_parameter_screen(longitude_oil_source_frame)
             self.latitude_oil_source_validation_label = create_label_grid_parameter_screen(latitude_oil_source_frame)
-            self.mass_per_minute_oil_source_validation_label = create_label_grid_parameter_screen(mass_per_minute_oil_source_frame)
-            self.spill_start_oil_source_validation_label = create_label_grid_parameter_screen(spill_start_oil_source_frame)
+            self.mass_per_minute_oil_source_validation_label = create_label_grid_parameter_screen(
+                mass_per_minute_oil_source_frame)
+            self.spill_start_oil_source_validation_label = create_label_grid_parameter_screen(
+                spill_start_oil_source_frame)
             self.spill_end_oil_source_validation_label = create_label_grid_parameter_screen(spill_end_oil_source_frame)
 
             self.map_view_frame.update()
@@ -407,39 +442,39 @@ def start_initial_menu(window):
             self.confirm_and_continue.config(state=DISABLED)
             self.correctly_set_parameters[6] = 0
 
-        def validate_cells_side_count_latitude(self):
-            value = self.cells_side_count_latitude_input.get()
+        def validate_interpolation_grid_size_latitude(self):
+            value = self.interpolation_grid_size_latitude_input.get()
             if not value:
                 return False
             try:
                 if float(value) % 1 == 0 and float(
                         value) > 0:
-                    self.cells_side_count_latitude = int(value)
-                    self.cells_side_count_latitude_validation_label.config(text="Valid value", fg="black")
+                    self.interpolation_grid_size_latitude = int(value)
+                    self.interpolation_grid_size_latitude_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[7] = 1
                     self.check_all_main_parameters_validity()
                     return True
             except ValueError:
                 pass
-            self.cells_side_count_latitude_validation_label.config(text="Invalid value", fg="red")
+            self.interpolation_grid_size_latitude_validation_label.config(text="Invalid value", fg="red")
             self.confirm_and_continue.config(state=DISABLED)
             self.correctly_set_parameters[7] = 0
 
-        def validate_cells_side_count_longitude(self):
-            value = self.cells_side_count_longitude_input.get()
+        def validate_interpolation_grid_size_longitude(self):
+            value = self.interpolation_grid_size_longitude_input.get()
             if not value:
                 return False
             try:
                 if float(value) % 1 == 0 and float(
                         value) > 0:
-                    self.cells_side_count_longitude = int(value)
-                    self.cells_side_count_longitude_validation_label.config(text="Valid value", fg="black")
+                    self.interpolation_grid_size_longitude = int(value)
+                    self.interpolation_grid_size_longitude_validation_label.config(text="Valid value", fg="black")
                     self.correctly_set_parameters[8] = 1
                     self.check_all_main_parameters_validity()
                     return True
             except ValueError:
                 pass
-            self.cells_side_count_longitude_validation_label.config(text="Invalid value", fg="red")
+            self.interpolation_grid_size_longitude_validation_label.config(text="Invalid value", fg="red")
             self.confirm_and_continue.config(state=DISABLED)
             self.correctly_set_parameters[8] = 0
 
@@ -644,8 +679,8 @@ def start_initial_menu(window):
             self.validate_time_range_start()
             self.validate_time_range_end()
             self.validate_data_time_step()
-            self.validate_cells_side_count_latitude()
-            self.validate_cells_side_count_longitude()
+            self.validate_interpolation_grid_size_latitude()
+            self.validate_interpolation_grid_size_longitude()
             self.validate_point_side_size()
             self.validate_iter_as_sec()
             self.validate_min_oil_thickness()
@@ -691,37 +726,38 @@ def start_initial_menu(window):
                 loaded_parameters = load_from_json(self.checkpoint_path.get())
                 self.set_all_parameters_from_checkpoint(loaded_parameters)
                 self.validate_all_parameters()
+                self.check_all_main_parameters_validity(True)
 
         def set_all_parameters_from_checkpoint(self, loaded_parameters):
-            self.top_coord_input.setvar(str(loaded_parameters["top_coord"]))
+            set_text(self.top_coord_input, str(loaded_parameters["top_coord"]))
             self.top_coord_input.config(state=DISABLED)
-            self.down_coord_input.setvar(str(loaded_parameters["down_coord"]))
+            set_text(self.down_coord_input, str(loaded_parameters["down_coord"]))
             self.down_coord_input.config(state=DISABLED)
-            self.left_coord_input.setvar(str(loaded_parameters["left_coord"]))
+            set_text(self.left_coord_input, str(loaded_parameters["left_coord"]))
             self.left_coord_input.config(state=DISABLED)
-            self.right_coord_input.setvar(str(loaded_parameters["right_coord"]))
+            set_text(self.right_coord_input, str(loaded_parameters["right_coord"]))
             self.right_coord_input.config(state=DISABLED)
-            self.time_range_start_input.setvar(str(loaded_parameters["time_range_start"]))
+            set_text(self.time_range_start_input, str(loaded_parameters["time_range_start"]))
             self.time_range_start_input.config(state=DISABLED)
-            self.time_range_end_input.setvar(str(loaded_parameters["time_range_end"]))
+            set_text(self.time_range_end_input, str(loaded_parameters["time_range_end"]))
             self.time_range_end_input.config(state=DISABLED)
-            self.data_time_step_input.setvar(str(loaded_parameters["data_time_step"]))
+            set_text(self.data_time_step_input, str(loaded_parameters["data_time_step"]))
             self.data_time_step_input.config(state=DISABLED)
-            self.cells_side_count_latitude_input.setvar(str(loaded_parameters["cells_side_count_latitude"]))
-            self.cells_side_count_latitude_input.config(state=DISABLED)
-            self.cells_side_count_longitude_input.setvar(str(loaded_parameters["cells_side_count_longitude"]))
-            self.cells_side_count_longitude_input.config(state=DISABLED)
-            self.point_side_size_input.setvar(str(loaded_parameters["point_side_size"]))
+            set_text(self.interpolation_grid_size_latitude_input, str(loaded_parameters["cells_side_count_latitude"]))
+            self.interpolation_grid_size_latitude_input.config(state=DISABLED)
+            set_text(self.interpolation_grid_size_longitude_input, str(loaded_parameters["cells_side_count_longitude"]))
+            self.interpolation_grid_size_longitude_input.config(state=DISABLED)
+            set_text(self.point_side_size_input, str(loaded_parameters["point_side_size"]))
             self.point_side_size_input.config(state=DISABLED)
-            self.iter_as_sec_input.setvar(str(loaded_parameters["iter_as_sec"]))
+            set_text(self.iter_as_sec_input, str(loaded_parameters["iter_as_sec"]))
             self.iter_as_sec_input.config(state=DISABLED)
-            self.min_oil_thickness_input.setvar(str(loaded_parameters["min_oil_thickness"]))
+            set_text(self.min_oil_thickness_input, str(loaded_parameters["min_oil_thickness"]))
             self.min_oil_thickness_input.config(state=DISABLED)
-            self.oil_viscosity_input.setvar(str(loaded_parameters["oil_viscosity"]))
+            set_text(self.oil_viscosity_input, str(loaded_parameters["oil_viscosity"]))
             self.oil_viscosity_input.config(state=DISABLED)
-            self.oil_density_input.setvar(str(loaded_parameters["oil_density"]))
+            set_text(self.oil_density_input, str(loaded_parameters["oil_density"]))
             self.oil_density_input.config(state=DISABLED)
-            self.checkpoint_frequency_input.setvar(str(loaded_parameters["checkpoint_frequency"]))
+            set_text(self.oil_density_input, str(loaded_parameters["checkpoint_frequency"]))
             self.checkpoint_frequency_input.config(state=DISABLED)
 
             self.total_simulation_time = loaded_parameters["total_simulation_time"]
@@ -781,8 +817,8 @@ def start_initial_menu(window):
                                                   self.time_range_start,
                                                   self.time_range_end,
                                                   self.data_time_step_minutes,
-                                                  self.cells_side_count_latitude,
-                                                  self.cells_side_count_longitude,
+                                                  self.interpolation_grid_size_latitude,
+                                                  self.interpolation_grid_size_longitude,
                                                   self.data_path.get(),
                                                   self.point_side_size,
                                                   self.iter_as_sec,

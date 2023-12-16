@@ -9,10 +9,10 @@ from PIL import Image, ImageTk
 import simulation.simulation as simulation
 from checkpoints import initialize_points_from_checkpoint
 from color import blend_color
-from initial_values import InitialValues
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from files import get_main_path
 from gui.utilities import get_tooltip_text, create_frame, create_label_pack, create_input_entry_pack
+from initial_values import InitialValues
 
 Image.MAX_IMAGE_PIXELS = 999999999999
 
@@ -36,6 +36,10 @@ def start_simulation(window, points=None, oil_sources=None):
             self.tooltip = None
             self.full_img = full_img
             self.current_img = None
+            self.left = 0
+            self.top = 0
+            self.right = self.image_array_width
+            self.bottom = self.image_array_height
             self.image_change_controller = image_change_controller
 
             self.bind("<MouseWheel>", self.on_mousewheel)
@@ -56,15 +60,15 @@ def start_simulation(window, points=None, oil_sources=None):
             self.pan_x = max(min(self.pan_x, 0), min(window_width - self.zoomed_width, 0))
             self.pan_y = max(min(self.pan_y, 0), min(window_height - self.zoomed_height, 0))
 
-            left = int(-self.pan_x / self.zoom_level)
-            top = int(-self.pan_y / self.zoom_level)
-            right = int(window_width / self.zoom_level - (self.pan_x / self.zoom_level))
-            bottom = int(window_height / self.zoom_level - (self.pan_y / self.zoom_level))
+            self.left = int(-self.pan_x / self.zoom_level)
+            self.top = int(-self.pan_y / self.zoom_level)
+            self.right = int(window_width / self.zoom_level - (self.pan_x / self.zoom_level))
+            self.bottom = int(window_height / self.zoom_level - (self.pan_y / self.zoom_level))
 
-            right = min(right, self.image_array_width)
-            bottom = min(bottom, self.image_array_height)
+            self.right = min(self.right, self.image_array_width)
+            self.bottom = min(self.bottom, self.image_array_height)
 
-            cropped_image = self.full_img.crop((left, top, right, bottom))
+            cropped_image = self.full_img.crop((self.left, self.top, self.right, self.bottom))
 
             self.current_img = cropped_image.resize((min(window_width, self.zoomed_width),
                                                      min(window_height, self.zoomed_height)),
@@ -167,7 +171,7 @@ def start_simulation(window, points=None, oil_sources=None):
             x = int((event.x - self.pan_x - max((window_width - self.zoomed_width) // 2, 0)) / self.zoom_level)
             y = int((event.y - self.pan_y - max((window_height - self.zoomed_height) // 2, 0)) / self.zoom_level)
             coord = (x, y)
-            if not (0 <= x < self.image_array_height and 0 <= y < self.image_array_width):
+            if not (0 <= x < self.image_array_width and 0 <= y < self.image_array_height):
                 self.hide_tooltip()
                 return
             if coord not in engine.world:
@@ -274,7 +278,8 @@ def start_simulation(window, points=None, oil_sources=None):
             self.btn_start_stop = tk.Button(buttons_frame, text="Start", width=15, command=self.toggle_start_stop)
             self.btn_start_stop.pack(side=tk.TOP, padx=5, pady=5)
 
-            self.btn_save_checkpoint = tk.Button(buttons_frame, text="Save checkpoint", width=15, command=self.save_checkpoint)
+            self.btn_save_checkpoint = tk.Button(buttons_frame, text="Save checkpoint", width=15,
+                                                 command=self.save_checkpoint)
             self.btn_save_checkpoint.pack(side=tk.TOP, padx=5, pady=5)
 
             self.text_interval = create_input_entry_pack(interval_frame, 10, str(self.interval / 1000),
@@ -386,12 +391,15 @@ def start_simulation(window, points=None, oil_sources=None):
                 points_removed = engine.update(self.iter_as_sec)
 
                 for coords in engine.world:
-                    point = engine.world[coords]
-                    if point.topography == simulation.TopographyState.LAND:
-                        var = blend_color(InitialValues.LAND_WITH_OIL_COLOR, InitialValues.LAND_COLOR, point.oil_mass / self.minimal_oil_to_show)
-                    else:
-                        var = blend_color(InitialValues.OIL_COLOR, InitialValues.SEA_COLOR, point.oil_mass / self.minimal_oil_to_show)
-                    self.full_img.putpixel((coords[0], coords[1]), var)
+                    if self.viewer.top <= coords[1] < self.viewer.bottom and self.viewer.left < coords[0] <= self.viewer.right:
+                        point = engine.world[coords]
+                        if point.topography == simulation.TopographyState.LAND:
+                            var = blend_color(InitialValues.LAND_WITH_OIL_COLOR, InitialValues.LAND_COLOR,
+                                              point.oil_mass / self.minimal_oil_to_show)
+                        else:
+                            var = blend_color(InitialValues.OIL_COLOR, InitialValues.SEA_COLOR,
+                                              point.oil_mass / self.minimal_oil_to_show)
+                        self.full_img.putpixel((coords[0], coords[1]), var)
 
                 for coords in points_removed:
                     if coords in engine.lands:
@@ -437,7 +445,6 @@ def start_simulation(window, points=None, oil_sources=None):
         def save_checkpoint(self):
             engine.save_checkpoint(self.curr_iter, True)
 
-
     # TODO: what if user already data has been processed?
     #  maybe interface for choosing already processed data?
     #  for time saving
@@ -466,7 +473,8 @@ def start_simulation(window, points=None, oil_sources=None):
     sea_color = np.array(InitialValues.SEA_COLOR, dtype=np.uint8)
     land_color = np.array(InitialValues.LAND_COLOR, dtype=np.uint8)
 
-    image_array = np.full((InitialValues.point_side_count, InitialValues.point_side_count, 3), sea_color, dtype=np.uint8)
+    image_array = np.full((InitialValues.point_side_lat_count, InitialValues.point_side_lon_count, 3), sea_color,
+                          dtype=np.uint8)
 
     image_array[y_indices, x_indices, :] = land_color
 

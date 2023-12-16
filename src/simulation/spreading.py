@@ -1,10 +1,9 @@
 from math import exp, sqrt
 from random import random as rand
 from random import shuffle
-from typing import Dict
 
 from initial_values import InitialValues
-from simulation.point import Point, Coord_t, TopographyState
+from simulation.point import Point, Coord_t, TopographyState, is_coord_in_simulation_area
 from simulation.utilities import get_neighbour_coordinates
 
 
@@ -20,7 +19,7 @@ class SpreadingEngine:
             neighbours = get_neighbour_coordinates(x, y, InitialValues.neighbourhood)
             shuffle(neighbours)
             for neighbour in neighbours:
-                if not (0 <= neighbour[0] < InitialValues.point_side_count and 0 <= neighbour[1] < InitialValues.point_side_count):
+                if not is_coord_in_simulation_area(neighbour):
                     continue
                 if neighbour not in self._world:
                     neighbour_point = self.new_point(neighbour, new_points)
@@ -32,16 +31,16 @@ class SpreadingEngine:
         for point in self._world.values():
             point.pour_from_buffer()
 
-    def new_point(self, coord: Coord_t, new_points: Dict[Coord_t, Point]) -> Point:
+    def new_point(self, coord: Coord_t, new_points: dict[Coord_t, Point]) -> Point:
         if coord in new_points:
             return new_points[coord]
         point = Point(coord, self._engine)
         new_points[coord] = point
         return point
 
-    def _update_new_points(self, new_points: Dict[Coord_t, Point]) -> None:
+    def _update_new_points(self, new_points: dict[Coord_t, Point]) -> None:
         for coord, point in new_points.items():
-            if not (0 <= coord[0] < InitialValues.point_side_count and 0 <= coord[1] < InitialValues.point_side_count):
+            if not is_coord_in_simulation_area(coord):
                 continue
             self._world[coord] = point
 
@@ -49,16 +48,18 @@ class SpreadingEngine:
     def _process_spread_between(total_mass: float, first: Point, second: Point, is_new: bool) -> None:
         if not (first.topography == TopographyState.SEA and second.topography == TopographyState.SEA):
             return
-          
+
         length = InitialValues.point_side_size
         V = total_mass / InitialValues.oil_density
         G = 9.8
         delta = (InitialValues.water_density - InitialValues.oil_density) / InitialValues.water_density
         dynamic_viscosity = (first.viscosity_dynamic + second.viscosity_dynamic) / 2
         kinematic_viscosity = dynamic_viscosity / InitialValues.oil_density
-        D = 0.48 / InitialValues.propagation_factor * (V ** 2 * G * delta / sqrt(kinematic_viscosity)) ** (1 / 3) / sqrt(
+        D = 0.48 / InitialValues.propagation_factor * (V ** 2 * G * delta / sqrt(kinematic_viscosity)) ** (
+                    1 / 3) / sqrt(
             InitialValues.iter_as_sec)
-        delta_mass = 0.5 * (second.oil_mass - first.oil_mass) * (1 - exp(-2 * D / (length ** 2) * InitialValues.iter_as_sec))
+        delta_mass = 0.5 * (second.oil_mass - first.oil_mass) * (
+                    1 - exp(-2 * D / (length ** 2) * InitialValues.iter_as_sec))
         if not is_new:
             delta_mass = delta_mass / 2  # due to double spreading on the same pair
 

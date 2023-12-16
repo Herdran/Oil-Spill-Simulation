@@ -1,4 +1,3 @@
-from typing import Tuple
 from enum import Enum
 
 import numpy as np
@@ -6,19 +5,26 @@ import pandas as pd
 from numpy import exp, log, sqrt
 
 from initial_values import InitialValues
-from data.measurment_data import Coordinates
 from simulation.utilities import get_neighbour_coordinates, Neighbourhood, sign
+from topology.math import get_coordinate_from_xy_cached
 
 DEFAULT_WAVE_VELOCITY = np.array([0.0, 0.0])  # [m/s]
 DEFAULT_WIND_VELOCITY = np.array([0.0, 0.0])  # [m/s]
 DEFAULT_TEMPERATURE = 302.15  # [K]
 
-Coord_t = Tuple[int, int]
+Coord_t = tuple[int, int]
 
 
 class TopographyState(Enum):
     LAND = 0
     SEA = 1
+
+
+def is_coord_in_simulation_area(coord: Coord_t) -> bool:
+    return 0 <= coord[0] < InitialValues.point_side_lon_count and 0 <= coord[1] < InitialValues.point_side_lat_count
+
+
+
 
 
 class Point:
@@ -28,9 +34,7 @@ class Point:
         self._topography = engine.get_topography(coord)
         self._engine = engine
         self._coord = coord  # world coordinates
-        x, y = coord
-        self._coordinates = Coordinates(latitude=InitialValues.point_lat_centers[y], longitude=InitialValues.point_lon_centers[x])
-        self._weather_station_coordinates = engine.data_processor.weather_station_coordinates(self._coordinates)
+        self.weather_station_coordinates = engine.data_processor.weather_station_coordinates(get_coordinate_from_xy_cached(coord))
         self._wind_velocity = DEFAULT_WIND_VELOCITY
         self._wave_velocity = DEFAULT_WAVE_VELOCITY
         self._temperature = DEFAULT_TEMPERATURE
@@ -43,7 +47,7 @@ class Point:
         self._evaporation_rate = 0
 
     def contain_oil(self) -> bool:
-        return self.slick_thickness() > InitialValues.min_oil_thickness
+        return self.slick_thickness() / 100 > InitialValues.min_oil_thickness
 
     def add_oil(self, mass: float) -> None:
         # maybe initial emulsification rate will be changed
@@ -63,8 +67,8 @@ class Point:
         if not self._should_update_weather_data(time_delta):
             return
         time_stamp = InitialValues.simulation_initial_parameters.time.min + time_delta
-        measurement = self._data_processor.get_measurement(self._coordinates, self._weather_station_coordinates,
-                                                          time_stamp)
+        measurement = self._data_processor.get_measurement(get_coordinate_from_xy_cached(self.coord), self.weather_station_coordinates,
+                                                           time_stamp)
         self._wave_velocity = measurement.current.to_numpy()
         self._wind_velocity = measurement.wind.to_numpy()
         self._temperature = measurement.temperature
@@ -80,7 +84,7 @@ class Point:
         self._process_natural_dispersion()
         self._viscosity_change(delta_f, delta_y)
 
-        # to na końcu na pewno
+        # that needs to be done as the last step
         self._process_advection()
 
     def _process_emulsification(self) -> float:
@@ -101,8 +105,9 @@ class Point:
         R = 8.314  # [J/(mol*K)]
 
         self._evaporation_rate = (K * (InitialValues.molar_mass / 1000) * P) / (R * self._temperature)
-        delta_mass = -1 * min(InitialValues.iter_as_sec * InitialValues.point_side_size * InitialValues.point_side_size * self._evaporation_rate,
-                              self._oil_mass)
+        delta_mass = -1 * min(
+            InitialValues.iter_as_sec * InitialValues.point_side_size * InitialValues.point_side_size * self._evaporation_rate,
+            self._oil_mass)
         delta_f = -delta_mass / self._oil_mass
         self._oil_mass += delta_mass
         return delta_f
@@ -116,7 +121,7 @@ class Point:
 
         neighbours = get_neighbour_coordinates(x, y, InitialValues.neighbourhood)
         for cords in neighbours:
-            if not ((0 <= cords[0] < InitialValues.point_side_count) and (0 <= cords[1] < InitialValues.point_side_count)):
+            if not is_coord_in_simulation_area(cords):
                 continue
             if self._engine.get_topography(cords) == TopographyState.LAND:
                 continue
@@ -129,7 +134,7 @@ class Point:
         for neighbor in to_share:
             neighbor.oil_mass += delta_mass
 
-    def _advection_land_collision(self, advection_vector: Tuple[float, float]) -> Tuple[int, int, Tuple[float, float]]:
+    def _advection_land_collision(self, advection_vector: tuple[float, float]) -> tuple[int, int, tuple[float, float]]:
         x, y = self._coord
         next_x = x + int(advection_vector[0])
         next_y = y + int(advection_vector[1])
@@ -191,7 +196,7 @@ class Point:
     def _viscosity_change(self, delta_F: float, delta_Y: float) -> None:
         delta_viscosity = InitialValues.c * self._viscosity_dynamic * delta_F + (
                 2.5 * self._viscosity_dynamic * delta_Y) / (
-                (1 - InitialValues.emulsion_max_content_water * self._emulsification_rate) ** 2)
+                                  (1 - InitialValues.emulsion_max_content_water * self._emulsification_rate) ** 2)
         self._viscosity_dynamic += delta_viscosity
         if self._oil_mass < 1:
             self._viscosity_dynamic = InitialValues.viscosity_dynamic
@@ -209,7 +214,7 @@ class Point:
 
     def move_oil_to_other(self, coord: Coord_t, mass: float) -> None:
         self._oil_mass -= mass
-        if not (0 <= coord[0] < InitialValues.point_side_count and 0 <= coord[1] < InitialValues.point_side_count):
+        if not is_coord_in_simulation_area(coord):
             return
         if coord not in self.world:
             self.world[coord] = Point(coord, self._engine)
@@ -261,10 +266,6 @@ class Point:
     @property
     def wind_velocity(self) -> np.ndarray:
         return self._wind_velocity
-
-    @property
-    def coordinates(self) -> Coordinates:
-        return self._coordinates
 
     @property
     def evaporation_rate(self) -> float:
