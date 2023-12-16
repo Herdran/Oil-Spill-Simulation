@@ -1,9 +1,9 @@
+import pandas as pd
+
 from data.generic import Range
 from data.measurement_data import Coordinates
 from data.simulation_run_parameters import Interpolation_grid_size, SimulationRunParameters
 from simulation.utilities import Neighbourhood
-
-import pandas as pd
 
 
 class InitialValues:
@@ -25,7 +25,7 @@ class InitialValues:
 
     top_left_coord: Coordinates = None
     top_left_binary_offset = None
-    
+
     min_lon = None
     max_lon = None
     min_lat = None
@@ -56,7 +56,7 @@ class InitialValues:
 
     simulation_time: float = None
 
-    min_oil_thickness = 5e-5
+    min_oil_thickness = 5e-6  # [m]
 
     water_density = 997  # [kg/m^3]
     oil_density = 846  # [kg/m^3]

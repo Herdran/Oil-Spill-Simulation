@@ -55,7 +55,7 @@ class Point:
         self._evaporation_rate = 0
 
     def contain_oil(self) -> bool:
-        return self.slick_thickness() > InitialValues.min_oil_thickness
+        return self.slick_thickness() / 100 > InitialValues.min_oil_thickness
 
     def add_oil(self, mass: float) -> None:
         # maybe initial emulsification rate will be changed
@@ -76,7 +76,7 @@ class Point:
             return
         time_stamp = InitialValues.simulation_initial_parameters.time.min + time_delta
         measurement = self._data_processor.get_measurement(get_coordinate(self.coord), self.weather_station_coordinates,
-                                                        time_stamp)
+                                                           time_stamp)
         self._wave_velocity = measurement.current.to_numpy()
         self._wind_velocity = measurement.wind.to_numpy()
         self._temperature = measurement.temperature
@@ -113,8 +113,9 @@ class Point:
         R = 8.314  # [J/(mol*K)]
 
         self._evaporation_rate = (K * (InitialValues.molar_mass / 1000) * P) / (R * self._temperature)
-        delta_mass = -1 * min(InitialValues.iter_as_sec * InitialValues.point_side_size * InitialValues.point_side_size * self._evaporation_rate,
-                              self._oil_mass)
+        delta_mass = -1 * min(
+            InitialValues.iter_as_sec * InitialValues.point_side_size * InitialValues.point_side_size * self._evaporation_rate,
+            self._oil_mass)
         delta_f = -delta_mass / self._oil_mass
         self._oil_mass += delta_mass
         return delta_f
@@ -203,7 +204,7 @@ class Point:
     def _viscosity_change(self, delta_F: float, delta_Y: float) -> None:
         delta_viscosity = InitialValues.c * self._viscosity_dynamic * delta_F + (
                 2.5 * self._viscosity_dynamic * delta_Y) / (
-                (1 - InitialValues.emulsion_max_content_water * self._emulsification_rate) ** 2)
+                                  (1 - InitialValues.emulsion_max_content_water * self._emulsification_rate) ** 2)
         self._viscosity_dynamic += delta_viscosity
         if self._oil_mass < 1:
             self._viscosity_dynamic = InitialValues.viscosity_dynamic

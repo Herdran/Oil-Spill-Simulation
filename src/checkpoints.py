@@ -11,7 +11,6 @@ from initial_values import InitialValues
 from simulation.point import Point, Coord_t, get_coordinate
 from topology.math import get_coordinate_from_xy
 
-
 logger = getLogger("checkpoints")
 
 
@@ -34,7 +33,7 @@ def _oil_source_to_dict(source: Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp])
     x, y = source[0]
     lon, lat = get_coordinate_from_xy(x, y).as_tuple()
     return {
-        "coord": (lat, lon),
+        "coord": (lon, lat),
         "mass_per_minute": source[1],
         "spill_start": str(source[2]),
         "spill_end": str(source[3])
@@ -47,7 +46,9 @@ def _get_path_to_save(curr_iter: int) -> PathLike:
     checkpoint_dir_path.mkdir(parents=True, exist_ok=True)
     return checkpoint_dir_path.joinpath(f"checkpoint_{timestamp}_iteration_{curr_iter}.json")
 
-def save_to_json(world: Dict[Coord_t, Point], total_time: int, curr_iter: int, constant_sources: List[Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]]) -> None:
+
+def save_to_json(world: Dict[Coord_t, Point], total_time: int, curr_iter: int,
+                 constant_sources: List[Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]]) -> None:
     logger.debug("STATED: Saving checkpoint")
     data = {
         "top_coord": InitialValues.simulation_initial_parameters.area.max.latitude,
@@ -76,7 +77,6 @@ def save_to_json(world: Dict[Coord_t, Point], total_time: int, curr_iter: int, c
     with open(path, "w") as file:
         json.dump(data, file, indent=4)
     logger.debug(f"Checkpoint saved fo file: {path}")
-        
 
 
 def load_from_json(path: str) -> Dict[str, Any]:
