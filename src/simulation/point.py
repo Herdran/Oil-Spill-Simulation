@@ -8,7 +8,7 @@ from numpy import exp, log, sqrt
 from data.measurement_data import Coordinates
 from initial_values import InitialValues
 from simulation.utilities import get_neighbour_coordinates, Neighbourhood, sign
-from topology.math import get_coordinate_from_xy
+from topology.math import get_coordinate_from_xy_cached
 
 DEFAULT_WAVE_VELOCITY = np.array([0.0, 0.0])  # [m/s]
 DEFAULT_WIND_VELOCITY = np.array([0.0, 0.0])  # [m/s]
@@ -26,13 +26,7 @@ def is_coord_in_simulation_area(coord: Coord_t) -> bool:
     return 0 <= coord[0] < InitialValues.point_side_lon_count and 0 <= coord[1] < InitialValues.point_side_lat_count
 
 
-mapped_coordinates = dict()
 
-
-def get_coordinate(coord: Coord_t) -> Coordinates:
-    if coord not in mapped_coordinates:
-        mapped_coordinates[coord] = get_coordinate_from_xy(coord[0], coord[1])
-    return mapped_coordinates[coord]
 
 
 class Point:
@@ -42,7 +36,7 @@ class Point:
         self._topography = engine.get_topography(coord)
         self._engine = engine
         self._coord = coord  # world coordinates
-        self.weather_station_coordinates = engine.data_processor.weather_station_coordinates(get_coordinate(coord))
+        self.weather_station_coordinates = engine.data_processor.weather_station_coordinates(get_coordinate_from_xy_cached(coord))
         self._wind_velocity = DEFAULT_WIND_VELOCITY
         self._wave_velocity = DEFAULT_WAVE_VELOCITY
         self._temperature = DEFAULT_TEMPERATURE
@@ -75,7 +69,7 @@ class Point:
         if not self._should_update_weather_data(time_delta):
             return
         time_stamp = InitialValues.simulation_initial_parameters.time.min + time_delta
-        measurement = self._data_processor.get_measurement(get_coordinate(self.coord), self.weather_station_coordinates,
+        measurement = self._data_processor.get_measurement(get_coordinate_from_xy_cached(self.coord), self.weather_station_coordinates,
                                                            time_stamp)
         self._wave_velocity = measurement.current.to_numpy()
         self._wind_velocity = measurement.wind.to_numpy()
@@ -92,7 +86,7 @@ class Point:
         self._process_natural_dispersion()
         self._viscosity_change(delta_f, delta_y)
 
-        # to na końcu na pewno
+        # that needs to be done as the last step
         self._process_advection()
 
     def _process_emulsification(self) -> float:

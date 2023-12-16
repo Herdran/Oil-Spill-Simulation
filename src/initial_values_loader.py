@@ -11,7 +11,7 @@ from simulation.utilities import Neighbourhood
 from topology.binary_map_math import project_binary_map_coordinates
 from topology.math import MoveDirection, get_coordinate_from_xy, get_xy_dist_from_coord, move_coordinate
 
-logger = getLogger("constants")
+logger = getLogger("initial_values")
 
 
 def set_simulation_coordinates_parameters(top_coord: float,

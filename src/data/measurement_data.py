@@ -13,7 +13,7 @@ class CoordinatesBase(Generic[GenericT]):
     longitude: GenericT
 
     def as_tuple(self) -> tuple[GenericT, GenericT]:
-        return (self.latitude, self.longitude)
+        return self.latitude, self.longitude
 
 
 Coordinates = CoordinatesBase[float]

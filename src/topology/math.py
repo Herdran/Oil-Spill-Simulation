@@ -28,10 +28,10 @@ def move_coordinate(source: Coordinates, distance: float, direction: MoveDirecti
     return move_coordinate_bearing(source, distance, direction.value)
 
 
-def move_coordinate_raw(lat: float, lon: float, distance: float, direction: MoveDirection) -> (float, float):
+def move_coordinate_raw(lat: float, lon: float, distance: float, direction: MoveDirection) -> tuple[float, float]:
     bearing = direction.value
     point = geo.distance(meters=distance).destination((lat, lon), bearing)
-    return (point.latitude, point.longitude)
+    return point.latitude, point.longitude
 
 
 def get_coordinate_from_xy(x: int, y: int) -> Coordinates:
@@ -45,15 +45,15 @@ def get_coordinate_from_xy(x: int, y: int) -> Coordinates:
 BEARING_OFFSET = 90.0
 
 
-def get_xy_dist_from_coord(first: Coordinates, second: Coordinates) -> (int, int):
+def get_xy_dist_from_coord(first: Coordinates, second: Coordinates) -> tuple[int, int]:
     bearing, distance = calculate_compass_bearing_and_dist(first, second)
     rad = radians(bearing - BEARING_OFFSET)
     x = int(distance * cos(rad))
     y = int(distance * sin(rad))
-    return (x, y)
+    return x, y
 
 
-def get_xy_from_coord_raw(lon: float, lat: float) -> (int, int):
+def get_xy_from_coord_raw(lon: float, lat: float) -> tuple[int, int]:
     x, y = get_xy_dist_from_coord(InitialValues.top_left_coord, Coordinates(latitude=lat, longitude=lon))
     x //= InitialValues.point_side_size
     y //= InitialValues.point_side_size
@@ -63,7 +63,16 @@ def get_xy_from_coord_raw(lon: float, lat: float) -> (int, int):
 _geodesic = proj.Geod(ellps='WGS84')
 
 
-def calculate_compass_bearing_and_dist(start: Coordinates, end: Coordinates) -> (float, float):
+def calculate_compass_bearing_and_dist(start: Coordinates, end: Coordinates) -> tuple[float, float]:
     forward_azimuth, _, dist = _geodesic.inv(start.longitude, start.latitude, end.longitude, end.latitude)
     bearing = forward_azimuth + 360 if forward_azimuth < 0 else forward_azimuth
-    return (bearing, dist)
+    return bearing, dist
+
+
+_mapped_coordinates = dict()
+
+
+def get_coordinate_from_xy_cached(coord: tuple[int, int]) -> Coordinates:
+    if coord not in _mapped_coordinates:
+        _mapped_coordinates[coord] = get_coordinate_from_xy(coord[0], coord[1])
+    return _mapped_coordinates[coord]

@@ -8,14 +8,14 @@ import pandas as pd
 
 from files import get_checkpoint_dir_path
 from initial_values import InitialValues
-from simulation.point import Point, Coord_t, get_coordinate
-from topology.math import get_coordinate_from_xy
+from simulation.point import Point, Coord_t
+from topology.math import get_coordinate_from_xy_cached
 
 logger = getLogger("checkpoints")
 
 
 def _point_to_dict(point: Point) -> Dict[str, any]:
-    coordinate = get_coordinate(point.coord)
+    coordinate = get_coordinate_from_xy_cached(point.coord)
     return {
         "coord": point.coord,
         "coordinates": {
@@ -30,8 +30,7 @@ def _point_to_dict(point: Point) -> Dict[str, any]:
 
 
 def _oil_source_to_dict(source: Tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]) -> Dict[str, any]:
-    x, y = source[0]
-    lon, lat = get_coordinate_from_xy(x, y).as_tuple()
+    lon, lat = get_coordinate_from_xy_cached(source[0]).as_tuple()
     return {
         "coord": (lon, lat),
         "mass_per_minute": source[1],

@@ -48,13 +48,13 @@ def _map_binary_lands(binary_lands: set[Coord_t]) -> tuple[set[tuple[int, int]],
     logger.debug("STATED: Mapping binary lands")
 
     xy_points = dict()
-    def get_point_xy(lon: float, lat: float) -> (int, int):
+    def get_point_xy(lon: float, lat: float) -> tuple[int, int]:
         if (lon, lat) not in xy_points:
             xy_points[(lon, lat)] = get_xy_from_coord_raw(lon, lat)
         return xy_points[(lon, lat)]
 
     projected_to_coords = dict()
-    def get_projected_to_coords(x: int, y: int) -> (float, float):
+    def get_projected_to_coords(x: int, y: int) -> tuple[float, float]:
         if (x, y) not in projected_to_coords:
             projected_to_coords[(x, y)] = project_binary_map_xy_to_coordinates_raw(x, y)
         return projected_to_coords[(x, y)]
