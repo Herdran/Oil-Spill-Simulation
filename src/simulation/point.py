@@ -24,9 +24,6 @@ def is_coord_in_simulation_area(coord: Coord_t) -> bool:
     return 0 <= coord[0] < InitialValues.point_side_lon_count and 0 <= coord[1] < InitialValues.point_side_lat_count
 
 
-
-
-
 class Point:
     world = dict()
 

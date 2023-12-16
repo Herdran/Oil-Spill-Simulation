@@ -107,3 +107,4 @@ def initialize_points_from_checkpoint(points: list[Any], engine):
         world[point_coord] = point
     logger.debug("FINISHED: Initializing points from checkpoint")
     engine.world = world
+    Point.world = world

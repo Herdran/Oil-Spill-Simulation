@@ -388,7 +388,7 @@ def start_simulation(window, points=None, oil_sources=None):
                 self.bottom_frame.grid()
 
             if self.is_running or first_update:
-                points_removed = engine.update(self.iter_as_sec)
+                points_removed = engine.update(self.iter_as_sec) if not first_update else []
 
                 for coords in engine.world:
                     if self.viewer.top <= coords[1] < self.viewer.bottom and self.viewer.left < coords[0] <= self.viewer.right:
