@@ -41,6 +41,7 @@ def start_simulation(window, points=None, oil_sources=None):
             self.right = self.image_array_width
             self.bottom = self.image_array_height
             self.image_change_controller = image_change_controller
+            self.tooltip_coord = None
 
             self.bind("<MouseWheel>", self.on_mousewheel)
             self.bind("<ButtonPress-1>", self.on_button_press)
@@ -170,15 +171,16 @@ def start_simulation(window, points=None, oil_sources=None):
             window_height = self.winfo_height()
             x = int((event.x - self.pan_x - max((window_width - self.zoomed_width) // 2, 0)) / self.zoom_level)
             y = int((event.y - self.pan_y - max((window_height - self.zoomed_height) // 2, 0)) / self.zoom_level)
-            coord = (x, y)
-            if not (0 <= x < self.image_array_width and 0 <= y < self.image_array_height):
+            self.tooltip_coord = (x, y)
+
+            if not (0 <= self.tooltip_coord[0] < self.image_array_width and 0 <= self.tooltip_coord[1] < self.image_array_height):
                 self.hide_tooltip()
                 return
-            if coord not in engine.world:
+            if self.tooltip_coord not in engine.world:
                 self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {0: .2f}kg")
             else:
-                point = engine.world[(x, y)]
-                self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(point))
+                tooltip_point = engine.world[self.tooltip_coord]
+                self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(tooltip_point))
 
         def on_leave(self, _):
             self.hide_tooltip()
@@ -189,6 +191,15 @@ def start_simulation(window, points=None, oil_sources=None):
             else:
                 self.tooltip.update_text(text)
                 self.tooltip.update_position(x, y)
+
+        def update_tooltip_text(self):
+            if self.tooltip:
+                if self.tooltip_coord not in engine.world:
+                    text = f"Oil mass: {0: .2f}kg"
+                else:
+                    tooltip_point = engine.world[self.tooltip_coord]
+                    text = get_tooltip_text(tooltip_point)
+                self.tooltip.update_text(text)
 
         def hide_tooltip(self):
             if self.tooltip is not None:
@@ -237,7 +248,6 @@ def start_simulation(window, points=None, oil_sources=None):
             self.job_id = None
             self.is_updating = False
             self.curr_iter = InitialValues.curr_iter
-            self.sim_sec_passed = 0
             self.oil_to_add_on_click = 10000
             self.minimal_oil_to_show = 100
             self.iter_as_sec = InitialValues.iter_as_sec
@@ -246,7 +256,7 @@ def start_simulation(window, points=None, oil_sources=None):
             self.oil_spill_on_bool = True
             self.full_img = full_img
 
-            self.options_frame = create_frame(window, 1, 0, 1, 2, tk.N + tk.S, 3, 3, relief_style=tk.RAISED)
+            self.options_frame = create_frame(parent, 1, 0, 1, 2, tk.N + tk.S, 3, 3, relief_style=tk.RAISED)
 
             self.options_frame.columnconfigure(0, weight=2)
             self.options_frame.columnconfigure(1, weight=2)
@@ -290,7 +300,8 @@ def start_simulation(window, points=None, oil_sources=None):
                                                                  str(self.minimal_oil_to_show),
                                                                  self.validate_minimal_oil_to_show)
 
-            self.infoboxes_frame = create_frame(window, 0, 1, 1, 1, tk.N + tk.S + tk.E, 3, 3, relief_style=tk.RAISED)
+            self.infoboxes_frame = create_frame(parent, 0, 1, 1, 1, tk.N + tk.S, 3, 3)
+            # self.infoboxes_frame = create_frame(parent, 0, 1, 1, 1, tk.N + tk.S, 3, 3, relief_style=tk.RAISED)
 
             frame_infoboxes_labels = create_frame(self.infoboxes_frame, 0, 0, 1, 1, tk.N + tk.S + tk.E, 5, 5)
 
@@ -308,7 +319,7 @@ def start_simulation(window, points=None, oil_sources=None):
             self.infobox4_values_label = create_label_pack(frame_infoboxes_values)
             self.infobox5_values_label = create_label_pack(frame_infoboxes_values, "1.0")
 
-            self.bottom_frame = create_frame(window, 1, 0, 1, 2, tk.N + tk.S, 3, 3, relief_style=tk.RAISED)
+            self.bottom_frame = create_frame(parent, 1, 0, 1, 2, tk.N + tk.S, 3, 3, relief_style=tk.RAISED)
 
             create_label_pack(self.bottom_frame, "Simulation finished!")
             self.bottom_frame.grid_remove()
@@ -389,6 +400,8 @@ def start_simulation(window, points=None, oil_sources=None):
 
             if self.is_running or first_update:
                 points_removed = engine.update(self.iter_as_sec) if not first_update else []
+                if not first_update:
+                    self.viewer.update_tooltip_text()
 
                 for coords in engine.world:
                     if self.viewer.top <= coords[1] < self.viewer.bottom and self.viewer.left < coords[0] <= self.viewer.right:
@@ -413,14 +426,13 @@ def start_simulation(window, points=None, oil_sources=None):
             if self.is_running:
                 self.viewer.update_image()
                 self.curr_iter += 1
-                self.sim_sec_passed += self.iter_as_sec
                 self.job_id = self.after(self.interval, self.update_image_array)
 
             self.update_infobox()
 
         def update_infobox(self):
             val1 = str(self.curr_iter)
-            val2 = f"{str(self.sim_sec_passed // 3600)}h {str((self.sim_sec_passed // 60) % 60)}m {str(self.sim_sec_passed % 60)}s"
+            val2 = f"{str(engine.total_time // 3600)}h {str((engine.total_time // 60) % 60)}m {str(engine.total_time % 60)}s"
             self.infobox1_values_label.configure(text=val1)
             self.infobox2_values_label.configure(text=val2)
 
@@ -480,17 +492,22 @@ def start_simulation(window, points=None, oil_sources=None):
 
     del engine.x_indices, engine.y_indices
 
-    window.rowconfigure(0, weight=5, uniform='row')
-    window.rowconfigure(1, weight=1, uniform='row')
-    window.columnconfigure(0, weight=2, uniform='column')
-    window.columnconfigure(1, weight=1, uniform='column')
+    # window.rowconfigure(0, weight=1, uniform='row')
+    # window.columnconfigure(0, weight=1, uniform='column')
+
+    main_frame = create_frame(window, 0, 0, 1, 1, tk.N + tk.S + tk.E + tk.W, 5, 5)
+
+    main_frame.rowconfigure(0, weight=5, uniform='row')
+    main_frame.rowconfigure(1, weight=1, uniform='row')
+    main_frame.columnconfigure(0, weight=2, uniform='column')
+    main_frame.columnconfigure(1, weight=1, uniform='column')
 
     full_img = Image.fromarray(image_array)
 
-    frame_controller = ImageChangeController(window, full_img)
+    frame_controller = ImageChangeController(main_frame, full_img)
 
     initial_zoom_level = 1
-    viewer = ImageViewer(window, image_array.shape, frame_controller, initial_zoom_level, full_img)
+    viewer = ImageViewer(main_frame, image_array.shape, frame_controller, initial_zoom_level, full_img)
     viewer.grid(row=0, column=0, sticky=tk.N + tk.S + tk.E + tk.W)
     frame_controller.set_viewer(viewer)
 
