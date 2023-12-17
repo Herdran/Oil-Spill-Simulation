@@ -91,7 +91,8 @@ def browse_button(target):
         
 def browse_dir_button(target):
     dirname = filedialog.askdirectory()
-    if dirname and dirname != "." and Path(dirname).absolute() != get_processed_data_path().absolute():
+    path = Path(dirname).absolute()
+    if dirname and path != Path(".").absolute() and path != get_processed_data_path().absolute():
         target.set(dirname)
 
 
