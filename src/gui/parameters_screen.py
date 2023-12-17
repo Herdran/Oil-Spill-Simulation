@@ -791,6 +791,20 @@ def start_initial_menu(window):
             self.spill_end_oil_source_input.config(state=DISABLED)
             self.oil_sources_listbox_insert.config(state=DISABLED)
             self.oil_sources_listbox_delete.config(state=DISABLED)
+            
+            SECONDS_IN_MINUTE = 60
+            total_simulation_time_second_offset = self.total_simulation_time % SECONDS_IN_MINUTE
+            total_simulation_time_minutes = int(self.total_simulation_time / SECONDS_IN_MINUTE)
+            offset_after_last_weather_minutes = total_simulation_time_minutes % self.data_time_step_minutes
+            data_preprocessor_initial_seconds = self.total_simulation_time - (offset_after_last_weather_minutes * SECONDS_IN_MINUTE) + total_simulation_time_second_offset
+            data_preprocessor_initial_timestamp = pd.Timestamp(self.time_range_start) + pd.Timedelta(seconds=data_preprocessor_initial_seconds)
+            InitialValues.data_preprocessor_initial_timestamp = data_preprocessor_initial_timestamp 
+            
+            InitialValues.data_preprocessor_total_time_offset = self.total_simulation_time
+            
+            print("data_preprocessor_initial_timestamp: ", data_preprocessor_initial_timestamp)
+            print("data_preprocessor_total_time_offset: ", self.total_simulation_time)
+            
 
         def crop_and_resize_preview_image(self, event=None):
             image_width, image_height = self.loaded_img.size

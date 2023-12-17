@@ -1,3 +1,4 @@
+from copy import deepcopy
 import logging
 import threading
 import tkinter as tk
@@ -445,20 +446,22 @@ def start_simulation(window, points=None, oil_sources=None):
         def save_checkpoint(self):
             engine.save_checkpoint(self.curr_iter, True)
 
-    # TODO: what if user already data has been processed?
-    #  maybe interface for choosing already processed data?
-    #  for time saving
     def get_data_processor() -> DataProcessor:
         sym_data_reader = DataReader()
         try:
             path = get_main_path().joinpath("data/test_data")
             sym_data_reader.add_all_from_dir(path)
         except DataValidationException as ex:
-            # TODO: some kind of error popup?
             logging.error(f"Data validation exception: {ex}")
             exit(1)
 
-        return sym_data_reader.preprocess(InitialValues.simulation_initial_parameters)
+        memorized_time_start = deepcopy(InitialValues.simulation_initial_parameters.time.min) 
+        if InitialValues.data_preprocessor_initial_timestamp is not None:
+            InitialValues.simulation_initial_parameters.time.min = deepcopy(InitialValues.data_preprocessor_initial_timestamp) 
+
+        result = sym_data_reader.preprocess(deepcopy(InitialValues.simulation_initial_parameters))
+        InitialValues.simulation_initial_parameters.time.min = memorized_time_start
+        return result
 
     engine = simulation.SimulationEngine(get_data_processor())
 

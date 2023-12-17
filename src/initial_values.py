@@ -55,6 +55,9 @@ class InitialValues:
     )
 
     simulation_time: float = None
+    
+    data_preprocessor_initial_timestamp: pd.Timestamp = None
+    data_preprocessor_total_time_offset: pd.Timedelta = 0
 
     min_oil_thickness = 5e-6  # [m]
 
