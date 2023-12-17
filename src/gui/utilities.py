@@ -1,8 +1,10 @@
+from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog
 
 from data.utilities import kelvins_to_celsius
 from simulation import simulation
+from files import get_processed_data_path
 
 
 def get_tooltip_text(point: simulation.Point) -> str:
@@ -89,7 +91,7 @@ def browse_button(target):
         
 def browse_dir_button(target):
     dirname = filedialog.askdirectory()
-    if dirname:
+    if dirname and dirname != "." and Path(dirname).absolute() != get_processed_data_path().absolute():
         target.set(dirname)
 
 
