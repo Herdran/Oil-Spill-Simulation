@@ -68,7 +68,7 @@ def save_to_json(world: dict[Coord_t, Point], total_time: int, curr_iter: int,
         "checkpoint_frequency": InitialValues.checkpoint_frequency,
         "total_simulation_time": total_time,
         "curr_iter": curr_iter,
-        "data_path": InitialValues.simulation_initial_parameters.path_to_data,
+        "data_path": InitialValues.data_dir_path,
         "constant_sources": [_oil_source_to_dict(source) for source in constant_sources],
         "points": [_point_to_dict(point) for point in world.values()]
     }

@@ -86,6 +86,12 @@ def browse_button(target):
     if filename:
         target.set(filename)
 
+        
+def browse_dir_button(target):
+    dirname = filedialog.askdirectory()
+    if dirname:
+        target.set(dirname)
+
 
 def resize_img_to_fit_frame(img, frame):
     w, h = img.size

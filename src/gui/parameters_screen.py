@@ -7,9 +7,8 @@ import pandas as pd
 from PIL import Image, ImageTk
 
 from checkpoints import load_from_json
-from files import get_data_path
 from gui.main_screen import start_simulation
-from gui.utilities import create_frame, create_label_pack, create_label_grid, create_input_entry_grid, \
+from gui.utilities import browse_dir_button, create_frame, create_label_pack, create_label_grid, create_input_entry_grid, \
     create_label_grid_parameter_screen, browse_button, resize_img_to_fit_frame
 from initial_values import InitialValues
 from initial_values_loader import set_simulation_coordinates_parameters
@@ -220,7 +219,7 @@ def start_initial_menu(window):
             self.nvm.grid(row=2, column=0, rowspan=1, padx=3, pady=3, sticky=tk.N + tk.S)
 
             self.data_path = tk.StringVar()
-            self.data_path.set(get_data_path())
+            self.data_path.set(InitialValues.data_dir_path)
 
             create_label_grid(data_path_frame, "Data path:", font=("Arial", 14, "bold"), columnspan=2,
                               sticky=tk.N + tk.S + tk.W)
@@ -229,7 +228,7 @@ def start_initial_menu(window):
             browse_path_label.grid(row=1, column=1, padx=3, pady=3, sticky=tk.N + tk.S + tk.W)
 
             data_path_browse = tk.Button(data_path_frame, text="Browse",
-                                         command=lambda: browse_button(target=self.data_path))
+                                         command=lambda: browse_dir_button(target=self.data_path))
             data_path_browse.grid(row=1, column=0, padx=3, pady=3, sticky=tk.N + tk.S + tk.W)
 
             create_label_grid(checkpoint_path_frame, "Checkpoint path:", font=("Arial", 14, "bold"), columnspan=2,

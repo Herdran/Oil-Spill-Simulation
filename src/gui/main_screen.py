@@ -462,9 +462,8 @@ def start_simulation(window, points=None, oil_sources=None):
     #  for time saving
     def get_data_processor() -> DataProcessor:
         sym_data_reader = DataReader()
-        try:
-            path = get_main_path().joinpath("data/test_data")
-            sym_data_reader.add_all_from_dir(path)
+        try: 
+            sym_data_reader.add_all_from_dir(InitialValues.data_dir_path)
         except DataValidationException as ex:
             # TODO: some kind of error popup?
             logging.error(f"Data validation exception: {ex}")
