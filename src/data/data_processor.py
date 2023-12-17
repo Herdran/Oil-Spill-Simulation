@@ -248,8 +248,8 @@ class DataProcessorImpl:
                 result.append(station_info_opt)
         return result
 
-    @staticmethod
-    def _get_direction_of_station(coordinates: Coordinates, station_coordinates: Coordinates) -> StationNeighbourType:
+    def _get_direction_of_station(self, coordinates: Coordinates,
+                                  station_coordinates: Coordinates) -> StationNeighbourType:
         lat_diff = (
             StationNeighbourType.NORTH if coordinates.latitude > station_coordinates.latitude else StationNeighbourType.SOUTH).value.latitude
         lon_diff = (
@@ -312,8 +312,7 @@ class DataProcessorImpl:
         data_path = path.join(self.run_parameters.path_to_data, f"{simulation_hour}.csv")
         return pd.read_csv(data_path) if path.exists(data_path) else None
 
-    @staticmethod
-    def _get_interpolated_data(time_points: np.array, latitude_points: np.array, longitude_points: np.array,
+    def _get_interpolated_data(self, time_points: np.array, latitude_points: np.array, longitude_points: np.array,
                                points: np.array, values: np.array) -> np.array:
         interpolator = NearestNDInterpolator(points, values)
         return interpolator(time_points, latitude_points, longitude_points)
@@ -338,32 +337,28 @@ class DataProcessorImpl:
 
         return np.array(points), np.array(values)
 
-    @staticmethod
-    def _create_environment_latitude_range(simulation_run_parameters: SimulationRunParameters) -> np.array:
+    def _create_environment_latitude_range(self, simulation_run_parameters: SimulationRunParameters) -> np.array:
         latitude_range = Range(simulation_run_parameters.area.min.latitude, simulation_run_parameters.area.max.latitude)
         latitude_step = (
-                                    latitude_range.max - latitude_range.min) / simulation_run_parameters.interpolation_grid_size.latitude
+                                latitude_range.max - latitude_range.min) / simulation_run_parameters.interpolation_grid_size.latitude
         return np.array([latitude_range.min + i * latitude_step for i in
                          range(simulation_run_parameters.interpolation_grid_size.latitude)])
 
-    @staticmethod
-    def _create_environment_longitude_range(simulation_run_parameters: SimulationRunParameters) -> np.array:
+    def _create_environment_longitude_range(self, simulation_run_parameters: SimulationRunParameters) -> np.array:
         longitude_range = Range(simulation_run_parameters.area.min.longitude,
                                 simulation_run_parameters.area.max.longitude)
         longitude_step = (
-                                     longitude_range.max - longitude_range.min) / simulation_run_parameters.interpolation_grid_size.longitude
+                                 longitude_range.max - longitude_range.min) / simulation_run_parameters.interpolation_grid_size.longitude
         return np.array([longitude_range.min + i * longitude_step for i in
                          range(simulation_run_parameters.interpolation_grid_size.longitude)])
 
-    @staticmethod
-    def _create_environment_time_range(simulation_run_parameters: SimulationRunParameters) -> np.array:
+    def _create_environment_time_range(self, simulation_run_parameters: SimulationRunParameters) -> np.array:
         time_range = simulation_run_parameters.time
         time_step = simulation_run_parameters.data_time_step
         times_count = int((time_range.max - time_range.min) / time_step)
         return np.array([minutes(i * time_step) for i in range(times_count)])
 
-    @staticmethod
-    def _load_single_dataset(csv_path: PathLike) -> pd.DataFrame:
+    def _load_single_dataset(self, csv_path: PathLike) -> pd.DataFrame:
         return pd.read_csv(csv_path)
 
     def _load_all_data(self, csv_paths: list[PathLike]) -> pd.DataFrame:
@@ -375,8 +370,7 @@ class DataProcessorImpl:
 
         return concatenated_data
 
-    @staticmethod
-    def _data_agg_time(data: pd.DataFrame):
+    def _data_agg_time(self, data: pd.DataFrame):
         def get_time_stamp(*args):
             return pd.Timestamp(*[int(arg) for arg in args])
 
@@ -393,8 +387,7 @@ class DataProcessorImpl:
             ]
         )
 
-    @staticmethod
-    def _data_agg_wind(data: pd.DataFrame):
+    def _data_agg_wind(self, data: pd.DataFrame):
         dataframe_replace_apply(
             dataframe=data,
             result_columns=[DataAggregationDescriptor.WIND_N.value, DataAggregationDescriptor.WIND_E.value],
@@ -405,8 +398,7 @@ class DataProcessorImpl:
             ]
         )
 
-    @staticmethod
-    def _data_agg_current(data: pd.DataFrame):
+    def _data_agg_current(self, data: pd.DataFrame):
         dataframe_replace_apply(
             dataframe=data,
             result_columns=[DataAggregationDescriptor.CURRENT_N.value, DataAggregationDescriptor.CURRENT_E.value],

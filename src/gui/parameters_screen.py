@@ -757,7 +757,7 @@ def start_initial_menu(window):
             self.oil_viscosity_input.config(state=DISABLED)
             set_text(self.oil_density_input, str(loaded_parameters["oil_density"]))
             self.oil_density_input.config(state=DISABLED)
-            set_text(self.oil_density_input, str(loaded_parameters["checkpoint_frequency"]))
+            set_text(self.checkpoint_frequency_input, str(loaded_parameters["checkpoint_frequency"]))
             self.checkpoint_frequency_input.config(state=DISABLED)
 
             self.total_simulation_time = loaded_parameters["total_simulation_time"]
@@ -777,7 +777,7 @@ def start_initial_menu(window):
                 self.nvm.select()
                 self.neighborhood_var.set(1)
 
-            for oil_source in loaded_parameters["constants_sources"]:
+            for oil_source in loaded_parameters["constant_sources"]:
                 self.oil_sources_listbox.insert(END, f"{oil_source[0][0]}, "
                                                      f"{oil_source[0][1]}, "
                                                      f"{oil_source[1]}, "

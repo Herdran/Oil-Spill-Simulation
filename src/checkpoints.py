@@ -69,7 +69,7 @@ def save_to_json(world: dict[Coord_t, Point], total_time: int, curr_iter: int,
         "total_simulation_time": total_time,
         "curr_iter": curr_iter,
         "data_path": InitialValues.simulation_initial_parameters.path_to_data,
-        "constants_sources": [_oil_source_to_dict(source) for source in constant_sources],
+        "constant_sources": [_oil_source_to_dict(source) for source in constant_sources],
         "points": [_point_to_dict(point) for point in world.values()]
     }
     path = _get_path_to_save(curr_iter)
@@ -82,14 +82,14 @@ def load_from_json(path: str) -> dict[str, Any]:
     logger.debug(f"STATED: Loading checkpoint from file: {path}")
     with open(path, "r") as file:
         data = json.load(file)
-    constants_sources = []
-    for source in data.get("constants_sources", []):
+    constant_sources = []
+    for source in data.get("constant_sources", []):
         coord = tuple(source["coord"])
         mass_per_minute = source["mass_per_minute"]
         spill_start = pd.Timestamp(source["spill_start"])
         spill_end = pd.Timestamp(source["spill_end"])
-        constants_sources.append((coord, mass_per_minute, spill_start, spill_end))
-    data["constants_sources"] = constants_sources
+        constant_sources.append((coord, mass_per_minute, spill_start, spill_end))
+    data["constant_sources"] = constant_sources
     logger.debug("FINISHED: Loading checkpoint")
     return data
 
