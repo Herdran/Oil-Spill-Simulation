@@ -802,9 +802,6 @@ def start_initial_menu(window):
             
             InitialValues.data_preprocessor_total_time_offset = self.total_simulation_time
             
-            print("data_preprocessor_initial_timestamp: ", data_preprocessor_initial_timestamp)
-            print("data_preprocessor_total_time_offset: ", self.total_simulation_time)
-            
 
         def crop_and_resize_preview_image(self, event=None):
             image_width, image_height = self.loaded_img.size
