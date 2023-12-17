@@ -48,7 +48,7 @@ def _get_path_to_save(curr_iter: int) -> PathLike:
 
 def save_to_json(world: dict[Coord_t, Point], total_time: int, curr_iter: int,
                  constant_sources: list[tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]]) -> None:
-    logger.debug("STATED: Saving checkpoint")
+    logger.debug("STARTED: Saving checkpoint")
     data = {
         "top_coord": InitialValues.simulation_initial_parameters.area.max.latitude,
         "down_coord": InitialValues.simulation_initial_parameters.area.min.latitude,
@@ -79,7 +79,7 @@ def save_to_json(world: dict[Coord_t, Point], total_time: int, curr_iter: int,
 
 
 def load_from_json(path: str) -> dict[str, Any]:
-    logger.debug(f"STATED: Loading checkpoint from file: {path}")
+    logger.debug(f"STARTED: Loading checkpoint from file: {path}")
     with open(path, "r") as file:
         data = json.load(file)
     constant_sources = []
@@ -95,7 +95,7 @@ def load_from_json(path: str) -> dict[str, Any]:
 
 
 def initialize_points_from_checkpoint(points: list[Any], engine):
-    logger.debug("STATED: Initializing points from checkpoint")
+    logger.debug("STARTED: Initializing points from checkpoint")
     world = {}
     for point_data in points:
         point_coord = tuple(point_data["coord"])

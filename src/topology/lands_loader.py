@@ -2,14 +2,14 @@ from itertools import product
 from logging import getLogger
 from typing import Any
 
-from initial_values import InitialValues
-from simulation.point import Coord_t
-from topology.math import get_xy_from_coord_raw
-from topology.binary_map_math import project_binary_map_xy_to_coordinates_raw, project_latitude_to_y, project_longitude_to_x
-from topology.file_loader import BinaryMap, get_binary_map
-
 import numpy as np
 
+from initial_values import InitialValues
+from simulation.point import Coord_t
+from topology.binary_map_math import project_binary_map_xy_to_coordinates_raw, project_latitude_to_y, \
+    project_longitude_to_x
+from topology.file_loader import BinaryMap, get_binary_map
+from topology.math import get_xy_from_coord_raw
 
 logger = getLogger("topology")
 
@@ -33,7 +33,7 @@ def _get_map_range() -> product:
 
 
 def _get_lands_set(binary_map: BinaryMap) -> set[tuple[Any, Any]]:
-    logger.debug("STATED: Loading lands set")
+    logger.debug("STARTED: Loading lands set")
     lands = set()
 
     for x, y in _get_map_range():
@@ -45,15 +45,17 @@ def _get_lands_set(binary_map: BinaryMap) -> set[tuple[Any, Any]]:
 
 
 def _map_binary_lands(binary_lands: set[Coord_t]) -> tuple[set[tuple[int, int]], np.ndarray, np.ndarray]:
-    logger.debug("STATED: Mapping binary lands")
+    logger.debug("STARTED: Mapping binary lands")
 
     xy_points = dict()
+
     def get_point_xy(lon: float, lat: float) -> tuple[int, int]:
         if (lon, lat) not in xy_points:
             xy_points[(lon, lat)] = get_xy_from_coord_raw(lon, lat)
         return xy_points[(lon, lat)]
 
     projected_to_coords = dict()
+
     def get_projected_to_coords(x: int, y: int) -> tuple[float, float]:
         if (x, y) not in projected_to_coords:
             projected_to_coords[(x, y)] = project_binary_map_xy_to_coordinates_raw(x, y)

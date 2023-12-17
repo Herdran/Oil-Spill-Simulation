@@ -199,6 +199,15 @@ def start_simulation(window, points=None, oil_sources=None):
                     text = get_tooltip_text(tooltip_point)
                 self.tooltip.update_text(text)
 
+        def update_tooltip_text(self):
+            if self.tooltip:
+                if self.tooltip_coord not in engine.world:
+                    text = f"Oil mass: {0: .2f}kg"
+                else:
+                    tooltip_point = engine.world[self.tooltip_coord]
+                    text = get_tooltip_text(tooltip_point)
+                self.tooltip.update_text(text)
+
         def hide_tooltip(self):
             if self.tooltip is not None:
                 self.tooltip.hide()
@@ -299,7 +308,6 @@ def start_simulation(window, points=None, oil_sources=None):
                                                                  self.validate_minimal_oil_to_show)
 
             self.infoboxes_frame = create_frame(parent, 0, 1, 1, 1, tk.N + tk.S, 3, 3)
-            # self.infoboxes_frame = create_frame(parent, 0, 1, 1, 1, tk.N + tk.S, 3, 3, relief_style=tk.RAISED)
 
             frame_infoboxes_labels = create_frame(self.infoboxes_frame, 0, 0, 1, 1, tk.N + tk.S + tk.E, 5, 5)
 
@@ -491,9 +499,6 @@ def start_simulation(window, points=None, oil_sources=None):
     image_array[y_indices, x_indices, :] = land_color
 
     del engine.x_indices, engine.y_indices
-
-    # window.rowconfigure(0, weight=1, uniform='row')
-    # window.columnconfigure(0, weight=1, uniform='column')
 
     main_frame = create_frame(window, 0, 0, 1, 1, tk.N + tk.S + tk.E + tk.W, 5, 5)
 
