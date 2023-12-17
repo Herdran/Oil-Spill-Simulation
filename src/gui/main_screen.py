@@ -149,7 +149,8 @@ def start_simulation(window, points=None, oil_sources=None):
                     self.image_change_controller.update_infobox()
                     self.full_img.putpixel((x, y), var)
                     self.update_image()
-                    self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(point_clicked))
+                    self.tooltip_coord = coord
+                    self.show_tooltip(event.x_root, event.y_root)
                     self.image_change_controller.value_not_yet_processed += self.image_change_controller.oil_to_add_on_click
             self.image_change_controller.update_oil_amount_infobox()
 
@@ -177,21 +178,17 @@ def start_simulation(window, points=None, oil_sources=None):
             if not (0 <= self.tooltip_coord[0] < self.image_array_width and 0 <= self.tooltip_coord[1] < self.image_array_height):
                 self.hide_tooltip()
                 return
-            if self.tooltip_coord not in engine.world:
-                self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {0: .2f}kg")
-            else:
-                tooltip_point = engine.world[self.tooltip_coord]
-                self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(tooltip_point))
+            self.show_tooltip(event.x_root, event.y_root)
 
         def on_leave(self, _):
             self.hide_tooltip()
 
-        def show_tooltip(self, x, y, text):
+        def show_tooltip(self, x, y):
             if self.tooltip is None:
-                self.tooltip = ToolTip(self, x, y, text)
+                self.tooltip = ToolTip(self, x, y, "")
             else:
-                self.tooltip.update_text(text)
                 self.tooltip.update_position(x, y)
+            self.update_tooltip_text()
 
         def update_tooltip_text(self):
             if self.tooltip:
