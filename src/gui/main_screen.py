@@ -11,7 +11,8 @@ from checkpoints import initialize_points_from_checkpoint
 from color import blend_color
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from files import get_main_path
-from gui.utilities import get_tooltip_text, create_frame, create_label_pack, create_input_entry_pack
+from gui.utilities import get_tooltip_text, create_frame, create_label_pack, create_input_entry_pack, \
+    generate_string_for_displaying_oil_amount
 from initial_values import InitialValues
 
 Image.MAX_IMAGE_PIXELS = 999999999999
@@ -301,7 +302,6 @@ def start_simulation(window, points=None, oil_sources=None):
                                                                  self.validate_minimal_oil_to_show)
 
             self.infoboxes_frame = create_frame(parent, 0, 1, 1, 1, tk.N + tk.S, 3, 3)
-            # self.infoboxes_frame = create_frame(parent, 0, 1, 1, 1, tk.N + tk.S, 3, 3, relief_style=tk.RAISED)
 
             frame_infoboxes_labels = create_frame(self.infoboxes_frame, 0, 0, 1, 1, tk.N + tk.S + tk.E, 5, 5)
 
@@ -309,15 +309,21 @@ def start_simulation(window, points=None, oil_sources=None):
             create_label_pack(frame_infoboxes_labels, "Simulation time")
             create_label_pack(frame_infoboxes_labels, "Global oil amount [sea]")
             create_label_pack(frame_infoboxes_labels, "Global oil amount [land]")
+            create_label_pack(frame_infoboxes_labels, "Dispersed oil")
+            create_label_pack(frame_infoboxes_labels, "Evaporated oil")
+            create_label_pack(frame_infoboxes_labels, "Oil area")
             create_label_pack(frame_infoboxes_labels, "Current zoom")
 
             frame_infoboxes_values = create_frame(self.infoboxes_frame, 0, 1, 1, 1, tk.N + tk.S + tk.E, 5, 5)
 
-            self.infobox1_values_label = create_label_pack(frame_infoboxes_values)
-            self.infobox2_values_label = create_label_pack(frame_infoboxes_values)
-            self.infobox3_values_label = create_label_pack(frame_infoboxes_values)
-            self.infobox4_values_label = create_label_pack(frame_infoboxes_values)
-            self.infobox5_values_label = create_label_pack(frame_infoboxes_values, "1.0")
+            self.infobox_current_iteration = create_label_pack(frame_infoboxes_values)
+            self.infobox_simulation_time = create_label_pack(frame_infoboxes_values)
+            self.infobox_global_oil_amount_sea = create_label_pack(frame_infoboxes_values)
+            self.infobox_global_oil_amount_land = create_label_pack(frame_infoboxes_values)
+            self.infobox_dispersed_oil = create_label_pack(frame_infoboxes_values)
+            self.infobox_evaporated_oil = create_label_pack(frame_infoboxes_values)
+            self.infobox_oil_area = create_label_pack(frame_infoboxes_values)
+            self.infobox_current_zoom = create_label_pack(frame_infoboxes_values, "1.0")
 
             self.bottom_frame = create_frame(parent, 1, 0, 1, 2, tk.N + tk.S, 3, 3, relief_style=tk.RAISED)
 
@@ -433,8 +439,8 @@ def start_simulation(window, points=None, oil_sources=None):
         def update_infobox(self):
             val1 = str(self.curr_iter)
             val2 = f"{str(engine.total_time // 3600)}h {str((engine.total_time // 60) % 60)}m {str(engine.total_time % 60)}s"
-            self.infobox1_values_label.configure(text=val1)
-            self.infobox2_values_label.configure(text=val2)
+            self.infobox_current_iteration.configure(text=val1)
+            self.infobox_simulation_time.configure(text=val2)
 
             self.update_oil_amount_infobox()
 
@@ -442,14 +448,16 @@ def start_simulation(window, points=None, oil_sources=None):
             global_oil_amount_sea, global_oil_amount_land = engine.get_oil_amounts()
             global_oil_amount_sea += self.value_not_yet_processed
 
-            val3 = f"{str(int(global_oil_amount_sea // 10 ** 9))}Mt {str(int(global_oil_amount_sea // 10 ** 6) % 10 ** 3)}kt {str(int(global_oil_amount_sea // 10 ** 3) % 10 ** 3)}t"
-            val4 = f"{str(int(global_oil_amount_land // 10 ** 9))}Mt {str(int(global_oil_amount_land // 10 ** 6) % 10 ** 3)}kt {str(int(global_oil_amount_land // 10 ** 3) % 10 ** 3)}t"
-            self.infobox3_values_label.configure(text=val3)
-            self.infobox4_values_label.configure(text=val4)
+            self.infobox_global_oil_amount_sea.configure(text=generate_string_for_displaying_oil_amount(global_oil_amount_sea))
+            self.infobox_global_oil_amount_land.configure(text=generate_string_for_displaying_oil_amount(global_oil_amount_land))
+
+            self.infobox_dispersed_oil.configure(text=generate_string_for_displaying_oil_amount(engine.dispersed_oil))
+            self.infobox_evaporated_oil.configure(text=generate_string_for_displaying_oil_amount(engine.evaporated_oil))
+            self.infobox_oil_area.configure(text=f"{(len(engine.world) * InitialValues.point_side_size ** 2) / 10**6} km2")
 
         def update_zoom_infobox_value(self):
             val5 = f"{round(self.viewer.zoom_level / self.viewer.initial_zoom_level, 2)} times"
-            self.infobox5_values_label.configure(text=val5)
+            self.infobox_current_zoom.configure(text=val5)
 
         def oil_spill_on_off(self):
             self.oil_spill_on_bool = not self.oil_spill_on_bool
@@ -491,9 +499,6 @@ def start_simulation(window, points=None, oil_sources=None):
     image_array[y_indices, x_indices, :] = land_color
 
     del engine.x_indices, engine.y_indices
-
-    # window.rowconfigure(0, weight=1, uniform='row')
-    # window.columnconfigure(0, weight=1, uniform='column')
 
     main_frame = create_frame(window, 0, 0, 1, 1, tk.N + tk.S + tk.E + tk.W, 5, 5)
 
