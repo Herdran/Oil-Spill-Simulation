@@ -71,7 +71,7 @@ def save_to_json(engine) -> None:
         "checkpoint_frequency": InitialValues.checkpoint_frequency,
         "total_simulation_time": engine.total_time,
         "curr_iter": int(engine.total_time / engine.timestep),
-        "data_path": InitialValues.simulation_initial_parameters.path_to_data,
+        "data_path": InitialValues.data_dir_path,
         "constant_sources": [_oil_source_to_dict(source) for source in engine.constant_sources],
         "points": [_point_to_dict(point) for point in engine.world.values()]
     }

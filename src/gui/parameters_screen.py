@@ -725,7 +725,17 @@ def start_initial_menu(window):
                 loaded_parameters = load_from_json(self.checkpoint_path.get())
                 self.set_all_parameters_from_checkpoint(loaded_parameters)
                 self.validate_all_parameters()
+                self.set_initial_time()
                 self.check_all_main_parameters_validity(True)
+                
+        def set_initial_time(self):
+            SECONDS_IN_MINUTE = 60
+            total_simulation_time_second_offset = self.total_simulation_time % SECONDS_IN_MINUTE
+            total_simulation_time_minutes = int(self.total_simulation_time / SECONDS_IN_MINUTE)
+            offset_after_last_weather_minutes = total_simulation_time_minutes % self.data_time_step_minutes
+            data_preprocessor_initial_seconds = self.total_simulation_time - (offset_after_last_weather_minutes * SECONDS_IN_MINUTE) + total_simulation_time_second_offset
+            data_preprocessor_initial_timestamp = pd.Timestamp(self.time_range_start) + pd.Timedelta(seconds=data_preprocessor_initial_seconds)
+            InitialValues.data_preprocessor_initial_timestamp = data_preprocessor_initial_timestamp     
 
         def set_all_parameters_from_checkpoint(self, loaded_parameters):
             set_text(self.top_coord_input, str(loaded_parameters["top_coord"]))
@@ -790,15 +800,7 @@ def start_initial_menu(window):
             self.spill_end_oil_source_input.config(state=DISABLED)
             self.oil_sources_listbox_insert.config(state=DISABLED)
             self.oil_sources_listbox_delete.config(state=DISABLED)
-            
-            SECONDS_IN_MINUTE = 60
-            total_simulation_time_second_offset = self.total_simulation_time % SECONDS_IN_MINUTE
-            total_simulation_time_minutes = int(self.total_simulation_time / SECONDS_IN_MINUTE)
-            offset_after_last_weather_minutes = total_simulation_time_minutes % self.data_time_step_minutes
-            data_preprocessor_initial_seconds = self.total_simulation_time - (offset_after_last_weather_minutes * SECONDS_IN_MINUTE) + total_simulation_time_second_offset
-            data_preprocessor_initial_timestamp = pd.Timestamp(self.time_range_start) + pd.Timedelta(seconds=data_preprocessor_initial_seconds)
-            InitialValues.data_preprocessor_initial_timestamp = data_preprocessor_initial_timestamp             
-
+                    
         def crop_and_resize_preview_image(self, event=None):
             image_width, image_height = self.loaded_img.size
 
