@@ -1,3 +1,4 @@
+from copy import deepcopy
 import logging
 import threading
 import tkinter as tk
@@ -148,7 +149,8 @@ def start_simulation(window, points=None, oil_sources=None):
                     self.image_change_controller.update_infobox()
                     self.full_img.putpixel((x, y), var)
                     self.update_image()
-                    self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(point_clicked))
+                    self.tooltip_coord = coord
+                    self.show_tooltip(event.x_root, event.y_root)
                     self.image_change_controller.value_not_yet_processed += self.image_change_controller.oil_to_add_on_click
             self.image_change_controller.update_oil_amount_infobox()
 
@@ -176,21 +178,26 @@ def start_simulation(window, points=None, oil_sources=None):
             if not (0 <= self.tooltip_coord[0] < self.image_array_width and 0 <= self.tooltip_coord[1] < self.image_array_height):
                 self.hide_tooltip()
                 return
-            if self.tooltip_coord not in engine.world:
-                self.show_tooltip(event.x_root, event.y_root, f"Oil mass: {0: .2f}kg")
-            else:
-                tooltip_point = engine.world[self.tooltip_coord]
-                self.show_tooltip(event.x_root, event.y_root, get_tooltip_text(tooltip_point))
+            self.show_tooltip(event.x_root, event.y_root)
 
         def on_leave(self, _):
             self.hide_tooltip()
 
-        def show_tooltip(self, x, y, text):
+        def show_tooltip(self, x, y):
             if self.tooltip is None:
-                self.tooltip = ToolTip(self, x, y, text)
+                self.tooltip = ToolTip(self, x, y, "")
             else:
-                self.tooltip.update_text(text)
                 self.tooltip.update_position(x, y)
+            self.update_tooltip_text()
+
+        def update_tooltip_text(self):
+            if self.tooltip:
+                if self.tooltip_coord not in engine.world:
+                    text = f"Oil mass: {0: .2f}kg"
+                else:
+                    tooltip_point = engine.world[self.tooltip_coord]
+                    text = get_tooltip_text(tooltip_point)
+                self.tooltip.update_text(text)
 
         def update_tooltip_text(self):
             if self.tooltip:
@@ -301,7 +308,6 @@ def start_simulation(window, points=None, oil_sources=None):
                                                                  self.validate_minimal_oil_to_show)
 
             self.infoboxes_frame = create_frame(parent, 0, 1, 1, 1, tk.N + tk.S, 3, 3)
-            # self.infoboxes_frame = create_frame(parent, 0, 1, 1, 1, tk.N + tk.S, 3, 3, relief_style=tk.RAISED)
 
             frame_infoboxes_labels = create_frame(self.infoboxes_frame, 0, 0, 1, 1, tk.N + tk.S + tk.E, 5, 5)
 
@@ -457,19 +463,21 @@ def start_simulation(window, points=None, oil_sources=None):
         def save_checkpoint(self):
             engine.save_checkpoint(self.curr_iter, True)
 
-    # TODO: what if user already data has been processed?
-    #  maybe interface for choosing already processed data?
-    #  for time saving
     def get_data_processor() -> DataProcessor:
         sym_data_reader = DataReader()
         try: 
             sym_data_reader.add_all_from_dir(InitialValues.data_dir_path)
         except DataValidationException as ex:
-            # TODO: some kind of error popup?
             logging.error(f"Data validation exception: {ex}")
             exit(1)
 
-        return sym_data_reader.preprocess(InitialValues.simulation_initial_parameters)
+        memorized_time_start = deepcopy(InitialValues.simulation_initial_parameters.time.min) 
+        if InitialValues.data_preprocessor_initial_timestamp is not None:
+            InitialValues.simulation_initial_parameters.time.min = deepcopy(InitialValues.data_preprocessor_initial_timestamp) 
+
+        result = sym_data_reader.preprocess(deepcopy(InitialValues.simulation_initial_parameters))
+        InitialValues.simulation_initial_parameters.time.min = memorized_time_start
+        return result
 
     engine = simulation.SimulationEngine(get_data_processor())
 
@@ -490,9 +498,6 @@ def start_simulation(window, points=None, oil_sources=None):
     image_array[y_indices, x_indices, :] = land_color
 
     del engine.x_indices, engine.y_indices
-
-    # window.rowconfigure(0, weight=1, uniform='row')
-    # window.columnconfigure(0, weight=1, uniform='column')
 
     main_frame = create_frame(window, 0, 0, 1, 1, tk.N + tk.S + tk.E + tk.W, 5, 5)
 
