@@ -6,6 +6,7 @@ import numpy.typing as npt
 import numpy as np
 
 from files import get_binary_world_map_path, get_binary_world_map_zip_path, get_binary_world_scaled_map_path, get_unzipped_world_map_dir_path
+from initial_values import InitialValues
 
 
 BinaryMap = npt.ArrayLike
@@ -44,4 +45,4 @@ def get_binary_map() -> BinaryMap:
 
 
 def get_binary_scaled_map() -> BinaryMap:
-    return _get_unzipped_world_map(get_binary_world_scaled_map_path())
+    return _get_unzipped_world_map(get_binary_world_scaled_map_path(InitialValues.PREVIEW_MAP_SCALE))

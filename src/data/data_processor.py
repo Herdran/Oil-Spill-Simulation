@@ -13,6 +13,7 @@ from data.generic import Range
 from data.measurement_data import CertainMeasurement, Coordinates, SpeedMeasure, CoordinatesBase, average_measurement
 from data.simulation_run_parameters import SimulationRunParameters
 from data.utilities import dataframe_replace_apply, minutes, round_values, celcius_to_kelvins
+from files import get_processed_data_path
 from topology.math import coordinates_distance
 
 logger = getLogger("data")
@@ -175,7 +176,7 @@ class DataProcessorImpl:
         environment_area.sort_values(inplace=True, by=[DataAggregationDescriptor.TIME_STAMP.value])
 
         logger.debug("FINISHED: Preprocessing data...")
-        path_to_save = self.run_parameters.path_to_data
+        path_to_save = get_processed_data_path()
         if not path.exists(path_to_save):
             logger.debug(f"Creating directory {path_to_save}")
             mkdir(path_to_save)
@@ -309,7 +310,7 @@ class DataProcessorImpl:
 
     def _read_data_for_time(self, simulation_hour: int) -> Optional[pd.DataFrame]:
         logger.debug(f"Reading data for hour {simulation_hour}")
-        data_path = path.join(self.run_parameters.path_to_data, f"{simulation_hour}.csv")
+        data_path = path.join(get_processed_data_path(), f"{simulation_hour}.csv")
         return pd.read_csv(data_path) if path.exists(data_path) else None
 
     def _get_interpolated_data(self, time_points: np.array, latitude_points: np.array, longitude_points: np.array,

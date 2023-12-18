@@ -14,4 +14,3 @@ class SimulationRunParameters:
     time: Range[pd.Timestamp]
     data_time_step: pd.Timedelta
     interpolation_grid_size: Interpolation_grid_size
-    path_to_data: str

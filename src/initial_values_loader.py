@@ -53,9 +53,10 @@ def set_simulation_coordinates_parameters(top_coord: float,
         interpolation_grid_size=Interpolation_grid_size(
             latitude=interpolation_grid_size_latitude,
             longitude=interpolation_grid_size_longitude
-        ),
-        path_to_data=data_path
+        )
     )
+
+    InitialValues.data_dir_path = data_path
 
     InitialValues.point_side_size = point_side_size
 
