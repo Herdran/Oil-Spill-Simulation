@@ -1,6 +1,7 @@
 from typing import Any
 
 import pandas as pd
+from PIL.Image import Image
 
 from checkpoints import save_to_json
 from data.data_processor import DataProcessor
@@ -27,6 +28,7 @@ class SimulationEngine:
         self._constant_sources = []  # contains tuples (coord, mass_per_minute, spill_start, spill_end)
         self._evaporated_oil = 0  # [kg]
         self._dispersed_oil = 0  # [kg]
+        self._simulation_image = None
 
     def is_finished(self) -> bool:
         return self._total_time >= InitialValues.simulation_time
@@ -102,6 +104,14 @@ class SimulationEngine:
     def world(self, world: dict[Coord_t, Point]):
         self._world = world
         Point.world = world
+
+    @property
+    def simulation_image(self):
+        return self._simulation_image
+
+    @simulation_image.setter
+    def simulation_image(self, simulation_image: Image):
+        self._simulation_image = simulation_image
 
     @property
     def total_time(self):

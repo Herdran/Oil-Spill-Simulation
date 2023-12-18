@@ -465,6 +465,9 @@ def start_simulation(window, points=None, oil_sources=None):
         def save_checkpoint(self):
             engine.save_checkpoint(True)
 
+    def get_simulation_image():
+        return full_img
+
     # TODO: what if user already data has been processed?
     #  maybe interface for choosing already processed data?
     #  for time saving
@@ -508,6 +511,8 @@ def start_simulation(window, points=None, oil_sources=None):
     main_frame.columnconfigure(1, weight=1, uniform='column')
 
     full_img = Image.fromarray(image_array)
+
+    engine.simulation_image = full_img
 
     frame_controller = ImageChangeController(main_frame, full_img)
 
