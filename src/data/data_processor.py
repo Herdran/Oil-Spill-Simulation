@@ -301,7 +301,7 @@ class DataProcessorImpl:
 
     def _get_run_hour_for_time_stamp(self, time_stamp: pd.Timestamp) -> int:
         SECONDS_IN_HOUR = 3600
-        return (time_stamp - self.run_parameters.time.min).seconds // SECONDS_IN_HOUR
+        return (time_stamp - self.run_parameters.time.min).total_seconds() // SECONDS_IN_HOUR
 
     def _load_data_for_time(self, simulation_hour: int) -> None:
         read_data = self._read_data_for_time(simulation_hour)
