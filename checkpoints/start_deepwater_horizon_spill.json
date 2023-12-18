@@ -1,0 +1,33 @@
+{
+    "top_coord": 30.6,
+    "down_coord": 26.36,
+    "left_coord": -91.31,
+    "right_coord": -82.23,
+    "time_range_start": "2010-04-20 10:00:00",
+    "time_range_end": "2010-04-24 00:00:00",
+    "data_time_step": 30,
+    "cells_side_count_latitude": 10,
+    "cells_side_count_longitude": 10,
+    "point_side_size": 50,
+    "iter_as_sec": 20,
+    "min_oil_thickness": 5e-06,
+    "oil_viscosity": 5.3e-06,
+    "oil_density": 846.0,
+    "neighborhood": "Neighbourhood.MOORE",
+    "checkpoint_frequency": 180,
+    "total_simulation_time": 0,
+    "curr_iter": 0,
+    "data_path": "..\\data\\processed",
+    "constant_sources": [
+        {
+            "coord": [
+                28.738497289462273,
+                -88.36649636992007
+            ],
+            "mass_per_minute": 5800.0,
+            "spill_start": "2010-04-20 10:00:00",
+            "spill_end": "2010-06-30 00:00:00"
+        }
+    ],
+    "points": []
+}
