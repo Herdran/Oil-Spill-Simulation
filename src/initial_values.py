@@ -4,6 +4,7 @@ from data.generic import Range
 from data.measurement_data import Coordinates
 from data.simulation_run_parameters import Interpolation_grid_size, SimulationRunParameters
 from simulation.utilities import Neighbourhood
+from files import get_main_path
 
 
 class InitialValues:
@@ -50,13 +51,16 @@ class InitialValues:
         interpolation_grid_size=Interpolation_grid_size(
             latitude=10,
             longitude=10
-        ),
-        path_to_data="data/processed_data"
+        )
     )
 
     simulation_time: float = None
+    
+    data_preprocessor_initial_timestamp: pd.Timestamp = None
 
     min_oil_thickness = 5e-6  # [m]
+
+    data_dir_path = get_main_path().joinpath("data/test_data")
 
     water_density = 997  # [kg/m^3]
     oil_density = 846  # [kg/m^3]
