@@ -39,15 +39,18 @@ def _oil_source_to_dict(source: tuple[Coord_t, int, pd.Timestamp, pd.Timestamp])
     }
 
 
-def _get_path_to_save(curr_iter: int) -> PathLike:
+def _get_name_to_save(curr_iter: int) -> str:
     timestamp = time.strftime("%Y_%m_%d-%H_%M_%S")
+    return f"checkpoint_{timestamp}_iteration_{curr_iter}"
+
+
+def _get_path_to_save(name: str, extension: str) -> PathLike:
     checkpoint_dir_path = get_checkpoint_dir_path()
     checkpoint_dir_path.mkdir(parents=True, exist_ok=True)
-    return checkpoint_dir_path.joinpath(f"checkpoint_{timestamp}_iteration_{curr_iter}.json")
+    return checkpoint_dir_path.joinpath(f"{name}.{extension}")
 
 
-def save_to_json(world: dict[Coord_t, Point], total_time: int, curr_iter: int,
-                 constant_sources: list[tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]]) -> None:
+def save_to_json(engine) -> None:
     logger.debug("STARTED: Saving checkpoint")
     data = {
         "top_coord": InitialValues.simulation_initial_parameters.area.max.latitude,
@@ -66,16 +69,19 @@ def save_to_json(world: dict[Coord_t, Point], total_time: int, curr_iter: int,
         "oil_density": InitialValues.oil_density,
         "neighborhood": str(InitialValues.neighbourhood),
         "checkpoint_frequency": InitialValues.checkpoint_frequency,
-        "total_simulation_time": total_time,
-        "curr_iter": curr_iter,
-        "data_path": InitialValues.data_dir_path,
-        "constant_sources": [_oil_source_to_dict(source) for source in constant_sources],
-        "points": [_point_to_dict(point) for point in world.values()]
+        "total_simulation_time": engine.total_time,
+        "curr_iter": int(engine.total_time / engine.timestep),
+        "data_path": InitialValues.simulation_initial_parameters.path_to_data,
+        "constant_sources": [_oil_source_to_dict(source) for source in engine.constant_sources],
+        "points": [_point_to_dict(point) for point in engine.world.values()]
     }
-    path = _get_path_to_save(curr_iter)
-    with open(path, "w") as file:
+    name = _get_name_to_save(int(engine.total_time / engine.timestep))
+    with open(_get_path_to_save(name, "json"), "w") as file:
         json.dump(data, file, indent=4)
-    logger.debug(f"Checkpoint saved fo file: {path}")
+
+    engine.simulation_image.save(_get_path_to_save(name, "png"))
+
+    logger.debug(f"Checkpoint saved fo file: {name}")
 
 
 def load_from_json(path: str) -> dict[str, Any]:

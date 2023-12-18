@@ -30,7 +30,7 @@ def create_label(parent: tk.Frame, text: str = "", font: tuple[str, int, str] = 
     return label
 
 
-def create_label_pack(parent: tk.Frame, text: str = "", font: tuple[str, int, str] = ("Arial", 14, "bold"),
+def create_label_pack(parent: tk.Frame, text: str = "", font: tuple[str, int, str] = ("Arial", 12, "bold"),
                       padx: int = 10, pady: int = 5, side=tk.TOP) -> tk.Label:
     label = create_label(parent, text, font, padx, pady)
     label.pack(side=side)
@@ -108,3 +108,17 @@ def resize_img_to_fit_frame(img, frame):
         w_resize = int(h_frame * (w / h))
 
     return img.resize((w_resize, h_resize))
+
+
+def generate_string_for_displaying_oil_amount(value):
+    units = [("Mt", 1_000_000_000), ("kt", 1_000_000), ("t", 1_000), ("kg", 1)]
+
+    result = []
+    for unit, unit_value in units:
+        quotient, remainder = divmod(value, unit_value)
+        if quotient > 0:
+            result.append(f"{int(quotient)} {unit}")
+
+        value = remainder
+
+    return " ".join(result) if result else "0 kg"

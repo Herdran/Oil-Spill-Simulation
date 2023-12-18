@@ -71,18 +71,17 @@ class Point:
         self._temperature = measurement.temperature
         self._last_weather_update_time = time_delta
 
-    def update(self) -> None:
+    def update(self) -> tuple[float, float]:
         self._update_weather_data()
         if self._topography == TopographyState.LAND:
             self._process_seashore_interaction()
-            return
+            return 0, 0
         delta_y = self._process_emulsification()
-        delta_f = self._process_evaporation()
-        self._process_natural_dispersion()
+        delta_f, evaporated_mass = self._process_evaporation()
+        dispersed_mass = self._process_natural_dispersion()
         self._viscosity_change(delta_f, delta_y)
-
-        # that needs to be done as the last step
         self._process_advection()
+        return evaporated_mass, dispersed_mass
 
     def _process_emulsification(self) -> float:
         K = 5.0e-7
@@ -94,7 +93,7 @@ class Point:
             self._emulsification_rate = InitialValues.emulsion_max_content_water
         return self._emulsification_rate - old_emulsification_rate
 
-    def _process_evaporation(self) -> float:
+    def _process_evaporation(self) -> tuple[float, float]:
         K = 1.25e-3
         P = 1000 * exp(-(4.4 + log(InitialValues.boiling_point)) * (
                 1.803 * (InitialValues.boiling_point / self._temperature - 1) - 0.803 * log(
@@ -107,7 +106,7 @@ class Point:
             self._oil_mass)
         delta_f = -delta_mass / self._oil_mass
         self._oil_mass += delta_mass
-        return delta_f
+        return delta_f, -delta_mass
 
     def _process_seashore_interaction(self) -> None:
         half_time = 3600 * 24  # 24h for sand beach / sand and gravel beach
@@ -179,12 +178,15 @@ class Point:
         if (next_x, next_y) != self._coord:
             self.move_oil_to_other((next_x, next_y), self._oil_mass)
 
-    def _process_natural_dispersion(self) -> None:
+    def _process_natural_dispersion(self) -> float:
         Da = 0.11 * (np.linalg.norm(self._wind_velocity) + 1) ** 2
         interfacial_tension = InitialValues.interfacial_tension * (1 + self._evaporation_rate)
         # multiply viscosity by 100 to convert from Pa*s to cPa*s
         Db = 1 / (1 + 50 * sqrt(self._viscosity_dynamic * 100) * self.slick_thickness() * interfacial_tension)
-        self._oil_mass -= self._oil_mass * Da * Db / (3600 * InitialValues.iter_as_sec)
+        delta_mass = -self._oil_mass * Da * Db / (3600 * InitialValues.iter_as_sec)
+        self._oil_mass += delta_mass
+        return -delta_mass
+
 
     def slick_thickness(self) -> float:
         thickness = (self._oil_mass / InitialValues.oil_density) / (InitialValues.point_side_size ** 2)  # [m]
