@@ -129,7 +129,7 @@ def start_initial_menu(window):
             create_label_grid(interpolation_grid_size_longitude_frame, "Data stations count:\nlongitude")
             create_label_grid(point_side_size_frame, "Point side size\n[m]")
             create_label_grid(time_per_iteration_frame, "Time per iteration\n[s]")
-            create_label_grid(min_oil_thickness_frame, "Minimum oil thickness\n[μm]")
+            create_label_grid(min_oil_thickness_frame, "Minimum slick thickness\n[m]")
             create_label_grid(oil_viscosity_frame, "Oil kinematic viscosity\n[m^2/s]")
             create_label_grid(oil_density_frame, "Oil density\n[kg/m^3]")
             create_label_grid(checkpoint_frequency_frame, "Checkpoint frequency\n[per iterations]")
