@@ -671,10 +671,10 @@ def start_initial_menu(window):
                 self.oil_sources_listbox_insert.config(state=NORMAL)
 
         def validate_all_parameters(self):
-            self.validate_coordinates_top(False)
-            self.validate_coordinates_down(False)
-            self.validate_coordinates_left(False)
-            self.validate_coordinates_right(False)
+            self.validate_coordinates_top()
+            self.validate_coordinates_down()
+            self.validate_coordinates_left()
+            self.validate_coordinates_right()
             self.validate_time_range_start()
             self.validate_time_range_end()
             self.validate_data_time_step()
@@ -785,6 +785,8 @@ def start_initial_menu(window):
             else:
                 self.nvm.select()
                 self.neighborhood_var.set(1)
+
+            self.oil_sources_listbox.delete(0, END)
 
             for oil_source in loaded_parameters["constant_sources"]:
                 self.oil_sources_listbox.insert(END, f"{oil_source[0][0]}, "
