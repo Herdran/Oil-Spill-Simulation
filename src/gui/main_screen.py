@@ -1,6 +1,5 @@
 from copy import deepcopy
 import logging
-import threading
 import tkinter as tk
 from tkinter import DISABLED, NORMAL
 
@@ -85,30 +84,26 @@ def start_simulation(window, points=None, oil_sources=None):
             window_width = self.winfo_width()
             window_height = self.winfo_height()
 
-            before_x = (self.image_array_width - (window_width / self.zoom_level))
-            before_y = (self.image_array_height - (window_height / self.zoom_level))
+            x = int((event.x - self.pan_x - max((window_width - self.zoomed_width) // 2, 0)) / self.zoom_level)
+            y = int((event.y - self.pan_y - max((window_height - self.zoomed_height) // 2, 0)) / self.zoom_level)
+
+            self.pan_x /= self.zoom_level
+            self.pan_y /= self.zoom_level
 
             self.zoom_level *= zoom_factor
             self.zoom_level = min(max(self.zoom_level, self.initial_zoom_level), 100)
 
-            if event.delta > 0:
-                self.pan_x -= max(
-                    (((self.image_array_width - (window_width / self.zoom_level)) - before_x) / 2) * self.zoom_level, 0)
-                self.pan_y -= max(
-                    (((self.image_array_height - (window_height / self.zoom_level)) - before_y) / 2) * self.zoom_level,
-                    0)
-            else:
-                self.pan_x += max(
-                    ((before_x - (self.image_array_width - (window_width / self.zoom_level))) / 2) * self.zoom_level, 0)
-                self.pan_y += max(
-                    ((before_y - (self.image_array_height - (window_height / self.zoom_level))) / 2) * self.zoom_level,
-                    0)
+            self.pan_x *= self.zoom_level
+            self.pan_y *= self.zoom_level
 
-            shift_x = event.x / window_width - 0.5
-            shift_y = event.y / window_height - 0.5
+            self.zoomed_width = int(self.image_array_width * self.zoom_level)
+            self.zoomed_height = int(self.image_array_height * self.zoom_level)
 
-            self.pan_x -= shift_x * window_width
-            self.pan_y -= shift_y * window_height
+            new_x = int((event.x - self.pan_x - max((window_width - self.zoomed_width) // 2, 0)) / self.zoom_level)
+            new_y = int((event.y - self.pan_y - max((window_height - self.zoomed_height) // 2, 0)) / self.zoom_level)
+
+            self.pan_x += new_x - x
+            self.pan_y += new_y - y
 
             self.update_image()
             self.image_change_controller.update_zoom_infobox_value()
