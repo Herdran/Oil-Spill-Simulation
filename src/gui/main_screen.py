@@ -74,8 +74,6 @@ def start_simulation(window, points=None, oil_sources=None):
 
             self.current_img = ImageTk.PhotoImage(self.current_img)
 
-            self.delete("all")
-
             self.image_id = self.create_image(max(0, (window_width - self.zoomed_width) // 2),
                                               max(0, (window_height - self.zoomed_height) // 2),
                                               anchor=tk.NW,
@@ -337,9 +335,6 @@ def start_simulation(window, points=None, oil_sources=None):
                 self.interval = int(interval * 1000)
                 self.text_interval.delete(0, tk.END)
                 self.text_interval.insert(tk.END, str(interval))
-                if self.is_running:
-                    self.after_cancel(self.job_id)
-                    self.job_id = self.after(self.interval, threading.Thread(target=self.update_image_array).start())
             except ValueError:
                 pass
 
@@ -361,9 +356,7 @@ def start_simulation(window, points=None, oil_sources=None):
                 self.minimal_oil_to_show = oil_to_show
                 self.text_minimal_oil_show.delete(0, tk.END)
                 self.text_minimal_oil_show.insert(tk.END, str(oil_to_show))
-                if self.job_id is not None:
-                    self.after_cancel(self.job_id)
-                threading.Thread(target=self.update_image_array).start()
+                self.update_image_array(True)
                 self.viewer.update_image()
             except ValueError:
                 pass
@@ -373,17 +366,23 @@ def start_simulation(window, points=None, oil_sources=None):
                 self.stop_image_changes()
                 self.set_oil_spill_on_off.config(state=NORMAL)
                 self.btn_save_checkpoint.config(state=NORMAL)
+                self.text_minimal_oil_show.config(state=NORMAL)
+                self.text_interval.config(state=NORMAL)
+                self.text_oil_added.config(state=NORMAL)
             else:
                 self.start_image_changes()
                 self.set_oil_spill_on_off.deselect()
                 self.set_oil_spill_on_off.config(state=DISABLED)
                 self.btn_save_checkpoint.config(state=DISABLED)
+                self.text_minimal_oil_show.config(state=DISABLED)
+                self.text_interval.config(state=DISABLED)
+                self.text_oil_added.config(state=DISABLED)
                 self.oil_spill_on_bool = False
 
         def start_image_changes(self):
             self.is_running = True
             self.btn_start_stop.configure(text="Stop")
-            threading.Thread(target=self.update_image_array).start()
+            self.job_id = self.after(self.interval, self.update_image_array)
 
         def stop_image_changes(self):
             self.is_running = False
@@ -391,15 +390,15 @@ def start_simulation(window, points=None, oil_sources=None):
             if self.job_id is not None:
                 self.after_cancel(self.job_id)
 
-        def update_image_array(self, first_update=False):
+        def update_image_array(self, full_update=False):
             if engine.is_finished():
                 self.toggle_start_stop()
                 self.options_frame.grid_remove()
                 self.bottom_frame.grid()
 
-            if self.is_running or first_update:
-                points_changed, points_removed = engine.update(self.minimal_oil_to_show) if not first_update else (engine.world, [])
-                if not first_update:
+            if self.is_running or full_update:
+                points_changed, points_removed = engine.update(self.minimal_oil_to_show) if not full_update else (engine.world, [])
+                if not full_update:
                     self.viewer.update_tooltip_text()
 
                 for coords in points_changed:
