@@ -40,6 +40,7 @@ class SpreadingEngine:
             if not is_coord_in_simulation_area(coord):
                 continue
             self._engine.world[coord] = point
+            self._engine.points_changed.add(coord)
 
 
 def _process_spread_between(total_mass: float, first: Point, second: Point, is_new: bool) -> None:
