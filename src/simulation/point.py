@@ -42,6 +42,7 @@ class Point:
         self._viscosity_dynamic = InitialValues.viscosity_dynamic  # [Pa*s]
         self.oil_buffer = []  # contains tuples (mass, viscosity, emulsification_rate)
         self._evaporation_rate = 0
+        self.pixel_color = InitialValues.SEA_COLOR
 
     def contain_oil(self) -> bool:
         return self.slick_thickness() / 100 > InitialValues.min_oil_thickness
@@ -123,6 +124,7 @@ class Point:
                 continue
             if cords not in self.world:
                 self.world[cords] = Point(cords, self._engine)
+                self._engine.points_changed.add(cords)
             to_share.append(self.world[cords])
         if len(to_share) == 0:  # in case of bug
             return
@@ -217,6 +219,7 @@ class Point:
             return
         if coord not in self.world:
             self.world[coord] = Point(coord, self._engine)
+            self._engine.points_changed.add(coord)
         self.world[coord].oil_buffer.append((mass, self._viscosity_dynamic, self._emulsification_rate))
 
     @property
