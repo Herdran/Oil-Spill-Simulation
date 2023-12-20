@@ -243,7 +243,7 @@ def start_simulation(window, points=None, oil_sources=None):
             self.is_updating = False
             self.curr_iter = InitialValues.curr_iter
             self.oil_to_add_on_click = 10000
-            self.minimal_oil_to_show = 100
+            self.minimal_oil_to_show = InitialValues.minimal_oil_to_show
             self.iter_as_sec = InitialValues.iter_as_sec
             self.viewer = None
             self.value_not_yet_processed = 0
@@ -452,9 +452,6 @@ def start_simulation(window, points=None, oil_sources=None):
 
         def save_checkpoint(self):
             engine.save_checkpoint(True)
-
-    def get_simulation_image():
-        return full_img
 
     def get_data_processor() -> DataProcessor:
         sym_data_reader = DataReader()

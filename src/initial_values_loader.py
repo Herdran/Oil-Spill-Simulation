@@ -32,7 +32,8 @@ def set_simulation_coordinates_parameters(top_coord: float,
                                           neighbourhood: Neighbourhood,
                                           checkpoint_frequency: int,
                                           total_simulation_time: int,
-                                          curr_iter: int
+                                          curr_iter: int,
+                                          minimal_oil_to_show: int
                                           ):
     InitialValues.simulation_initial_parameters = SimulationRunParameters(
         area=Range(
@@ -111,3 +112,4 @@ def set_simulation_coordinates_parameters(top_coord: float,
     InitialValues.checkpoint_frequency = checkpoint_frequency
     InitialValues.total_simulation_time = total_simulation_time
     InitialValues.curr_iter = curr_iter
+    InitialValues.minimal_oil_to_show = minimal_oil_to_show

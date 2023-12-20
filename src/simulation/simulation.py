@@ -1,29 +1,16 @@
-from typing import Any, Tuple, Set
+from typing import Any
 
 import pandas as pd
 from PIL.Image import Image
 
 from checkpoints import save_to_json
-from color import blend_color
 from data.data_processor import DataProcessor
 from initial_values import InitialValues
+from simulation.temp_to_be_moved import changed_color
 from simulation.point import Point, Coord_t, TopographyState
 from simulation.spreading import SpreadingEngine
 from topology.lands_loader import load_topography
 from topology.math import get_xy_from_coord_raw
-
-
-def _changed_color(minimal_oil_to_show: float, point: Point):
-    if point.topography == TopographyState.LAND:
-        var = blend_color(InitialValues.LAND_WITH_OIL_COLOR, InitialValues.LAND_COLOR,
-                          point.oil_mass / minimal_oil_to_show)
-    else:
-        var = blend_color(InitialValues.OIL_COLOR, InitialValues.SEA_COLOR,
-                          point.oil_mass / minimal_oil_to_show)
-    if point.pixel_color != var:
-        point.pixel_color = var
-        return True
-    return False
 
 
 class SimulationEngine:
@@ -73,10 +60,8 @@ class SimulationEngine:
         return self.points_changed, deleted
 
     def _update_points_color(self, minimal_oil_to_show: float):
-        # TODO functionality of this method should be performed after last update process for each point, so that it
-        #  won't have to be run after all the updates are done and on all at the same time
         for coord in self._world.keys():
-            if _changed_color(minimal_oil_to_show, self._world[coord]):
+            if changed_color(minimal_oil_to_show, self._world[coord]):
                 self.points_changed.add(coord)
 
     def _update_oil_points(self):
