@@ -1,3 +1,4 @@
+import threading
 from copy import deepcopy
 import logging
 import tkinter as tk
@@ -11,7 +12,7 @@ from checkpoints import initialize_points_from_checkpoint
 from color import blend_color
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from gui.utilities import get_tooltip_text, create_frame, create_label_pack, create_input_entry_pack, \
-    generate_string_for_displaying_oil_amount
+    generate_string_for_displaying_oil_amount, stop_thread_on_closing, generate_string_for_displaying_time
 from initial_values import InitialValues
 
 Image.MAX_IMAGE_PIXELS = 999999999999
@@ -231,7 +232,7 @@ def start_simulation(window, points=None, oil_sources=None):
         def __init__(self, parent, full_img):
             super().__init__(parent)
             self.is_running = False
-            self.interval = 10
+            self.interval = 100
             self.job_id = None
             self.is_updating = False
             self.curr_iter = InitialValues.curr_iter
@@ -242,9 +243,10 @@ def start_simulation(window, points=None, oil_sources=None):
             self.value_not_yet_processed = 0
             self.oil_spill_on_bool = True
             self.full_img = full_img
+            self.update_occurred = False
+            self.event_wait_for_gui_update = threading.Event()
 
             self.options_frame = create_frame(parent, 1, 0, 1, 2, tk.N + tk.S, 3, 3, relief_style=tk.RAISED)
-
             self.options_frame.columnconfigure(0, weight=2)
             self.options_frame.columnconfigure(1, weight=2)
             self.options_frame.columnconfigure(2, weight=2)
@@ -289,6 +291,9 @@ def start_simulation(window, points=None, oil_sources=None):
 
             self.infoboxes_frame = create_frame(parent, 0, 1, 1, 1, tk.N + tk.S, 3, 3)
 
+            self.infoboxes_frame.columnconfigure(0, weight=1, uniform='column')
+            self.infoboxes_frame.columnconfigure(1, weight=1, uniform='column')
+
             frame_infoboxes_labels = create_frame(self.infoboxes_frame, 0, 0, 1, 1, tk.N + tk.S + tk.E, 5, 5)
 
             create_label_pack(frame_infoboxes_labels, "Current iteration")
@@ -326,7 +331,7 @@ def start_simulation(window, points=None, oil_sources=None):
             new_value = self.text_interval.get()
             try:
                 interval = float(new_value)
-                interval = max(0.01, min(2.0, interval))
+                interval = max(0.1, min(2.0, interval))
                 self.interval = int(interval * 1000)
                 self.text_interval.delete(0, tk.END)
                 self.text_interval.insert(tk.END, str(interval))
@@ -377,13 +382,26 @@ def start_simulation(window, points=None, oil_sources=None):
         def start_image_changes(self):
             self.is_running = True
             self.btn_start_stop.configure(text="Stop")
-            self.job_id = self.after(self.interval, self.update_image_array)
+            threading.Thread(target=self.threaded_function).start()
+            self.job_id = self.after(self.interval, self.update_after)
 
         def stop_image_changes(self):
             self.is_running = False
             self.btn_start_stop.configure(text="Start")
             if self.job_id is not None:
                 self.after_cancel(self.job_id)
+                self.event_wait_for_gui_update.set()
+
+        def threaded_function(self):
+            while self.is_running:
+                engine.update(self.minimal_oil_to_show)
+                self.update_occurred = True
+                self.curr_iter += 1
+                self.event_wait_for_gui_update.wait()
+                self.event_wait_for_gui_update.clear()
+
+        def update_after(self):
+            self.update_image_array()
 
         def update_image_array(self, full_update=False):
             if engine.is_finished():
@@ -391,8 +409,12 @@ def start_simulation(window, points=None, oil_sources=None):
                 self.options_frame.grid_remove()
                 self.bottom_frame.grid()
 
-            if self.is_running or full_update:
-                points_changed, points_removed = engine.update(self.minimal_oil_to_show) if not full_update else (engine.world, [])
+            changes_occurred = False
+            if self.update_occurred and self.is_running or full_update:
+                self.update_occurred = False
+                points_changed, points_removed = (engine.points_changed, engine.points_removed) if not full_update else (engine.world, [])
+                if points_changed or points_removed:
+                    changes_occurred = True
                 if not full_update:
                     self.viewer.update_tooltip_text()
 
@@ -410,19 +432,17 @@ def start_simulation(window, points=None, oil_sources=None):
                     self.full_img.putpixel((coords[0], coords[1]), var)
 
                 self.value_not_yet_processed = 0
+                self.update_infobox()
 
             if self.is_running:
-                self.viewer.update_image()
-                self.curr_iter += 1
-                self.job_id = self.after(self.interval, self.update_image_array)
-
-            self.update_infobox()
+                if full_update or changes_occurred:
+                    self.viewer.update_image()
+                self.event_wait_for_gui_update.set()
+                self.job_id = self.after(self.interval, self.update_after)
 
         def update_infobox(self):
-            val1 = str(self.curr_iter)
-            val2 = f"{str(engine.total_time // 3600)}h {str((engine.total_time // 60) % 60)}m {str(engine.total_time % 60)}s"
-            self.infobox_current_iteration.configure(text=val1)
-            self.infobox_simulation_time.configure(text=val2)
+            self.infobox_current_iteration.configure(text=str(self.curr_iter))
+            self.infobox_simulation_time.configure(text=generate_string_for_displaying_time(engine.total_time))
 
             self.update_oil_amount_infobox()
 
@@ -504,3 +524,4 @@ def start_simulation(window, points=None, oil_sources=None):
     frame_controller.update_image_array()
     viewer.update()
     viewer.update_image()
+    window.protocol("WM_DELETE_WINDOW", lambda: stop_thread_on_closing(window, frame_controller))

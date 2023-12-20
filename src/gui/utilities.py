@@ -110,6 +110,20 @@ def resize_img_to_fit_frame(img, frame):
     return img.resize((w_resize, h_resize))
 
 
+def generate_string_for_displaying_time(value):
+    units = [("h", 3600), ("min", 60), ("s", 1)]
+
+    result = []
+    for unit, unit_value in units:
+        quotient, remainder = divmod(value, unit_value)
+        if quotient > 0:
+            result.append(f"{quotient} {unit}")
+
+        value = remainder
+
+    return " ".join(result) if result else "0 s"
+
+
 def generate_string_for_displaying_oil_amount(value):
     units = [("Mt", 1_000_000_000), ("kt", 1_000_000), ("t", 1_000), ("kg", 1)]
 
@@ -122,3 +136,9 @@ def generate_string_for_displaying_oil_amount(value):
         value = remainder
 
     return " ".join(result) if result else "0 kg"
+
+
+def stop_thread_on_closing(window, frame_controller):
+    frame_controller.is_running = False
+    frame_controller.event_wait_for_gui_update.set()
+    window.destroy()

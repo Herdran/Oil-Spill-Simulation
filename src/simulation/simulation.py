@@ -31,12 +31,14 @@ class SimulationEngine:
         self._dispersed_oil = 0  # [kg]
         self._simulation_image = None
         self.points_changed = set()
+        self.points_removed = set()
 
     def is_finished(self) -> bool:
         return self._total_time >= InitialValues.simulation_time
 
-    def update(self, minimal_oil_to_show) -> tuple[set[Any], set[tuple[int, int]]]:
+    def update(self, minimal_oil_to_show):
         self.points_changed = set()
+        self.points_removed = set()
         self._pour_from_sources()
         self._update_oil_points()
 
@@ -50,14 +52,12 @@ class SimulationEngine:
 
         self.spreading_engine.spread_oil_points(self._total_mass)
         empty_points = [coord for coord, point in self._world.items() if not point.contain_oil()]
-        deleted = set()
         for point in empty_points:
             del self._world[point]
-            deleted.add(point)
+            self.points_removed.add(point)
         self._update_points_color(minimal_oil_to_show)
         self._total_time += self.timestep
         self.save_checkpoint()
-        return self.points_changed, deleted
 
     def _update_points_color(self, minimal_oil_to_show: float):
         for coord in self._world.keys():
