@@ -43,6 +43,7 @@ def start_initial_menu(window):
             self.checkpoint_frequency = InitialValues.checkpoint_frequency
             self.total_simulation_time = InitialValues.total_simulation_time
             self.curr_iter = InitialValues.curr_iter
+            self.minimal_oil_to_show = InitialValues.minimal_oil_to_show
             self.correctly_set_parameters = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
             self.img = None
             self.points_from_checkpoint = None
@@ -771,6 +772,7 @@ def start_initial_menu(window):
 
             self.total_simulation_time = loaded_parameters["total_simulation_time"]
             self.curr_iter = loaded_parameters["curr_iter"]
+            self.minimal_oil_to_show = loaded_parameters["minimal_oil_to_show"]
             self.points_from_checkpoint = loaded_parameters["points"]
             self.checkpoint_frequency = loaded_parameters["checkpoint_frequency"]
 
@@ -840,7 +842,8 @@ def start_initial_menu(window):
                                                   else Neighbourhood.VON_NEUMANN,
                                                   self.checkpoint_frequency,
                                                   self.total_simulation_time,
-                                                  self.curr_iter
+                                                  self.curr_iter,
+                                                  self.minimal_oil_to_show
                                                   )
 
             self.read_all_from_oil_sources_listbox()

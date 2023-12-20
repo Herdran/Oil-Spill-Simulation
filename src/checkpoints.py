@@ -8,6 +8,7 @@ import pandas as pd
 
 from files import get_checkpoint_dir_path
 from initial_values import InitialValues
+from simulation.temp_to_be_moved import changed_color
 from simulation.point import Point, Coord_t
 from topology.math import get_coordinate_from_xy_cached
 
@@ -71,6 +72,7 @@ def save_to_json(engine) -> None:
         "checkpoint_frequency": InitialValues.checkpoint_frequency,
         "total_simulation_time": engine.total_time,
         "curr_iter": int(engine.total_time / engine.timestep),
+        "minimal_oil_to_show": InitialValues.minimal_oil_to_show,
         "data_path": InitialValues.data_dir_path,
         "constant_sources": [_oil_source_to_dict(source) for source in engine.constant_sources],
         "points": [_point_to_dict(point) for point in engine.world.values()]
@@ -113,3 +115,6 @@ def initialize_points_from_checkpoint(points: list[Any], engine):
         world[point_coord] = point
     logger.debug("FINISHED: Initializing points from checkpoint")
     engine.world = world
+    for coord in engine.world.keys():
+        if changed_color(InitialValues.minimal_oil_to_show, engine.world[coord]):
+            engine.points_changed.add(coord)

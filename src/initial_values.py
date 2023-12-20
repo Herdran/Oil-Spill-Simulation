@@ -76,3 +76,4 @@ class InitialValues:
     checkpoint_frequency: int = 0
     total_simulation_time: int = 0
     curr_iter: int = 0
+    minimal_oil_to_show: int = 100
