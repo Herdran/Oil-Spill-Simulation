@@ -170,7 +170,7 @@ def start_initial_menu(window):
                                                                self.validate_oil_viscosity)
             self.oil_density_input = create_input_entry_grid(oil_density_frame, 7, str(self.oil_density),
                                                              self.validate_oil_density)
-            self.checkpoint_frequency_input = create_input_entry_grid(checkpoint_frequency_frame, 7,
+            self.checkpoint_frequency_input = create_input_entry_grid(checkpoint_frequency_frame, 3,
                                                                       str(self.checkpoint_frequency),
                                                                       self.validate_checkpoint_frequency)
 
