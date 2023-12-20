@@ -1,3 +1,4 @@
+import time
 from copy import deepcopy
 import logging
 import threading
@@ -68,11 +69,11 @@ def start_simulation(window, points=None, oil_sources=None):
 
             cropped_image = self.full_img.crop((left, top, right, bottom))
 
-            self.current_img = cropped_image.resize((min(window_width, self.zoomed_width),
+            current_img = cropped_image.resize((min(window_width, self.zoomed_width),
                                                      min(window_height, self.zoomed_height)),
                                                     Image.NEAREST)
 
-            self.current_img = ImageTk.PhotoImage(self.current_img)
+            self.current_img = ImageTk.PhotoImage(current_img)
 
             self.image_id = self.create_image(max(0, (window_width - self.zoomed_width) // 2),
                                               max(0, (window_height - self.zoomed_height) // 2),
@@ -110,6 +111,7 @@ def start_simulation(window, points=None, oil_sources=None):
             self.pan_x -= shift_x * window_width
             self.pan_y -= shift_y * window_height
 
+            # with self.image_change_controller.threading_lock:
             self.update_image()
             self.image_change_controller.update_zoom_infobox_value()
 
@@ -142,6 +144,7 @@ def start_simulation(window, points=None, oil_sources=None):
                                       point_clicked.oil_mass / self.image_change_controller.minimal_oil_to_show)
                     self.image_change_controller.update_infobox()
                     self.full_img.putpixel((x, y), var)
+                    # with self.image_change_controller.threading_lock:
                     self.update_image()
                     self.tooltip_coord = coord
                     self.show_tooltip(event.x_root, event.y_root)
@@ -158,6 +161,7 @@ def start_simulation(window, points=None, oil_sources=None):
             self.pan_y += delta_y
             self.prev_x = event.x
             self.prev_y = event.y
+            # with self.image_change_controller.threading_lock:
             self.update_image()
             if self.tooltip:
                 self.tooltip.update_position(event.x_root, event.y_root)
@@ -203,6 +207,7 @@ def start_simulation(window, points=None, oil_sources=None):
             self.zoom_level /= self.initial_zoom_level
             self.initial_zoom_level = min(window_width / image_array.shape[1], window_height / image_array.shape[0])
             self.zoom_level *= self.initial_zoom_level
+            # with self.image_change_controller.threading_lock:
             self.update_image()
 
     class ToolTip:
@@ -384,13 +389,20 @@ def start_simulation(window, points=None, oil_sources=None):
         def start_image_changes(self):
             self.is_running = True
             self.btn_start_stop.configure(text="Stop")
-            self.job_id = self.after(self.interval, self.update_image_array)
+            self.update_thread = threading.Thread(target=self.threaded_function).start()
 
         def stop_image_changes(self):
             self.is_running = False
             self.btn_start_stop.configure(text="Start")
-            if self.job_id is not None:
-                self.after_cancel(self.job_id)
+
+        def threaded_function(self):
+            while self.is_running:
+                time.sleep(self.interval / 1000)
+                self.update_image_array()
+                # with self.threading_lock:
+                self.viewer.update_image()
+                self.curr_iter += 1
+            print("finished_thread")
 
         def update_image_array(self, full_update=False):
             if engine.is_finished():
@@ -402,6 +414,9 @@ def start_simulation(window, points=None, oil_sources=None):
                 points_changed, points_removed = engine.update(self.minimal_oil_to_show) if not full_update else (engine.world, [])
                 if not full_update:
                     self.viewer.update_tooltip_text()
+
+                print(len(points_changed))
+                print(threading.current_thread())
 
                 for coords in points_changed:
                     if coords not in engine.world:
@@ -417,11 +432,6 @@ def start_simulation(window, points=None, oil_sources=None):
                     self.full_img.putpixel((coords[0], coords[1]), var)
 
                 self.value_not_yet_processed = 0
-
-            if self.is_running:
-                self.viewer.update_image()
-                self.curr_iter += 1
-                self.job_id = self.after(self.interval, self.update_image_array)
 
             self.update_infobox()
 
@@ -456,15 +466,15 @@ def start_simulation(window, points=None, oil_sources=None):
 
     def get_data_processor() -> DataProcessor:
         sym_data_reader = DataReader()
-        try: 
+        try:
             sym_data_reader.add_all_from_dir(InitialValues.data_dir_path)
         except DataValidationException as ex:
             logging.error(f"Data validation exception: {ex}")
             exit(1)
 
-        memorized_time_start = deepcopy(InitialValues.simulation_initial_parameters.time.min) 
+        memorized_time_start = deepcopy(InitialValues.simulation_initial_parameters.time.min)
         if InitialValues.data_preprocessor_initial_timestamp is not None:
-            InitialValues.simulation_initial_parameters.time.min = deepcopy(InitialValues.data_preprocessor_initial_timestamp) 
+            InitialValues.simulation_initial_parameters.time.min = deepcopy(InitialValues.data_preprocessor_initial_timestamp)
 
         result = sym_data_reader.preprocess(deepcopy(InitialValues.simulation_initial_parameters))
         InitialValues.simulation_initial_parameters.time.min = memorized_time_start
