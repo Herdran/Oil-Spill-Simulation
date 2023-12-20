@@ -33,7 +33,7 @@ def _point_to_dict(point: Point) -> dict[str, any]:
 def _oil_source_to_dict(source: tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]) -> dict[str, any]:
     lon, lat = get_coordinate_from_xy_cached(source[0]).as_tuple()
     return {
-        "coord": (lon, lat),
+        "coord": (round(lon, 2), round(lat, 2)),
         "mass_per_minute": source[1],
         "spill_start": str(source[2]),
         "spill_end": str(source[3])

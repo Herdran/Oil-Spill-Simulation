@@ -48,9 +48,9 @@ def start_initial_menu(window):
             self.img = None
             self.points_from_checkpoint = None
             self.oil_sources = []
-            self.latitude_oil_source = 0.0
-            self.longitude_oil_source = 0.0
-            self.mass_per_minute_oil_source = 0.0
+            self.latitude_oil_source = 54.65
+            self.longitude_oil_source = 18.83
+            self.mass_per_minute_oil_source = 10000.0
             self.spill_start_oil_source = str(InitialValues.simulation_initial_parameters.time.min)
             self.spill_end_oil_source = str(InitialValues.simulation_initial_parameters.time.max)
             self.correctly_set_parameters_oil_sources = [1, 1, 1, 1, 1]
@@ -170,7 +170,7 @@ def start_initial_menu(window):
                                                                self.validate_oil_viscosity)
             self.oil_density_input = create_input_entry_grid(oil_density_frame, 7, str(self.oil_density),
                                                              self.validate_oil_density)
-            self.checkpoint_frequency_input = create_input_entry_grid(checkpoint_frequency_frame, 7,
+            self.checkpoint_frequency_input = create_input_entry_grid(checkpoint_frequency_frame, 3,
                                                                       str(self.checkpoint_frequency),
                                                                       self.validate_checkpoint_frequency)
 

@@ -122,3 +122,9 @@ def generate_string_for_displaying_oil_amount(value):
         value = remainder
 
     return " ".join(result) if result else "0 kg"
+
+
+def stop_thread_on_closing(window, frame_controller):
+    frame_controller.is_running = False
+    frame_controller.event_wait_for_gui_update.set()
+    window.destroy()

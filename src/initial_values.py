@@ -35,12 +35,12 @@ class InitialValues:
     simulation_initial_parameters: SimulationRunParameters = SimulationRunParameters(
         area=Range(
             min=Coordinates(
-                latitude=26.36,
-                longitude=-91.31
+                latitude=54,
+                longitude=18
             ),
             max=Coordinates(
-                latitude=30.6,
-                longitude=-85.23
+                latitude=55.5,
+                longitude=20.5
             )
         ),
         time=Range(
