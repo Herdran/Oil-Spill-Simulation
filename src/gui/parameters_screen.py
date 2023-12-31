@@ -778,6 +778,10 @@ def start_initial_menu(window):
             self.total_simulation_time = loaded_parameters["total_simulation_time"]
             self.curr_iter = loaded_parameters["curr_iter"]
             self.minimal_oil_to_show = loaded_parameters["minimal_oil_to_show"]
+            self.global_oil_amount_sea = loaded_parameters["global_oil_amount_sea"]
+            self.global_oil_amount_land = loaded_parameters["global_oil_amount_land"]
+            self.dispersed_oil = loaded_parameters["dispersed_oil"]
+            self.evaporated_oil = loaded_parameters["evaporated_oil"]
             self.points_from_checkpoint = loaded_parameters["points"]
             self.checkpoint_frequency = loaded_parameters["checkpoint_frequency"]
 
