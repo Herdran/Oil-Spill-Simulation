@@ -1,7 +1,7 @@
-import threading
-from copy import deepcopy
 import logging
+import threading
 import tkinter as tk
+from copy import deepcopy
 from tkinter import DISABLED, NORMAL
 
 import numpy as np
@@ -13,7 +13,7 @@ from color import blend_color
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from gui.utilities import get_tooltip_text, create_frame, create_label_pack, create_input_entry_pack, \
     generate_string_for_displaying_oil_amount, stop_thread_on_closing, generate_string_for_displaying_time, \
-    create_label, create_label_grid
+    create_label_grid
 from initial_values import InitialValues
 
 Image.MAX_IMAGE_PIXELS = 999999999999

@@ -3,8 +3,8 @@ import pandas as pd
 from data.generic import Range
 from data.measurement_data import Coordinates
 from data.simulation_run_parameters import Interpolation_grid_size, SimulationRunParameters
-from simulation.utilities import Neighbourhood
 from files import get_main_path
+from simulation.utilities import Neighbourhood
 
 
 class InitialValues:

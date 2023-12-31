@@ -8,7 +8,8 @@ from PIL import Image, ImageTk
 
 from checkpoints import load_from_json
 from gui.main_screen import start_simulation
-from gui.utilities import browse_dir_button, create_frame, create_label_pack, create_label_grid, create_input_entry_grid, \
+from gui.utilities import browse_dir_button, create_frame, create_label_pack, create_label_grid, \
+    create_input_entry_grid, \
     create_label_grid_parameter_screen, browse_button, resize_img_to_fit_frame
 from initial_values import InitialValues
 from initial_values_loader import set_simulation_coordinates_parameters
