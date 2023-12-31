@@ -22,13 +22,13 @@ class SimulationEngine:
         self.data_processor = data_processor
         self.checkpoint_frequency = InitialValues.checkpoint_frequency
         self.timestep = InitialValues.iter_as_sec
-        self._total_mass = 0
-        self._total_land_mass = 0
+        self._total_mass = InitialValues.global_oil_amount_sea
+        self._total_land_mass = InitialValues.global_oil_amount_land
         self.lands, self.x_indices, self.y_indices = load_topography()
         self._total_time = InitialValues.total_simulation_time
         self._constant_sources = []  # contains tuples (coord, mass_per_minute, spill_start, spill_end)
-        self._evaporated_oil = 0  # [kg]
-        self._dispersed_oil = 0  # [kg]
+        self._evaporated_oil = InitialValues.evaporated_oil  # [kg]
+        self._dispersed_oil = InitialValues.dispersed_oil  # [kg]
         self._simulation_image = None
         self.points_changed = set()
         self.points_removed = set()

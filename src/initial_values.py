@@ -77,3 +77,7 @@ class InitialValues:
     total_simulation_time: int = 0
     curr_iter: int = 0
     minimal_oil_to_show: int = 100
+    global_oil_amount_sea: float = 0
+    global_oil_amount_land: float = 0
+    dispersed_oil: float = 0
+    evaporated_oil: float = 0

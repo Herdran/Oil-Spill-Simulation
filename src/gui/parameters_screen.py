@@ -44,6 +44,10 @@ def start_initial_menu(window):
             self.total_simulation_time = InitialValues.total_simulation_time
             self.curr_iter = InitialValues.curr_iter
             self.minimal_oil_to_show = InitialValues.minimal_oil_to_show
+            self.global_oil_amount_sea = InitialValues.global_oil_amount_sea
+            self.global_oil_amount_land = InitialValues.global_oil_amount_land
+            self.dispersed_oil = InitialValues.dispersed_oil
+            self.evaporated_oil = InitialValues.evaporated_oil
             self.correctly_set_parameters = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
             self.img = None
             self.points_from_checkpoint = None
@@ -843,7 +847,11 @@ def start_initial_menu(window):
                                                   self.checkpoint_frequency,
                                                   self.total_simulation_time,
                                                   self.curr_iter,
-                                                  self.minimal_oil_to_show
+                                                  self.minimal_oil_to_show,
+                                                  self.global_oil_amount_sea,
+                                                  self.global_oil_amount_land,
+                                                  self.dispersed_oil,
+                                                  self.evaporated_oil
                                                   )
 
             self.read_all_from_oil_sources_listbox()

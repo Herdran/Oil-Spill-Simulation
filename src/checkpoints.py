@@ -53,6 +53,7 @@ def _get_path_to_save(name: str, extension: str) -> PathLike:
 
 def save_to_json(engine) -> None:
     logger.debug("STARTED: Saving checkpoint")
+    oil_amounts = engine.get_oil_amounts()
     data = {
         "top_coord": InitialValues.simulation_initial_parameters.area.max.latitude,
         "down_coord": InitialValues.simulation_initial_parameters.area.min.latitude,
@@ -75,7 +76,11 @@ def save_to_json(engine) -> None:
         "minimal_oil_to_show": InitialValues.minimal_oil_to_show,
         "data_path": InitialValues.data_dir_path,
         "constant_sources": [_oil_source_to_dict(source) for source in engine.constant_sources],
-        "points": [_point_to_dict(point) for point in engine.world.values()]
+        "points": [_point_to_dict(point) for point in engine.world.values()],
+        "global_oil_amount_sea": oil_amounts[0],
+        "global_oil_amount_land": oil_amounts[1],
+        "dispersed_oil": engine.dispersed_oil,
+        "evaporated_oil": engine.evaporated_oil
     }
     name = _get_name_to_save(int(engine.total_time / engine.timestep))
     with open(_get_path_to_save(name, "json"), "w") as file:
