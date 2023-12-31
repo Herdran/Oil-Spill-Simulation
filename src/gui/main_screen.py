@@ -12,7 +12,8 @@ from checkpoints import initialize_points_from_checkpoint
 from color import blend_color
 from data.data_processor import DataProcessor, DataReader, DataValidationException
 from gui.utilities import get_tooltip_text, create_frame, create_label_pack, create_input_entry_pack, \
-    generate_string_for_displaying_oil_amount, stop_thread_on_closing, generate_string_for_displaying_time
+    generate_string_for_displaying_oil_amount, stop_thread_on_closing, generate_string_for_displaying_time, \
+    create_label, create_label_grid
 from initial_values import InitialValues
 
 Image.MAX_IMAGE_PIXELS = 999999999999
@@ -296,29 +297,29 @@ def start_simulation(window, points=None, oil_sources=None):
 
             frame_infoboxes_labels = create_frame(self.infoboxes_frame, 0, 0, 1, 1, tk.N + tk.S + tk.E, 5, 5)
 
-            create_label_pack(frame_infoboxes_labels, "Current iteration")
-            create_label_pack(frame_infoboxes_labels, "Simulation time")
-            create_label_pack(frame_infoboxes_labels, "Global oil amount [sea]")
-            create_label_pack(frame_infoboxes_labels, "Global oil amount [land]")
-            create_label_pack(frame_infoboxes_labels, "Dispersed oil")
-            create_label_pack(frame_infoboxes_labels, "Evaporated oil")
-            create_label_pack(frame_infoboxes_labels, "Oil area")
-            create_label_pack(frame_infoboxes_labels, "Current zoom")
+            create_label_grid(frame_infoboxes_labels, "Current iteration", 0, 0, sticky=tk.N + tk.S + tk.W)
+            create_label_grid(frame_infoboxes_labels, "Simulation time", 1, 0, sticky=tk.N + tk.S + tk.W)
+            create_label_grid(frame_infoboxes_labels, "Global oil amount [sea]", 2, 0, sticky=tk.N + tk.S + tk.W)
+            create_label_grid(frame_infoboxes_labels, "Global oil amount [land]", 3, 0, sticky=tk.N + tk.S + tk.W)
+            create_label_grid(frame_infoboxes_labels, "Dispersed oil", 4, 0, sticky=tk.N + tk.S + tk.W)
+            create_label_grid(frame_infoboxes_labels, "Evaporated oil", 5, 0, sticky=tk.N + tk.S + tk.W)
+            create_label_grid(frame_infoboxes_labels, "Oil area", 6, 0, sticky=tk.N + tk.S + tk.W)
+            create_label_grid(frame_infoboxes_labels, "Current zoom", 7, 0, sticky=tk.N + tk.S + tk.W)
 
             frame_infoboxes_values = create_frame(self.infoboxes_frame, 0, 1, 1, 1, tk.N + tk.S + tk.E, 5, 5)
 
-            self.infobox_current_iteration = create_label_pack(frame_infoboxes_values)
-            self.infobox_simulation_time = create_label_pack(frame_infoboxes_values)
-            self.infobox_global_oil_amount_sea = create_label_pack(frame_infoboxes_values)
-            self.infobox_global_oil_amount_land = create_label_pack(frame_infoboxes_values)
-            self.infobox_dispersed_oil = create_label_pack(frame_infoboxes_values)
-            self.infobox_evaporated_oil = create_label_pack(frame_infoboxes_values)
-            self.infobox_oil_area = create_label_pack(frame_infoboxes_values)
-            self.infobox_current_zoom = create_label_pack(frame_infoboxes_values, "1.0")
+            self.infobox_current_iteration = create_label_grid(frame_infoboxes_values, "", 0, 0, sticky=tk.N + tk.S + tk.E, anchor="e", justify="right")
+            self.infobox_simulation_time = create_label_grid(frame_infoboxes_values, "", 1, 0, sticky=tk.N + tk.S + tk.E, anchor="e", justify="right")
+            self.infobox_global_oil_amount_sea = create_label_grid(frame_infoboxes_values, "", 2, 0, sticky=tk.N + tk.S + tk.E, anchor="e", justify="right")
+            self.infobox_global_oil_amount_land = create_label_grid(frame_infoboxes_values, "", 3, 0, sticky=tk.N + tk.S + tk.E, anchor="e", justify="right")
+            self.infobox_dispersed_oil = create_label_grid(frame_infoboxes_values, "", 4, 0, sticky=tk.N + tk.S + tk.E, anchor="e", justify="right")
+            self.infobox_evaporated_oil = create_label_grid(frame_infoboxes_values, "", 5, 0, sticky=tk.N + tk.S + tk.E, anchor="e", justify="right")
+            self.infobox_oil_area = create_label_grid(frame_infoboxes_values, "", 6, 0, sticky=tk.N + tk.S + tk.E, anchor="e", justify="right")
+            self.infobox_current_zoom = create_label_grid(frame_infoboxes_values, "1.0", 7, 0, sticky=tk.N + tk.S + tk.E, anchor="e", justify="right")
 
             self.bottom_frame = create_frame(parent, 1, 0, 1, 2, tk.N + tk.S, 3, 3, relief_style=tk.RAISED)
 
-            create_label_pack(self.bottom_frame, "Simulation finished!")
+            create_label_grid(self.bottom_frame, "Simulation finished!")
             self.bottom_frame.grid_remove()
 
             self.update_infobox()
@@ -409,12 +410,8 @@ def start_simulation(window, points=None, oil_sources=None):
                 self.options_frame.grid_remove()
                 self.bottom_frame.grid()
 
-            changes_occurred = False
             if self.update_occurred and self.is_running or full_update:
-                self.update_occurred = False
                 points_changed, points_removed = (engine.points_changed, engine.points_removed) if not full_update else (engine.world, [])
-                if points_changed or points_removed:
-                    changes_occurred = True
                 if not full_update:
                     self.viewer.update_tooltip_text()
 
@@ -435,9 +432,10 @@ def start_simulation(window, points=None, oil_sources=None):
                 self.update_infobox()
 
             if self.is_running:
-                if full_update or changes_occurred:
+                if self.update_occurred:
+                    self.update_occurred = False
                     self.viewer.update_image()
-                self.event_wait_for_gui_update.set()
+                    self.event_wait_for_gui_update.set()
                 self.job_id = self.after(self.interval, self.update_after)
 
         def update_infobox(self):
@@ -445,6 +443,7 @@ def start_simulation(window, points=None, oil_sources=None):
             self.infobox_simulation_time.configure(text=generate_string_for_displaying_time(engine.total_time))
 
             self.update_oil_amount_infobox()
+            self.update_idletasks()
 
         def update_oil_amount_infobox(self):
             global_oil_amount_sea, global_oil_amount_land = engine.get_oil_amounts()

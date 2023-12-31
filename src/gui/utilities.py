@@ -25,8 +25,8 @@ def create_frame(parent: tk.Frame, row: int, column: int, rowspan: int = 1, colu
 
 
 def create_label(parent: tk.Frame, text: str = "", font: tuple[str, int, str] = ("Arial", 14, "bold"),
-                 padx: int = 10, pady: int = 5) -> tk.Label:
-    label = tk.Label(parent, text=text, font=font, padx=padx, pady=pady)
+                 padx: int = 10, pady: int = 5, anchor: str = "center", justify: str = "center") -> tk.Label:
+    label = tk.Label(parent, text=text, font=font, padx=padx, pady=pady, anchor=anchor, justify=justify)
     return label
 
 
@@ -41,11 +41,11 @@ def create_label_grid_parameter_screen(parent: tk.Frame) -> tk.Label:
     return create_label_grid(parent, "Default value", 2, 0, ("Arial", 8, "bold"))
 
 
-def create_label_grid(parent: tk.Frame, text: str, row: int = 0, column: int = 0,
+def create_label_grid(parent: tk.Frame, text: str = "", row: int = 0, column: int = 0,
                       font: tuple[str, int, str] = ("Arial", 12, "bold"), padx: int = 10, pady: int = 5,
                       rowspan: int = 1, columnspan: int = 1, sticky: str = tk.N + tk.S, padx_grid: int = 3,
-                      pady_grid: int = 3) -> tk.Label:
-    label = create_label(parent, text, font, padx, pady)
+                      pady_grid: int = 3, anchor: str = "center", justify: str = "center") -> tk.Label:
+    label = create_label(parent, text, font, padx, pady, anchor=anchor, justify=justify)
     label.grid(row=row, column=column, padx=padx_grid, pady=pady_grid, rowspan=rowspan, columnspan=columnspan,
                sticky=sticky)
     return label
