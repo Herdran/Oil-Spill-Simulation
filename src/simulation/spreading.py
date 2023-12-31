@@ -1,5 +1,4 @@
 from math import exp, sqrt
-from random import random as rand
 from random import shuffle
 
 from initial_values import InitialValues
@@ -71,6 +70,6 @@ def _process_spread_between(total_mass: float, first: Point, second: Point, is_n
         from_cell = second
         to_cell = first
 
-    real_delta = rand() * ratio * from_cell.oil_mass
+    real_delta = ratio * from_cell.oil_mass
     from_cell.oil_mass -= real_delta
     to_cell.oil_buffer.append((real_delta, from_cell.viscosity_dynamic, from_cell.emulsification_rate))
