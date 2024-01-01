@@ -245,6 +245,7 @@ def start_simulation(window, points=None, oil_sources=None):
             self.oil_spill_on_bool = True
             self.full_img = full_img
             self.update_occurred = False
+            self.thread_finished = False
             self.event_wait_for_gui_update = threading.Event()
 
             self.options_frame = create_frame(parent, 1, 0, 1, 2, tk.N + tk.S, 3, 3, relief_style=tk.RAISED)
@@ -365,11 +366,8 @@ def start_simulation(window, points=None, oil_sources=None):
         def toggle_start_stop(self):
             if self.is_running:
                 self.stop_image_changes()
-                self.set_oil_spill_on_off.config(state=NORMAL)
-                self.btn_save_checkpoint.config(state=NORMAL)
-                self.text_minimal_oil_show.config(state=NORMAL)
-                self.text_interval.config(state=NORMAL)
-                self.text_oil_added.config(state=NORMAL)
+                self.btn_start_stop.config(state=DISABLED)
+                self.after(100, self.wait_for_thread_to_unlock_buttons)
             else:
                 self.start_image_changes()
                 self.set_oil_spill_on_off.deselect()
@@ -382,16 +380,31 @@ def start_simulation(window, points=None, oil_sources=None):
 
         def start_image_changes(self):
             self.is_running = True
+            self.update_occurred = False
+            self.thread_finished = False
             self.btn_start_stop.configure(text="Stop")
             threading.Thread(target=self.threaded_function).start()
             self.job_id = self.after(self.interval, self.update_after)
 
         def stop_image_changes(self):
             self.is_running = False
+            self.event_wait_for_gui_update.set()
             self.btn_start_stop.configure(text="Start")
             if self.job_id is not None:
                 self.after_cancel(self.job_id)
-                self.event_wait_for_gui_update.set()
+
+        def wait_for_thread_to_unlock_buttons(self):
+            if not self.thread_finished:
+                self.after(100, self.wait_for_thread_to_unlock_buttons)
+            else:
+                self.update_image_array()
+                self.update_occurred = False
+                self.set_oil_spill_on_off.config(state=NORMAL)
+                self.btn_save_checkpoint.config(state=NORMAL)
+                self.text_minimal_oil_show.config(state=NORMAL)
+                self.text_interval.config(state=NORMAL)
+                self.text_oil_added.config(state=NORMAL)
+                self.btn_start_stop.config(state=NORMAL)
 
         def threaded_function(self):
             while self.is_running:
@@ -400,6 +413,7 @@ def start_simulation(window, points=None, oil_sources=None):
                 self.curr_iter += 1
                 self.event_wait_for_gui_update.wait()
                 self.event_wait_for_gui_update.clear()
+            self.thread_finished = True
 
         def update_after(self):
             self.update_image_array()
@@ -429,7 +443,7 @@ def start_simulation(window, points=None, oil_sources=None):
                     self.full_img.putpixel((coords[0], coords[1]), var)
 
                 self.value_not_yet_processed = 0
-                self.update_infobox()
+            self.update_infobox()
 
             if self.is_running:
                 if self.update_occurred:

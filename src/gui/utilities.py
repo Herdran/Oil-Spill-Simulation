@@ -111,7 +111,7 @@ def resize_img_to_fit_frame(img, frame):
 
 
 def generate_string_for_displaying_time(value):
-    units = [("h", 3600), ("min", 60), ("s", 1)]
+    units = [("d", 86400), ("h", 3600), ("min", 60), ("s", 1)]
 
     result = []
     for unit, unit_value in units:
