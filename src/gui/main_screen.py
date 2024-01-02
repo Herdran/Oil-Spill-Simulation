@@ -442,7 +442,6 @@ def start_simulation(window, points=None, oil_sources=None):
 
             self.update_infobox()
             if simulation_engine.is_finished():
-                self.btn_start_stop.config(state=DISABLED)
                 if self.is_running:
                     self.toggle_start_stop()
                 self.options_frame.grid_remove()

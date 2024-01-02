@@ -102,8 +102,8 @@ class SimulationEngine:
         return self._total_mass - self._total_land_mass, self._total_land_mass
 
     def save_checkpoint(self, on_demand: bool = False):
-        if on_demand or self.checkpoint_frequency > 0 and (
-                self._total_time / self.timestep) % self.checkpoint_frequency == 0:
+        if on_demand or self.checkpoint_frequency > 0 and ((
+                self._total_time / self.timestep) % self.checkpoint_frequency == 0 or self.is_finished()):
             save_to_json(self)
 
     @property
