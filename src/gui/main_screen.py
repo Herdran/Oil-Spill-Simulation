@@ -128,11 +128,11 @@ def start_simulation(window, points=None, oil_sources=None):
             y = int((event.y - self.pan_y - max((window_height - self.zoomed_height) // 2, 0)) / self.zoom_level)
             if 0 <= x < self.image_array_width and 0 <= y < self.image_array_height:
                 coord = (x, y)
-                if engine.get_topography(coord) == simulation.TopographyState.SEA:
-                    if coord not in engine.world:
-                        engine.world[coord] = simulation.Point(coord, engine)
+                if simulation_engine.get_topography(coord) == simulation.TopographyState.SEA:
+                    if coord not in simulation_engine.world:
+                        simulation_engine.world[coord] = simulation.Point(coord, simulation_engine)
 
-                    point_clicked = engine.world[coord]
+                    point_clicked = simulation_engine.world[coord]
                     point_clicked.add_oil(self.image_change_controller.oil_to_add_on_click)
 
                     var = blend_color(InitialValues.OIL_COLOR, InitialValues.SEA_COLOR,
@@ -183,10 +183,10 @@ def start_simulation(window, points=None, oil_sources=None):
 
         def update_tooltip_text(self):
             if self.tooltip:
-                if self.tooltip_coord not in engine.world:
+                if self.tooltip_coord not in simulation_engine.world:
                     text = f"Oil mass: {0: .2f}kg"
                 else:
-                    tooltip_point = engine.world[self.tooltip_coord]
+                    tooltip_point = simulation_engine.world[self.tooltip_coord]
                     text = get_tooltip_text(tooltip_point)
                 self.tooltip.update_text(text)
 
@@ -333,7 +333,7 @@ def start_simulation(window, points=None, oil_sources=None):
             new_value = self.text_interval.get()
             try:
                 interval = float(new_value)
-                interval = max(0.1, min(2.0, interval))
+                interval = max(0.01, min(2.0, interval))
                 self.interval = int(interval * 1000)
                 self.text_interval.delete(0, tk.END)
                 self.text_interval.insert(tk.END, str(interval))
@@ -404,11 +404,12 @@ def start_simulation(window, points=None, oil_sources=None):
                 self.text_minimal_oil_show.config(state=NORMAL)
                 self.text_interval.config(state=NORMAL)
                 self.text_oil_added.config(state=NORMAL)
-                self.btn_start_stop.config(state=NORMAL)
+                if not simulation_engine.is_finished():
+                    self.btn_start_stop.config(state=NORMAL)
 
         def threaded_function(self):
             while self.is_running:
-                engine.update(self.minimal_oil_to_show)
+                simulation_engine.update(self.minimal_oil_to_show)
                 self.update_occurred = True
                 self.curr_iter += 1
                 self.event_wait_for_gui_update.wait()
@@ -419,31 +420,34 @@ def start_simulation(window, points=None, oil_sources=None):
             self.update_image_array()
 
         def update_image_array(self, full_update=False):
-            if engine.is_finished():
-                self.toggle_start_stop()
-                self.options_frame.grid_remove()
-                self.bottom_frame.grid()
-
             if self.update_occurred and self.is_running or full_update:
-                points_changed, points_removed = (engine.points_changed, engine.points_removed) if not full_update else (engine.world, [])
+                points_changed, points_removed = (simulation_engine.points_changed, simulation_engine.points_removed) if not full_update else (simulation_engine.world, [])
                 if not full_update:
                     self.viewer.update_tooltip_text()
 
                 for coords in points_changed:
-                    if coords not in engine.world:
+                    if coords not in simulation_engine.world:
                         continue
-                    pixel_color = engine.world[coords].pixel_color
+                    pixel_color = simulation_engine.world[coords].pixel_color
                     self.full_img.putpixel((coords[0], coords[1]), pixel_color)
 
                 for coords in points_removed:
-                    if coords in engine.lands:
+                    if coords in simulation_engine.lands:
                         var = InitialValues.LAND_COLOR
                     else:
                         var = InitialValues.SEA_COLOR
                     self.full_img.putpixel((coords[0], coords[1]), var)
 
                 self.value_not_yet_processed = 0
+
             self.update_infobox()
+            if simulation_engine.is_finished():
+                self.btn_start_stop.config(state=DISABLED)
+                if self.is_running:
+                    self.toggle_start_stop()
+                self.options_frame.grid_remove()
+                self.bottom_frame.grid()
+                return
 
             if self.is_running:
                 if self.update_occurred:
@@ -454,21 +458,21 @@ def start_simulation(window, points=None, oil_sources=None):
 
         def update_infobox(self):
             self.infobox_current_iteration.configure(text=str(self.curr_iter))
-            self.infobox_simulation_time.configure(text=generate_string_for_displaying_time(engine.total_time))
+            self.infobox_simulation_time.configure(text=generate_string_for_displaying_time(simulation_engine.total_time))
 
             self.update_oil_amount_infobox()
             self.update_idletasks()
 
         def update_oil_amount_infobox(self):
-            global_oil_amount_sea, global_oil_amount_land = engine.get_oil_amounts()
+            global_oil_amount_sea, global_oil_amount_land = simulation_engine.get_oil_amounts()
             global_oil_amount_sea += self.value_not_yet_processed
 
             self.infobox_global_oil_amount_sea.configure(text=generate_string_for_displaying_oil_amount(global_oil_amount_sea))
             self.infobox_global_oil_amount_land.configure(text=generate_string_for_displaying_oil_amount(global_oil_amount_land))
 
-            self.infobox_dispersed_oil.configure(text=generate_string_for_displaying_oil_amount(engine.dispersed_oil))
-            self.infobox_evaporated_oil.configure(text=generate_string_for_displaying_oil_amount(engine.evaporated_oil))
-            self.infobox_oil_area.configure(text=f"{(len(engine.world) * InitialValues.point_side_size ** 2) / 10**6} km2")
+            self.infobox_dispersed_oil.configure(text=generate_string_for_displaying_oil_amount(simulation_engine.dispersed_oil))
+            self.infobox_evaporated_oil.configure(text=generate_string_for_displaying_oil_amount(simulation_engine.evaporated_oil))
+            self.infobox_oil_area.configure(text=f"{(len(simulation_engine.world) * InitialValues.point_side_size ** 2) / 10**6} km2")
 
         def update_zoom_infobox_value(self):
             val5 = f"{round(self.viewer.zoom_level / self.viewer.initial_zoom_level, 2)} times"
@@ -478,7 +482,7 @@ def start_simulation(window, points=None, oil_sources=None):
             self.oil_spill_on_bool = not self.oil_spill_on_bool
 
         def save_checkpoint(self):
-            engine.save_checkpoint(True)
+            simulation_engine.save_checkpoint(True)
 
     def get_data_processor() -> DataProcessor:
         sym_data_reader = DataReader()
@@ -496,15 +500,15 @@ def start_simulation(window, points=None, oil_sources=None):
         InitialValues.simulation_initial_parameters.time.min = memorized_time_start
         return result
 
-    engine = simulation.SimulationEngine(get_data_processor())
+    simulation_engine = simulation.SimulationEngine(get_data_processor())
 
     if points:
-        initialize_points_from_checkpoint(points, engine)
+        initialize_points_from_checkpoint(points, simulation_engine)
     if oil_sources:
-        engine.add_oil_sources(oil_sources)
+        simulation_engine.add_oil_sources(oil_sources)
 
-    x_indices = engine.x_indices
-    y_indices = engine.y_indices
+    x_indices = simulation_engine.x_indices
+    y_indices = simulation_engine.y_indices
 
     sea_color = np.array(InitialValues.SEA_COLOR, dtype=np.uint8)
     land_color = np.array(InitialValues.LAND_COLOR, dtype=np.uint8)
@@ -514,7 +518,7 @@ def start_simulation(window, points=None, oil_sources=None):
 
     image_array[y_indices, x_indices, :] = land_color
 
-    del engine.x_indices, engine.y_indices
+    del simulation_engine.x_indices, simulation_engine.y_indices
 
     main_frame = create_frame(window, 0, 0, 1, 1, tk.N + tk.S + tk.E + tk.W, 5, 5)
 
@@ -525,7 +529,7 @@ def start_simulation(window, points=None, oil_sources=None):
 
     full_img = Image.fromarray(image_array)
 
-    engine.simulation_image = full_img
+    simulation_engine.simulation_image = full_img
 
     frame_controller = ImageChangeController(main_frame, full_img)
 
