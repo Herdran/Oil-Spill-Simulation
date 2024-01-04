@@ -17,7 +17,12 @@
     "checkpoint_frequency": 180,
     "total_simulation_time": 0,
     "curr_iter": 0,
-    "data_path": "..\\data\\processed",
+    "minimal_oil_to_show": 100,
+    "global_oil_amount_sea": 0,
+    "global_oil_amount_land": 0,
+    "dispersed_oil": 0,
+    "evaporated_oil": 0,
+    "data_path": "data\\processed",
     "constant_sources": [
         {
             "coord": [

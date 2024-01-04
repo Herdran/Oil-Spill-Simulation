@@ -6,6 +6,7 @@ from typing import Any
 
 import pandas as pd
 
+from color import changed_color
 from files import get_checkpoint_dir_path
 from initial_values import InitialValues
 from simulation.point import Point, Coord_t
@@ -32,7 +33,7 @@ def _point_to_dict(point: Point) -> dict[str, any]:
 def _oil_source_to_dict(source: tuple[Coord_t, int, pd.Timestamp, pd.Timestamp]) -> dict[str, any]:
     lon, lat = get_coordinate_from_xy_cached(source[0]).as_tuple()
     return {
-        "coord": (lon, lat),
+        "coord": (round(lon, 2), round(lat, 2)),
         "mass_per_minute": source[1],
         "spill_start": str(source[2]),
         "spill_end": str(source[3])
@@ -52,6 +53,7 @@ def _get_path_to_save(name: str, extension: str) -> PathLike:
 
 def save_to_json(engine) -> None:
     logger.debug("STARTED: Saving checkpoint")
+    oil_amounts = engine.get_oil_amounts()
     data = {
         "top_coord": InitialValues.simulation_initial_parameters.area.max.latitude,
         "down_coord": InitialValues.simulation_initial_parameters.area.min.latitude,
@@ -71,9 +73,14 @@ def save_to_json(engine) -> None:
         "checkpoint_frequency": InitialValues.checkpoint_frequency,
         "total_simulation_time": engine.total_time,
         "curr_iter": int(engine.total_time / engine.timestep),
+        "minimal_oil_to_show": InitialValues.minimal_oil_to_show,
         "data_path": InitialValues.data_dir_path,
         "constant_sources": [_oil_source_to_dict(source) for source in engine.constant_sources],
-        "points": [_point_to_dict(point) for point in engine.world.values()]
+        "points": [_point_to_dict(point) for point in engine.world.values()],
+        "global_oil_amount_sea": oil_amounts[0],
+        "global_oil_amount_land": oil_amounts[1],
+        "dispersed_oil": engine.dispersed_oil,
+        "evaporated_oil": engine.evaporated_oil
     }
     name = _get_name_to_save(int(engine.total_time / engine.timestep))
     with open(_get_path_to_save(name, "json"), "w") as file:
@@ -113,3 +120,6 @@ def initialize_points_from_checkpoint(points: list[Any], engine):
         world[point_coord] = point
     logger.debug("FINISHED: Initializing points from checkpoint")
     engine.world = world
+    for coord in engine.world.keys():
+        if changed_color(InitialValues.minimal_oil_to_show, engine.world[coord]):
+            engine.points_changed.add(coord)

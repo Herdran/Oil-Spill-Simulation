@@ -32,7 +32,12 @@ def set_simulation_coordinates_parameters(top_coord: float,
                                           neighbourhood: Neighbourhood,
                                           checkpoint_frequency: int,
                                           total_simulation_time: int,
-                                          curr_iter: int
+                                          curr_iter: int,
+                                          minimal_oil_to_show: int,
+                                          global_oil_amount_sea: float,
+                                          global_oil_amount_land: float,
+                                          dispersed_oil: float,
+                                          evaporated_oil: float
                                           ):
     InitialValues.simulation_initial_parameters = SimulationRunParameters(
         area=Range(
@@ -111,3 +116,8 @@ def set_simulation_coordinates_parameters(top_coord: float,
     InitialValues.checkpoint_frequency = checkpoint_frequency
     InitialValues.total_simulation_time = total_simulation_time
     InitialValues.curr_iter = curr_iter
+    InitialValues.minimal_oil_to_show = minimal_oil_to_show
+    InitialValues.global_oil_amount_sea = global_oil_amount_sea
+    InitialValues.global_oil_amount_land = global_oil_amount_land
+    InitialValues.dispersed_oil = dispersed_oil
+    InitialValues.evaporated_oil = evaporated_oil

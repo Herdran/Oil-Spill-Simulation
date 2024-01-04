@@ -3,8 +3,8 @@ import pandas as pd
 from data.generic import Range
 from data.measurement_data import Coordinates
 from data.simulation_run_parameters import Interpolation_grid_size, SimulationRunParameters
-from simulation.utilities import Neighbourhood
 from files import get_main_path
+from simulation.utilities import Neighbourhood
 
 
 class InitialValues:
@@ -76,3 +76,8 @@ class InitialValues:
     checkpoint_frequency: int = 0
     total_simulation_time: int = 0
     curr_iter: int = 0
+    minimal_oil_to_show: int = 100
+    global_oil_amount_sea: float = 0
+    global_oil_amount_land: float = 0
+    dispersed_oil: float = 0
+    evaporated_oil: float = 0

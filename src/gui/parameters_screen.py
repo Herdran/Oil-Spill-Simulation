@@ -8,7 +8,8 @@ from PIL import Image, ImageTk
 
 from checkpoints import load_from_json
 from gui.main_screen import start_simulation
-from gui.utilities import browse_dir_button, create_frame, create_label_pack, create_label_grid, create_input_entry_grid, \
+from gui.utilities import browse_dir_button, create_frame, create_label_pack, create_label_grid, \
+    create_input_entry_grid, \
     create_label_grid_parameter_screen, browse_button, resize_img_to_fit_frame
 from initial_values import InitialValues
 from initial_values_loader import set_simulation_coordinates_parameters
@@ -43,6 +44,11 @@ def start_initial_menu(window):
             self.checkpoint_frequency = InitialValues.checkpoint_frequency
             self.total_simulation_time = InitialValues.total_simulation_time
             self.curr_iter = InitialValues.curr_iter
+            self.minimal_oil_to_show = InitialValues.minimal_oil_to_show
+            self.global_oil_amount_sea = InitialValues.global_oil_amount_sea
+            self.global_oil_amount_land = InitialValues.global_oil_amount_land
+            self.dispersed_oil = InitialValues.dispersed_oil
+            self.evaporated_oil = InitialValues.evaporated_oil
             self.correctly_set_parameters = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
             self.img = None
             self.points_from_checkpoint = None
@@ -66,7 +72,7 @@ def start_initial_menu(window):
             self.main_frame.rowconfigure(6, weight=1, uniform='row')
             self.main_frame.columnconfigure(0, weight=3, uniform='column')
             self.main_frame.columnconfigure(1, weight=2, uniform='column')
-            self.main_frame.columnconfigure(2, weight=8, uniform='column')
+            self.main_frame.columnconfigure(2, weight=9, uniform='column')
             self.main_frame.columnconfigure(3, weight=1, uniform='column')
 
             title_frame = create_frame(self.main_frame, 0, 0, 1, 4, tk.N + tk.S)
@@ -85,20 +91,20 @@ def start_initial_menu(window):
             inputs_frame.rowconfigure(0, weight=1, uniform='row')
             inputs_frame.rowconfigure(1, weight=1, uniform='row')
             inputs_frame.rowconfigure(2, weight=1, uniform='row')
-            inputs_frame.columnconfigure(0, weight=1, uniform='column')
-            inputs_frame.columnconfigure(1, weight=1, uniform='column')
-            inputs_frame.columnconfigure(2, weight=1, uniform='column')
-            inputs_frame.columnconfigure(3, weight=1, uniform='column')
-            inputs_frame.columnconfigure(4, weight=1, uniform='column')
-            inputs_frame.columnconfigure(5, weight=1, uniform='column')
+            inputs_frame.columnconfigure(0, weight=4, uniform='column')
+            inputs_frame.columnconfigure(1, weight=5, uniform='column')
+            inputs_frame.columnconfigure(2, weight=5, uniform='column')
+            inputs_frame.columnconfigure(3, weight=5, uniform='column')
+            inputs_frame.columnconfigure(4, weight=5, uniform='column')
+            inputs_frame.columnconfigure(5, weight=5, uniform='column')
 
             coord_and_time_range_frame = create_frame(inputs_frame, 0, 1, 3, 2, tk.N + tk.S, padx=3, pady=3)
             coord_frame = create_frame(coord_and_time_range_frame, 0, 1, 2, 2, tk.N + tk.S, relief_style=tk.RAISED)
             time_range_frame = create_frame(coord_and_time_range_frame, 2, 1, 1, 2, tk.N + tk.S, relief_style=tk.RAISED)
-            data_processor_parameters_frame = create_frame(inputs_frame, 0, 3, 3, 1, tk.N + tk.S,
-                                                           relief_style=tk.RAISED, padx=3, pady=3)
-            other_parameters_frame = create_frame(inputs_frame, 0, 4, 3, 2, tk.N + tk.S, relief_style=tk.RAISED, padx=3,
-                                                  pady=3)
+            data_processor_parameters_frame = create_frame(inputs_frame, 0, 3, 3, 1, tk.N + tk.S,padx=3, pady=3)
+            data_processor_parameters_frame_interior = create_frame(data_processor_parameters_frame, 0, 0, 1, 1, tk.N + tk.S, relief_style=tk.RAISED)
+            other_parameters_frame = create_frame(inputs_frame, 0, 4, 3, 2, tk.N + tk.S, padx=3,pady=3)
+            other_parameters_frame_interior = create_frame(other_parameters_frame, 0, 0, 1, 1, tk.N + tk.S, relief_style=tk.RAISED, padx=3,pady=3)
 
             top_coord_frame = create_frame(coord_frame, 0, 0, 1, 1, tk.N + tk.S)
             down_coord_frame = create_frame(coord_frame, 1, 0, 1, 1, tk.N + tk.S)
@@ -106,17 +112,17 @@ def start_initial_menu(window):
             right_coord_frame = create_frame(coord_frame, 1, 1, 1, 1, tk.N + tk.S)
             time_range_start_frame = create_frame(time_range_frame, 0, 0, 1, 1, tk.N + tk.S)
             time_range_end_frame = create_frame(time_range_frame, 0, 1, 1, 1, tk.N + tk.S)
-            data_time_step_frame = create_frame(data_processor_parameters_frame, 2, 0, 1, 1, tk.N + tk.S)
-            interpolation_grid_size_latitude_frame = create_frame(data_processor_parameters_frame, 0, 0, 1, 1,
+            data_time_step_frame = create_frame(data_processor_parameters_frame_interior, 2, 0, 1, 1, tk.N + tk.S)
+            interpolation_grid_size_latitude_frame = create_frame(data_processor_parameters_frame_interior, 0, 0, 1, 1,
                                                                   tk.N + tk.S)
-            interpolation_grid_size_longitude_frame = create_frame(data_processor_parameters_frame, 1, 0, 1, 1,
+            interpolation_grid_size_longitude_frame = create_frame(data_processor_parameters_frame_interior, 1, 0, 1, 1,
                                                                    tk.N + tk.S)
-            point_side_size_frame = create_frame(other_parameters_frame, 0, 0, 1, 1, tk.N + tk.S)
-            time_per_iteration_frame = create_frame(other_parameters_frame, 1, 0, 1, 1, tk.N + tk.S)
-            min_oil_thickness_frame = create_frame(other_parameters_frame, 2, 1, 1, 1, tk.N + tk.S)
-            oil_viscosity_frame = create_frame(other_parameters_frame, 0, 1, 1, 1, tk.N + tk.S)
-            oil_density_frame = create_frame(other_parameters_frame, 1, 1, 1, 1, tk.N + tk.S)
-            checkpoint_frequency_frame = create_frame(other_parameters_frame, 2, 0, 1, 1, tk.N + tk.S)
+            point_side_size_frame = create_frame(other_parameters_frame_interior, 0, 0, 1, 1, tk.N + tk.S)
+            time_per_iteration_frame = create_frame(other_parameters_frame_interior, 1, 0, 1, 1, tk.N + tk.S)
+            min_oil_thickness_frame = create_frame(other_parameters_frame_interior, 2, 1, 1, 1, tk.N + tk.S)
+            oil_viscosity_frame = create_frame(other_parameters_frame_interior, 0, 1, 1, 1, tk.N + tk.S)
+            oil_density_frame = create_frame(other_parameters_frame_interior, 1, 1, 1, 1, tk.N + tk.S)
+            checkpoint_frequency_frame = create_frame(other_parameters_frame_interior, 2, 0, 1, 1, tk.N + tk.S)
 
             create_label_grid(top_coord_frame, "Top coord value\n[latitude]")
             create_label_grid(down_coord_frame, "Bottom coord value\n[latitude]")
@@ -169,7 +175,7 @@ def start_initial_menu(window):
                                                                self.validate_oil_viscosity)
             self.oil_density_input = create_input_entry_grid(oil_density_frame, 7, str(self.oil_density),
                                                              self.validate_oil_density)
-            self.checkpoint_frequency_input = create_input_entry_grid(checkpoint_frequency_frame, 7,
+            self.checkpoint_frequency_input = create_input_entry_grid(checkpoint_frequency_frame, 3,
                                                                       str(self.checkpoint_frequency),
                                                                       self.validate_checkpoint_frequency)
 
@@ -771,6 +777,11 @@ def start_initial_menu(window):
 
             self.total_simulation_time = loaded_parameters["total_simulation_time"]
             self.curr_iter = loaded_parameters["curr_iter"]
+            self.minimal_oil_to_show = loaded_parameters["minimal_oil_to_show"]
+            self.global_oil_amount_sea = loaded_parameters["global_oil_amount_sea"]
+            self.global_oil_amount_land = loaded_parameters["global_oil_amount_land"]
+            self.dispersed_oil = loaded_parameters["dispersed_oil"]
+            self.evaporated_oil = loaded_parameters["evaporated_oil"]
             self.points_from_checkpoint = loaded_parameters["points"]
             self.checkpoint_frequency = loaded_parameters["checkpoint_frequency"]
 
@@ -840,7 +851,12 @@ def start_initial_menu(window):
                                                   else Neighbourhood.VON_NEUMANN,
                                                   self.checkpoint_frequency,
                                                   self.total_simulation_time,
-                                                  self.curr_iter
+                                                  self.curr_iter,
+                                                  self.minimal_oil_to_show,
+                                                  self.global_oil_amount_sea,
+                                                  self.global_oil_amount_land,
+                                                  self.dispersed_oil,
+                                                  self.evaporated_oil
                                                   )
 
             self.read_all_from_oil_sources_listbox()

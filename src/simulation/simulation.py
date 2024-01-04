@@ -4,6 +4,7 @@ import pandas as pd
 from PIL.Image import Image
 
 from checkpoints import save_to_json
+from color import changed_color
 from data.data_processor import DataProcessor
 from initial_values import InitialValues
 from simulation.point import Point, Coord_t, TopographyState
@@ -21,19 +22,23 @@ class SimulationEngine:
         self.data_processor = data_processor
         self.checkpoint_frequency = InitialValues.checkpoint_frequency
         self.timestep = InitialValues.iter_as_sec
-        self._total_mass = 0
-        self._total_land_mass = 0
+        self._total_mass = InitialValues.global_oil_amount_sea
+        self._total_land_mass = InitialValues.global_oil_amount_land
         self.lands, self.x_indices, self.y_indices = load_topography()
         self._total_time = InitialValues.total_simulation_time
         self._constant_sources = []  # contains tuples (coord, mass_per_minute, spill_start, spill_end)
-        self._evaporated_oil = 0  # [kg]
-        self._dispersed_oil = 0  # [kg]
+        self._evaporated_oil = InitialValues.evaporated_oil  # [kg]
+        self._dispersed_oil = InitialValues.dispersed_oil  # [kg]
         self._simulation_image = None
+        self.points_changed = set()
+        self.points_removed = set()
 
     def is_finished(self) -> bool:
         return self._total_time >= InitialValues.simulation_time
 
-    def update(self) -> list[Coord_t]:
+    def update(self, minimal_oil_to_show):
+        self.points_changed = set()
+        self.points_removed = set()
         self._pour_from_sources()
         self._update_oil_points()
 
@@ -47,13 +52,17 @@ class SimulationEngine:
 
         self.spreading_engine.spread_oil_points(self._total_mass)
         empty_points = [coord for coord, point in self._world.items() if not point.contain_oil()]
-        deleted = []
         for point in empty_points:
             del self._world[point]
-            deleted.append(point)
+            self.points_removed.add(point)
+        self._update_points_color(minimal_oil_to_show)
         self._total_time += self.timestep
         self.save_checkpoint()
-        return deleted
+
+    def _update_points_color(self, minimal_oil_to_show: float):
+        for coord in self._world.keys():
+            if changed_color(minimal_oil_to_show, self._world[coord]):
+                self.points_changed.add(coord)
 
     def _update_oil_points(self):
         for coord in list(self._world.keys()):  # copy because dict changes size during iteration
@@ -81,6 +90,7 @@ class SimulationEngine:
                 if cords not in self._world and 0 <= cords[0] < InitialValues.point_side_lon_count and 0 <= cords[
                     1] < InitialValues.point_side_lat_count:
                     self._world[cords] = Point(cords, self)
+                    self.points_changed.add(cords)
                 self._world[cords].add_oil(mass_per_minute * self.timestep / 60)
 
     def get_topography(self, coord: Coord_t) -> TopographyState:
@@ -92,8 +102,8 @@ class SimulationEngine:
         return self._total_mass - self._total_land_mass, self._total_land_mass
 
     def save_checkpoint(self, on_demand: bool = False):
-        if on_demand or self.checkpoint_frequency > 0 and (
-                self._total_time / self.timestep) % self.checkpoint_frequency == 0:
+        if on_demand or self.checkpoint_frequency > 0 and ((
+                self._total_time / self.timestep) % self.checkpoint_frequency == 0 or self.is_finished()):
             save_to_json(self)
 
     @property
