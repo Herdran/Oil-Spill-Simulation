@@ -4,9 +4,9 @@ import pandas as pd
 from PIL.Image import Image
 
 from checkpoints import save_to_json
+from color import changed_color
 from data.data_processor import DataProcessor
 from initial_values import InitialValues
-from simulation.temp_to_be_moved import changed_color
 from simulation.point import Point, Coord_t, TopographyState
 from simulation.spreading import SpreadingEngine
 from topology.lands_loader import load_topography

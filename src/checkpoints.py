@@ -6,9 +6,9 @@ from typing import Any
 
 import pandas as pd
 
+from color import changed_color
 from files import get_checkpoint_dir_path
 from initial_values import InitialValues
-from simulation.temp_to_be_moved import changed_color
 from simulation.point import Point, Coord_t
 from topology.math import get_coordinate_from_xy_cached
 
